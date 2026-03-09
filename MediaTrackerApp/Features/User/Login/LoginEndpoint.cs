@@ -10,7 +10,7 @@ public static class LoginEndpoint
         group.MapPost("/login", HandleAsync)
             .WithName("Login")
             .WithDescription("Inicia sesión con email y contraseña")
-            .AddEndpointFilter<MediaTrackerApp.Auth.ValidationFilter>()
+            .AddEndpointFilter<ValidationFilter>()
             .AllowAnonymous();
     }
 

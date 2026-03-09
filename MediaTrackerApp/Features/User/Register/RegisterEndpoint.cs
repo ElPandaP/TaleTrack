@@ -10,11 +10,14 @@ public static class RegisterEndpoint
         group.MapPost("/register", HandleAsync)
             .WithName("Register")
             .WithDescription("Register a new user (only with internal API key)")
-            .AddEndpointFilter<MediaTrackerApp.Auth.ValidationFilter>()
-            .RequireAuthorization(Policies.InternalOnly); // Requiere API key interna
+            .AddEndpointFilter<ValidationFilter>()
+            .RequireAuthorization(Policies.InternalOnly);
     }
 
-    private static async Task<IResult> HandleAsync(RegisterRequest request, UserService userService, ILogger<RegisterRequest> logger)
+    private static async Task<IResult> HandleAsync(
+        RegisterRequest request,
+        UserService userService,
+        ILogger<RegisterRequest> logger)
     {
         // Process
         if (await userService.EmailExistsAsync(request.Email))
