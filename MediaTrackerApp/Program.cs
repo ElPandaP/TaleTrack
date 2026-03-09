@@ -1,9 +1,7 @@
-using System.Runtime.CompilerServices;
 using System.Reflection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using MediaTrackerApp.Features.User.Login;
 using MediaTrackerApp.Features.User.Register;
 using MediaTrackerApp.Features.User.EditUser;
@@ -30,6 +28,7 @@ var builder = WebApplication.CreateBuilder(args);
 configureDatabase();
 configureAuth();
 configureApi();
+configureCors();
 
 var app = builder.Build();
 
@@ -37,9 +36,6 @@ configurePipeline();
 
 app.Run();
 
-
-// CONFIGURATION METHODS
-// Charge .env
 void loadEnvironment()
 {
     string envPath = Path.Combine(Directory.GetCurrentDirectory(), "..", ".env");
@@ -51,11 +47,11 @@ void loadEnvironment()
 
 void configureDatabase()
 {
-    var dbHost = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "localhost";
-    var dbPort = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
-    var dbName = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "mediatracker_dev";
-    var dbUser = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres";
-    var dbPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgres";
+    var dbHost = Environment.GetEnvironmentVariable("POSTGRES_HOST");
+    var dbPort = Environment.GetEnvironmentVariable("POSTGRES_PORT");
+    var dbName = Environment.GetEnvironmentVariable("POSTGRES_DB");
+    var dbUser = Environment.GetEnvironmentVariable("POSTGRES_USER");
+    var dbPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
 
     var connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPassword}";
     builder.Services.AddDbContext<MediaTrackerApp.Data.AppDbContext>(options =>
@@ -65,14 +61,9 @@ void configureDatabase()
 
 void configureAuth()
 {
-    var jwtSecret = builder.Configuration["JwtSettings:Secret"] ?? Environment.GetEnvironmentVariable("JWT_SECRET");
-    var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "MediaTrackerApp";
-    var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "MediaTrackerApp";
-
-    if (string.IsNullOrEmpty(jwtSecret))
-    {
-        throw new InvalidOperationException("JWT_SECRET must be configured in environment variables or appsettings");
-    }
+    var jwtSecret = builder.Configuration["JwtSettings:Secret"];
+    var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
+    var jwtAudience = builder.Configuration["JwtSettings:Audience"];
 
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
@@ -86,7 +77,7 @@ void configureAuth()
                 ValidIssuer = jwtIssuer,
                 ValidAudience = jwtAudience,
                 IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-                    System.Text.Encoding.UTF8.GetBytes(jwtSecret))
+                    System.Text.Encoding.UTF8.GetBytes(jwtSecret!))
             };
         });
 
@@ -133,11 +124,29 @@ void configureApi()
     builder.Services.AddScoped<IEndpointFilter, ValidationFilter>();
 }
 
+void configureCors()
+{
+    var allowedOrigins = (Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS") ?? "http://localhost:8090")
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("FrontendCors", policy =>
+        {
+            policy
+                .WithOrigins(allowedOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+    });
+}
+
 void configurePipeline()
 {
     app.UseSwagger();
     app.UseSwaggerUI();
     app.UseHttpsRedirection();
+    app.UseCors("FrontendCors");
     
     app.UseAuthentication();
     app.UseAuthorization();

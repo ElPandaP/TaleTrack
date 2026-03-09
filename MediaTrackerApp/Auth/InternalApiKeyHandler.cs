@@ -21,15 +21,13 @@ public class InternalApiKeyHandler : AuthorizationHandler<InternalApiKeyRequirem
     {
         if (context.Resource is HttpContext httpContext)
         {
-            // Obtener API key desde header
             if (!httpContext.Request.Headers.TryGetValue("X-Internal-Api-Key", out var apiKeyFromHeader))
             {
                 _logger.LogWarning("Internal API key missing in request");
                 return Task.CompletedTask;
             }
 
-            // Obtener API key configurada (desde env o appsettings)
-            var configuredApiKey = _configuration["InternalApiKey"] ?? Environment.GetEnvironmentVariable("INTERNAL_API_KEY");
+            var configuredApiKey = Environment.GetEnvironmentVariable("INTERNAL_API_KEY") ?? _configuration["InternalApiKey"];
             
             if (string.IsNullOrEmpty(configuredApiKey))
             {
@@ -37,7 +35,6 @@ public class InternalApiKeyHandler : AuthorizationHandler<InternalApiKeyRequirem
                 return Task.CompletedTask;
             }
 
-            // Validar API key
             if (apiKeyFromHeader == configuredApiKey)
             {
                 _logger.LogInformation("Internal API key validated successfully");

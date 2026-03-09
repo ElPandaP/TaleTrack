@@ -18,7 +18,7 @@ public class JwtService
 
     public string GenerateToken(int userId, string email, string username)
     {
-        var jwtSecret = _configuration["JwtSettings:Secret"] ?? Environment.GetEnvironmentVariable("JWT_SECRET");
+        var jwtSecret = _configuration["JwtSettings:Secret"];
         
         if (string.IsNullOrEmpty(jwtSecret))
         {
@@ -26,9 +26,9 @@ public class JwtService
             throw new InvalidOperationException("JWT Secret is not configured");
         }
 
-        var jwtIssuer = _configuration["JwtSettings:Issuer"] ?? "MediaTrackerApp";
-        var jwtAudience = _configuration["JwtSettings:Audience"] ?? "MediaTrackerApp";
-        var jwtExpirationMinutes = int.Parse(_configuration["JwtSettings:ExpirationMinutes"] ?? "60");
+        var jwtIssuer = _configuration["JwtSettings:Issuer"];
+        var jwtAudience = _configuration["JwtSettings:Audience"];
+        var jwtExpirationMinutes = int.Parse(_configuration["JwtSettings:ExpirationMinutes"]!);
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);

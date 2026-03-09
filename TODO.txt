@@ -12,3 +12,8 @@ Clear Netflix console.logs
 
 Multi language support??? At least get the english name for searching the image url if more than english is supported
 
+mirar q el cors lo aplico bien
+Quitar secretos y connection string de appsettings.Development
+Quitar Environment.GetEnvironmentVariable() y usar builder.Configuration
+
+poner guia de como hacer la migracion en caso de querer cambiar algo en la bd
