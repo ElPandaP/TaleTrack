@@ -15,7 +15,7 @@ public static class GetMediaEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-        GetMediaRequest request,
+        [AsParameters] GetMediaRequest request,
         MediaService mediaService,
         ILogger<GetMediaRequest> logger)
     {

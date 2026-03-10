@@ -17,7 +17,7 @@ public static class GetTrackingEventsEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-        GetTrackingEventsRequest request,
+        [AsParameters] GetTrackingEventsRequest request,
         TrackingEventService trackingEventService,
         ClaimsPrincipal user,
         ILogger<GetTrackingEventsRequest> logger)
