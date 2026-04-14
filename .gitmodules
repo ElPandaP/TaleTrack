@@ -1,0 +1,3 @@
+[submodule "mediatracker.koplugin"]
+	path = mediatracker.koplugin
+	url = https://github.com/ElPandaP/mediatracker.koplugin.git
