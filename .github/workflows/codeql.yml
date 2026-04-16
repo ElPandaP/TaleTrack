@@ -39,7 +39,7 @@ jobs:
 
       - if: matrix.language == 'csharp'
         name: Build backend for analysis
-        run: dotnet build MediaTrackerApp/MediaTrackerApp.csproj -c Release
+        run: dotnet build TaleTrackApp/TaleTrackApp.csproj -c Release
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4

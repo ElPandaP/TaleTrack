@@ -1,3 +1,3 @@
-[submodule "mediatracker.koplugin"]
-	path = mediatracker.koplugin
-	url = https://github.com/ElPandaP/mediatracker.koplugin.git
+[submodule "taletrack.koplugin"]
+	path = taletrack.koplugin
+	url = https://github.com/ElPandaP/taletrack.koplugin.git

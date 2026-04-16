@@ -19,10 +19,10 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Restore dependencies
-        run: dotnet restore MediaTrackerApp/MediaTrackerApp.csproj
+        run: dotnet restore TaleTrackApp/TaleTrackApp.csproj
 
       - name: Build
-        run: dotnet build MediaTrackerApp/MediaTrackerApp.csproj --no-restore -c Release
+        run: dotnet build TaleTrackApp/TaleTrackApp.csproj --no-restore -c Release
 
   frontend-lint-build:
     name: Frontend — Lint & Build
@@ -36,15 +36,15 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        working-directory: mediatracker-frontend
+        working-directory: taletrack-frontend
         run: bun install --frozen-lockfile
 
       - name: Lint
-        working-directory: mediatracker-frontend
+        working-directory: taletrack-frontend
         run: bun run lint
 
       - name: Build
-        working-directory: mediatracker-frontend
+        working-directory: taletrack-frontend
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8080/api
           NEXT_PUBLIC_INTERNAL_API_KEY: ci-placeholder
@@ -62,11 +62,11 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        working-directory: NetflixExtension
+        working-directory: taletrack-netflix-extension
         run: bun install --frozen-lockfile
 
       - name: Build
-        working-directory: NetflixExtension
+        working-directory: taletrack-netflix-extension
         run: bun run build.ts
 
   docker-build:
@@ -77,12 +77,12 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Build backend image
-        run: docker build -t mediatracker-backend ./MediaTrackerApp
+        run: docker build -t taletrack-backend ./TaleTrackApp
 
       - name: Build frontend image
         run: |
           docker build \
             --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080/api \
             --build-arg NEXT_PUBLIC_INTERNAL_API_KEY=ci-placeholder \
-            -t mediatracker-frontend \
-            ./mediatracker-frontend
+            -t taletrack-frontend \
+            ./taletrack-frontend

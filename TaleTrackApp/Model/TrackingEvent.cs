@@ -1,0 +1,29 @@
+namespace TaleTrackApp.Model;
+
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+public class TrackingEvent
+{
+    [Key]
+    public int Id { get; set; }
+    
+    [Required(ErrorMessage = "UserId is required")]
+    [Range(1, int.MaxValue, ErrorMessage = "UserId must be a valid positive integer")]
+    [ForeignKey(nameof(User))]
+    public int UserId { get; set; }
+    
+    [Required(ErrorMessage = "MediaId is required")]
+    [Range(1, int.MaxValue, ErrorMessage = "MediaId must be a valid positive integer")]
+    [ForeignKey(nameof(Media))]
+    public int MediaId { get; set; }
+    
+    [Range(0, 100, ErrorMessage = "Progress must be between 0 and 100")]
+    public int? Progress { get; set; }
+    
+    [Required]
+    public DateTime EventDate { get; set; } = DateTime.UtcNow;
+    
+    public User? User { get; set; }
+    public Media? Media { get; set; }
+}
