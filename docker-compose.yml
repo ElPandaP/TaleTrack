@@ -60,6 +60,7 @@ services:
       JwtSettings__Secret: ${JWT_SECRET}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      RESEND_API_KEY: ${RESEND_API_KEY}
     ports:
       - "8080:8080"
 

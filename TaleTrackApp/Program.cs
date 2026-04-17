@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using TaleTrackApp.Features.User.Login;
 using TaleTrackApp.Features.User.Register;
 using TaleTrackApp.Features.User.GoogleLogin;
+using TaleTrackApp.Features.User.EmailAuth;
 using TaleTrackApp.Features.User.EditUser;
 using TaleTrackApp.Features.User.DeleteUser;
 using TaleTrackApp.Features.Media.AddMedia;
@@ -99,6 +100,12 @@ void configureAuth()
 
     builder.Services.AddScoped<IAuthorizationHandler, InternalApiKeyHandler>();
     builder.Services.AddScoped<JwtService>();
+
+    var resendApiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY")!;
+    builder.Services.AddHttpClient<EmailService>(client =>
+    {
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {resendApiKey}");
+    });
 }
 
 void configureApi()
@@ -166,6 +173,8 @@ void configurePipeline()
     // Public endpoints
     LoginEndpoint.Map(apiGroup);
     GoogleLoginEndpoint.Map(apiGroup);
+    RequestCodeEndpoint.Map(apiGroup);
+    VerifyCodeEndpoint.Map(apiGroup);
     
     // User endpoints (JWT + API Key)
     AddMediaEndpoint.Map(apiGroup);

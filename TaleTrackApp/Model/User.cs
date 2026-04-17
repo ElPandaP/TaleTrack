@@ -21,6 +21,11 @@ public class User
 
     [StringLength(255, ErrorMessage = "Google ID cannot exceed 255 characters")]
     public string? GoogleId { get; set; }
+
+    [StringLength(6, ErrorMessage = "Email code cannot exceed 6 characters")]
+    public string? EmailCode { get; set; }
+
+    public DateTime? EmailCodeExpiry { get; set; }
     
     [StringLength(512, ErrorMessage = "Refresh token cannot exceed 512 characters")]
     public string? RefreshToken { get; set; }

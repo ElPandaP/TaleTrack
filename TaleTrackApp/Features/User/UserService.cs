@@ -135,6 +135,30 @@ public class UserService
         await _context.SaveChangesAsync();
     }
 
+    public async Task SetEmailCodeAsync(int id, string code)
+    {
+        var user = await _context.Users.FindAsync(id);
+        if (user == null) return;
+
+        user.EmailCode = code;
+        user.EmailCodeExpiry = DateTime.UtcNow.AddMinutes(10);
+        user.UpdatedAt = DateTime.UtcNow;
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task ClearEmailCodeAsync(int id)
+    {
+        var user = await _context.Users.FindAsync(id);
+        if (user == null) return;
+
+        user.EmailCode = null;
+        user.EmailCodeExpiry = null;
+        user.UpdatedAt = DateTime.UtcNow;
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync();
+    }
+
     public bool VerifyPassword(string password, string? hash)
     {
         if (hash == null) return false;
