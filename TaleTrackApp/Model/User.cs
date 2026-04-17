@@ -16,9 +16,11 @@ public class User
     [StringLength(50, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 50 characters")]
     public required string Username { get; set; }
     
-    [Required(ErrorMessage = "Password hash is required")]
     [StringLength(512, ErrorMessage = "Password hash cannot exceed 512 characters")]
-    public required string PasswordHash { get; set; }
+    public string? PasswordHash { get; set; }
+
+    [StringLength(255, ErrorMessage = "Google ID cannot exceed 255 characters")]
+    public string? GoogleId { get; set; }
     
     [StringLength(512, ErrorMessage = "Refresh token cannot exceed 512 characters")]
     public string? RefreshToken { get; set; }

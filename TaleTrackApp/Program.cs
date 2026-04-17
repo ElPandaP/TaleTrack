@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using TaleTrackApp.Features.User.Login;
 using TaleTrackApp.Features.User.Register;
+using TaleTrackApp.Features.User.GoogleLogin;
 using TaleTrackApp.Features.User.EditUser;
 using TaleTrackApp.Features.User.DeleteUser;
 using TaleTrackApp.Features.Media.AddMedia;
@@ -141,8 +142,16 @@ void configureCors()
     });
 }
 
+void applyMigrations()
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<TaleTrackApp.Data.AppDbContext>();
+    db.Database.Migrate();
+}
+
 void configurePipeline()
 {
+    applyMigrations();
     app.UseSwagger();
     app.UseSwaggerUI();
     app.UseHttpsRedirection();
@@ -156,6 +165,7 @@ void configurePipeline()
     
     // Public endpoints
     LoginEndpoint.Map(apiGroup);
+    GoogleLoginEndpoint.Map(apiGroup);
     
     // User endpoints (JWT + API Key)
     AddMediaEndpoint.Map(apiGroup);

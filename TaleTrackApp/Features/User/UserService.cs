@@ -94,8 +94,50 @@ public class UserService
         return true;
     }
 
-    public bool VerifyPassword(string password, string hash)
+    public async Task<Model.User?> GetByGoogleIdAsync(string googleId)
     {
+        return await _context.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId);
+    }
+
+    public async Task<Model.User> CreateGoogleUserAsync(string email, string username, string googleId)
+    {
+        var baseUsername = username.Length > 50 ? username[..50] : username;
+        var finalUsername = baseUsername;
+        int suffix = 1;
+        while (await _context.Users.AnyAsync(u => u.Username == finalUsername))
+        {
+            var limit = Math.Min(baseUsername.Length, 46);
+            finalUsername = $"{baseUsername[..limit]}{suffix++}";
+        }
+
+        var user = new Model.User
+        {
+            Email = email,
+            Username = finalUsername,
+            GoogleId = googleId
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Google user {Username} created", user.Username);
+        return user;
+    }
+
+    public async Task LinkGoogleIdAsync(int id, string googleId)
+    {
+        var user = await _context.Users.FindAsync(id);
+        if (user == null) return;
+
+        user.GoogleId = googleId;
+        user.UpdatedAt = DateTime.UtcNow;
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync();
+    }
+
+    public bool VerifyPassword(string password, string? hash)
+    {
+        if (hash == null) return false;
         return HashPassword(password) == hash;
     }
 

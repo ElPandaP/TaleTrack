@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { GoogleLogin } from '@react-oauth/google';
 import { authService, trackingService, mediaService } from '@/lib/api/services';
 import type { TrackingEvent, MediaType } from '@/lib/types';
 
@@ -161,6 +162,29 @@ export default function Home() {
               >
                 {loading ? 'Cargando...' : 'Iniciar Sesión'}
               </button>
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-zinc-300 dark:border-zinc-700" />
+                </div>
+                <div className="relative flex justify-center text-xs text-zinc-500 dark:text-zinc-400">
+                  <span className="bg-white dark:bg-zinc-900 px-2">o continúa con</span>
+                </div>
+              </div>
+              <div className="flex justify-center">
+                <GoogleLogin
+                  onSuccess={(res) => {
+                    if (res.credential) {
+                      setLoading(true);
+                      setError(null);
+                      authService.googleLogin(res.credential)
+                        .then(() => setIsAuthenticated(true))
+                        .catch((err) => setError(err instanceof Error ? err.message : 'Error con Google login'))
+                        .finally(() => setLoading(false));
+                    }
+                  }}
+                  onError={() => setError('Error al iniciar sesión con Google')}
+                />
+              </div>
               <div className="text-center">
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
                   ¿No tienes cuenta?{' '}

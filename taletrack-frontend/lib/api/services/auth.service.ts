@@ -26,6 +26,21 @@ export const authService = {
     );
   },
 
+  async googleLogin(idToken: string): Promise<LoginResponse> {
+    const response = await apiClient.post<LoginResponse>(
+      '/auth/google',
+      { idToken },
+      false,
+      false
+    );
+
+    if (response.success && response.token) {
+      apiClient.setToken(response.token);
+    }
+
+    return response;
+  },
+
   logout(): void {
     apiClient.clearToken();
   },

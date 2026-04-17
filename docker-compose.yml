@@ -59,6 +59,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       JwtSettings__Secret: ${JWT_SECRET}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
     ports:
       - "8080:8080"
 
@@ -69,6 +70,7 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL must be set in .env}
         NEXT_PUBLIC_INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
     container_name: taletrack-frontend
     restart: unless-stopped
     depends_on:
@@ -76,6 +78,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL must be set in .env}
       NEXT_PUBLIC_INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set in .env}
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID must be set in .env}
     ports:
       - "8090:3000"
 
