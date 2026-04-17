@@ -1,36 +1,15 @@
-# Environment variables
+# Repo-level env files
 .env
+.env.local
+.env.*.local
 
-# Docker
+# Docker overrides
 docker-compose.override.yml
 
-# .NET
-**/bin/
-**/obj/
-**/*.user
-**/*.suo
-*. cache
-*.dll
-*.exe
-*.pdb
-*.log
-
-# Netflix Extension
-# Dependencies
-netflix-extension/node_modules/
-netflix-extension/bun.lockb
-# Build output
-netflix-extension/dist/
-# TypeScript
-netflix-extension/*. tsbuildinfo
-# Logs
-netflix-extension/*.log
-netflix-extension/npm-debug.log*
-netflix-extension/yarn-debug.log*
-netflix-extension/yarn-error.log*
 # OS
-netflix-extension/. DS_Store
-netflix-extension/Thumbs.db
-# Temp files
-netflix-extension/*.tmp
-netflix-extension/*.temp
+.DS_Store
+Thumbs.db
+
+# Workspace
+.vscode
+.claude

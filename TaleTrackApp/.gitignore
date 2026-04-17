@@ -1,0 +1,28 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.DotSettings.user
+
+# Debug symbols
+*.pdb
+
+# Secrets & environment-specific config
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Secrets.json
+
+# Logs
+*.log
+
+# Test results
+TestResults/
+
+# Temp
+*.tmp
+*.temp
