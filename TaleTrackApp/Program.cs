@@ -19,6 +19,7 @@ using TaleTrackApp.Features.User;
 using TaleTrackApp.Features.Media;
 using TaleTrackApp.Features.TrackingEvent;
 using TaleTrackApp.Features.Review;
+using TaleTrackApp.Features.TrackingEvent.GetUserBooks;
 using TaleTrackApp.Auth;
 
 // Load environment variables from .env
@@ -49,6 +50,9 @@ void loadEnvironment()
 
 void configureDatabase()
 {
+    // In "Testing" environment, the test project provides its own DbContext via ConfigureTestServices
+    if (builder.Environment.EnvironmentName == "Testing") return;
+
     var dbHost = Environment.GetEnvironmentVariable("POSTGRES_HOST");
     var dbPort = Environment.GetEnvironmentVariable("POSTGRES_PORT");
     var dbName = Environment.GetEnvironmentVariable("POSTGRES_DB");
@@ -127,6 +131,10 @@ void configureApi()
     builder.Services.AddScoped<MediaService>();
     builder.Services.AddScoped<TrackingEventService>();
     builder.Services.AddScoped<ReviewService>();
+    builder.Services.AddHttpClient<OpenLibraryService>(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(10);
+    });
     
     // Add automatic model validation filter
     builder.Services.AddScoped<IEndpointFilter, ValidationFilter>();
@@ -153,7 +161,10 @@ void applyMigrations()
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<TaleTrackApp.Data.AppDbContext>();
-    db.Database.Migrate();
+    if (db.Database.ProviderName?.Contains("Sqlite") == true)
+        db.Database.EnsureCreated();
+    else
+        db.Database.Migrate();
 }
 
 void configurePipeline()
@@ -183,6 +194,7 @@ void configurePipeline()
     
     // User data endpoints (JWT)
     GetTrackingEventsEndpoint.Map(apiGroup);
+    GetUserBooksEndpoint.Map(apiGroup);
     
     // Internal API endpoints (API Key)
     GetMediaEndpoint.Map(apiGroup);
@@ -196,3 +208,5 @@ void configurePipeline()
     EditReviewEndpoint.Map(apiGroup);
     DeleteReviewEndpoint.Map(apiGroup);
 }
+
+public partial class Program { }

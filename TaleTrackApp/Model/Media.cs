@@ -25,7 +25,13 @@ public class Media
     [Url(ErrorMessage = "Invalid URL format for PosterUrl")]
     [StringLength(2048, ErrorMessage = "PosterUrl cannot exceed 2048 characters")]
     public string? PosterUrl { get; set; }
-    
+
+    [StringLength(255)]
+    public string? Author { get; set; }
+
+    [StringLength(13)]
+    public string? Isbn { get; set; }
+
     [Required]
     public DateTime FirstTrackedAt { get; set; } = DateTime.UtcNow;
     

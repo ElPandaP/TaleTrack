@@ -31,8 +31,26 @@ export interface Media {
   length?: number;
   description?: string;
   posterUrl?: string;
+  author?: string;
+  isbn?: string;
   firstTrackedAt: string;
   updatedAt: string;
+}
+
+export interface Book {
+  id: number;
+  title: string;
+  author?: string;
+  coverUrl?: string;
+  isbn?: string;
+  pages?: number;
+  finishedAt: string;
+}
+
+export interface GetUserBooksResponse {
+  success: boolean;
+  count: number;
+  data: Book[];
 }
 
 export interface AddMediaRequest {

@@ -17,4 +17,10 @@ public class AddTrackingEventRequest
     
     [Range(0, 100, ErrorMessage = "Progress debe estar entre 0 y 100")]
     public int? Progress { get; set; }
+
+    [StringLength(255)]
+    public string? Author { get; set; }
+
+    [StringLength(13)]
+    public string? Isbn { get; set; }
 }

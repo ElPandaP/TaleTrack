@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { authService, trackingService, mediaService } from '@/lib/api/services';
-import type { TrackingEvent, MediaType } from '@/lib/types';
+import type { TrackingEvent, MediaType, Book } from '@/lib/types';
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +28,13 @@ export default function Home() {
   const [mediaType, setMediaType] = useState<MediaType>('Film');
 
   useEffect(() => {
-    setIsAuthenticated(authService.isAuthenticated());
+    const authenticated = authService.isAuthenticated();
+    setIsAuthenticated(authenticated);
+    if (authenticated) {
+      trackingService.getBooks()
+        .then(res => setBooks(res.data))
+        .catch(() => {});
+    }
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -82,6 +89,7 @@ export default function Home() {
     authService.logout();
     setIsAuthenticated(false);
     setTrackingEvents([]);
+    setBooks([]);
   };
 
   const loadTrackingEvents = async () => {
@@ -384,6 +392,41 @@ export default function Home() {
                       </p>
                     </div>
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {books.length > 0 && (
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow mt-8">
+            <h2 className="text-xl font-semibold mb-6 text-zinc-900 dark:text-white">
+              Libros Leídos ({books.length})
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {books.map((book) => (
+                <div key={book.id} className="flex flex-col items-center gap-2">
+                  {book.coverUrl ? (
+                    <img
+                      src={book.coverUrl}
+                      alt={book.title}
+                      className="w-24 h-36 object-cover rounded shadow"
+                    />
+                  ) : (
+                    <div className="w-24 h-36 bg-zinc-200 dark:bg-zinc-700 rounded shadow flex items-center justify-center">
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400 text-center px-1">
+                        Sin portada
+                      </span>
+                    </div>
+                  )}
+                  <p className="text-xs font-medium text-zinc-900 dark:text-white text-center line-clamp-2">
+                    {book.title}
+                  </p>
+                  {book.author && (
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center line-clamp-1">
+                      {book.author}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
