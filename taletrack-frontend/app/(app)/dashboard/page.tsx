@@ -33,14 +33,12 @@ function typeColor(type?: string) {
   }
 }
 
-function typeIcon(type?: string) {
-  switch (type) {
-    case 'Book':  return BookOpen;
-    case 'Film':  return Film;
-    case 'Serie': return Tv;
-    case 'Comic': return BookMarked;
-    default:      return Activity;
-  }
+function TypeIcon({ type, className }: { type?: string; className?: string }) {
+  if (type === 'Book')  return <BookOpen   className={className} />;
+  if (type === 'Film')  return <Film       className={className} />;
+  if (type === 'Serie') return <Tv         className={className} />;
+  if (type === 'Comic') return <BookMarked className={className} />;
+  return <Activity className={className} />;
 }
 
 interface Stats { books: number; films: number; series: number; comics: number; inProgress: number; }
@@ -77,12 +75,11 @@ function ProgressBar({ value }: { value: number }) {
 
 function InProgressCard({ event }: { event: TrackingEvent }) {
   const colors = typeColor(event.media?.type);
-  const Icon = typeIcon(event.media?.type);
   return (
     <div className="tt-card p-4 hover:shadow-md transition-all duration-200">
       <div className="flex items-start gap-3">
         <div className={`p-2 rounded-xl ${colors.bg} flex-shrink-0`}>
-          <Icon className={`w-4 h-4 ${colors.text}`} />
+          <TypeIcon type={event.media?.type} className={`w-4 h-4 ${colors.text}`} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-medium text-foreground truncate text-sm">
@@ -100,11 +97,11 @@ function InProgressCard({ event }: { event: TrackingEvent }) {
   );
 }
 
-function ActivityItem({ event }: { event: TrackingEvent }) {
+function ActivityItem({ event, now }: { event: TrackingEvent; now: number }) {
   const colors = typeColor(event.media?.type);
   const date = new Date(event.eventDate);
   const relativeTime = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
-  const diffMs = date.getTime() - Date.now();
+  const diffMs = date.getTime() - now;
   const diffDays = Math.round(diffMs / 86400000);
   const diffHours = Math.round(diffMs / 3600000);
   const timeStr = Math.abs(diffDays) >= 1
@@ -131,6 +128,7 @@ function ActivityItem({ event }: { event: TrackingEvent }) {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [loadTime] = useState(Date.now);
   const [events, setEvents] = useState<TrackingEvent[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
@@ -305,7 +303,7 @@ export default function DashboardPage() {
             ) : (
               <div>
                 {recentActivity.map((event) => (
-                  <ActivityItem key={event.id} event={event} />
+                  <ActivityItem key={event.id} event={event} now={loadTime} />
                 ))}
               </div>
             )}

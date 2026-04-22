@@ -1,5 +1,5 @@
 import { apiClient } from '../client';
-import type { GetTrackingEventsRequest, GetTrackingEventsResponse, GetUserBooksResponse, MediaType } from '../../types';
+import type { GetTrackingEventsResponse, GetUserBooksResponse } from '../../types';
 
 export const trackingService = {
   async addTrackingEvent(

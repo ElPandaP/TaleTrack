@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import { authService } from '@/lib/api/services';
 
 export interface AuthUser {
@@ -18,7 +18,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
-  loading: true,
+  loading: false,
   user: null,
   login: () => {},
   logout: () => {},
@@ -33,22 +33,18 @@ export function parseJwt(token: string): { email?: string; username?: string } |
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return !!localStorage.getItem('token');
+  });
 
-  useEffect(() => {
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    if (typeof window === 'undefined') return null;
     const token = localStorage.getItem('token');
-    if (token) {
-      const decoded = parseJwt(token);
-      setIsAuthenticated(true);
-      setUser({
-        username: decoded?.username ?? 'User',
-        email: decoded?.email ?? '',
-      });
-    }
-    setLoading(false);
-  }, []);
+    if (!token) return null;
+    const decoded = parseJwt(token);
+    return { username: decoded?.username ?? 'User', email: decoded?.email ?? '' };
+  });
 
   const login = (u: AuthUser) => {
     setIsAuthenticated(true);
@@ -62,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, loading, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, loading: false, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
