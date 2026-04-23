@@ -35,7 +35,13 @@ export function parseJwt(token: string): { email?: string; username?: string } |
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    return !!localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    if (token) {
+      // Sync pre-existing localStorage token to cookie for SSR middleware
+      const maxAge = 60 * 60 * 24 * 30;
+      document.cookie = `tt-token=${token}; path=/; SameSite=Lax; max-age=${maxAge}`;
+    }
+    return !!token;
   });
 
   const [user, setUser] = useState<AuthUser | null>(() => {

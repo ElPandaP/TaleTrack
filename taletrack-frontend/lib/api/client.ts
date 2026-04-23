@@ -36,11 +36,14 @@ export class ApiClient {
   public setToken(token: string): void {
     if (typeof window === 'undefined') return;
     localStorage.setItem('token', token);
+    const maxAge = 60 * 60 * 24 * 30; // 30 days
+    document.cookie = `tt-token=${token}; path=/; SameSite=Lax; max-age=${maxAge}`;
   }
 
   public clearToken(): void {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('token');
+    document.cookie = 'tt-token=; path=/; max-age=0';
   }
 
   async request<T>(

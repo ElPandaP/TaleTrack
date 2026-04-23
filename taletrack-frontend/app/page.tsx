@@ -48,7 +48,7 @@ function Navbar() {
           <div className="w-8 h-8 bg-primary/15 border border-primary/25 rounded-xl flex items-center justify-center">
             <Leaf className="w-4 h-4 text-primary" />
           </div>
-          <span className="font-heading font-semibold text-[17px] tracking-tight">TaleTrack</span>
+          <Link href="/" className="font-heading font-semibold text-[17px] tracking-tight cursor-pointer">TaleTrack</Link>
         </div>
 
         <div className="hidden md:flex items-center gap-6">
@@ -131,7 +131,7 @@ function DashboardMockup() {
                       transition={{ delay: 1.1 + i * 0.2, duration: 0.9, ease: 'easeOut' }}
                     />
                   </div>
-                  <span className="text-[10px] text-muted-foreground flex-shrink-0">{item.pct}%</span>
+                  <span className="text-[10px] text-muted-foreground shrink-0">{item.pct}%</span>
                 </div>
               </div>
             </motion.div>
@@ -150,8 +150,8 @@ function Hero() {
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-28 pb-16 overflow-hidden">
       {/* Ambient blobs */}
-      <div className="absolute top-1/4 left-1/4 w-[480px] h-[480px] bg-primary/6 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/3 right-1/4 w-[360px] h-[360px] bg-[oklch(0.65_0.13_65)]/6 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 w-120 h-120 bg-primary/6 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/3 right-1/4 w-90 h-90 bg-[oklch(0.65_0.13_65)]/6 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="max-w-4xl mx-auto text-center relative z-10">
         {/* Eyebrow */}
@@ -397,12 +397,15 @@ function HowItWorks() {
           animate={inView ? 'visible' : 'hidden'}
           className="grid grid-cols-1 md:grid-cols-3 gap-8 relative"
         >
-          <div className="hidden md:block absolute top-[52px] left-[calc(16.66%+24px)] right-[calc(16.66%+24px)] h-px bg-border" />
+          
+          <div className="hidden md:block absolute top-13 left-[calc(16.66%+24px)] right-[calc(16.66%+24px)] h-px bg-border pointer-events-none" />
 
           {steps.map(({ step, title, description }) => (
-            <motion.div key={step} variants={fadeUp} className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-primary/10 border border-primary/15 rounded-2xl flex items-center justify-center mb-5">
-                <span className="font-heading text-xl font-bold text-primary">{step}</span>
+            <motion.div key={step} variants={fadeUp} className="flex flex-col items-center text-center relative z-10">
+              <div className="p-1 bg-background rounded-2xl mb-5">
+                <div className="w-16 h-16 bg-primary/10 border border-primary/15 rounded-xl flex items-center justify-center">
+                  <span className="font-heading text-xl font-bold text-primary">{step}</span>
+                </div>
               </div>
               <h3 className="font-heading text-xl font-semibold mb-2.5">{title}</h3>
               <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">{description}</p>
@@ -517,11 +520,11 @@ export default function LandingPage() {
       <Navbar />
       <Hero />
       <div className="relative">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-border to-transparent" />
         <Features />
       </div>
       <div className="relative">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-border to-transparent" />
         <HowItWorks />
       </div>
       <Properties />
