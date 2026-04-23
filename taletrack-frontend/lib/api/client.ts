@@ -64,8 +64,16 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API Error: ${response.status} - ${errorText}`);
+      const status = response.status;
+      let reason = 'Something went wrong';
+      try {
+        const noRes = await fetch('https://naas.isalman.dev/no');
+        if (noRes.ok) {
+          const noData = await noRes.json();
+          reason = noData.reason ?? reason;
+        }
+      } catch { }
+      throw new Error(`${status} Reason: ${reason}`);
     }
 
     return response.json();
