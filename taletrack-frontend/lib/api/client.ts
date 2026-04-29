@@ -65,6 +65,18 @@ export class ApiClient {
 
     if (!response.ok) {
       const status = response.status;
+      const expectedCodes = [400, 401, 403, 409, 422, 429];
+
+      if (expectedCodes.includes(status)) {
+        const body = await response.text();
+        let message = 'Request failed.';
+        try {
+          const json = JSON.parse(body);
+          message = json.message ?? json.error ?? json.title ?? message;
+        } catch { /* use default */ }
+        throw new Error(message);
+      }
+
       let reason = 'Something went wrong';
       try {
         const noRes = await fetch('https://naas.isalman.dev/no');
@@ -72,7 +84,7 @@ export class ApiClient {
           const noData = await noRes.json();
           reason = noData.reason ?? reason;
         }
-      } catch { }
+      } catch { /* use default reason */ }
       throw new Error(`${status} Reason: ${reason}`);
     }
 
