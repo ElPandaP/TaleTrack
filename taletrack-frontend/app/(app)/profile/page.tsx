@@ -51,7 +51,7 @@ export default function ProfilePage() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await trackingService.getTrackingEvents(undefined, 200, 'desc');
+      const res = await trackingService.getTrackingEvents(undefined, 200, 'date_desc');
       setEvents(res.data ?? []);
     } catch {
       // stats are non-critical
@@ -96,7 +96,7 @@ export default function ProfilePage() {
     setSaving(true);
     setSaveMsg(null);
     try {
-      await apiClient.put('/user', { username: editUsername, email: editEmail }, true, false);
+      await apiClient.put(`/user/${user?.id}`, { username: editUsername, email: editEmail }, true, false);
       setSaveMsg('Profile updated successfully.');
     } catch (err) {
       setSaveMsg(err instanceof Error ? err.message : 'Failed to update profile.');
@@ -110,7 +110,7 @@ export default function ProfilePage() {
   const handleDelete = async () => {
     if (!deleteConfirm) { setDeleteConfirm(true); return; }
     try {
-      await apiClient.delete('/user', true, false);
+      await apiClient.delete(`/user/${user?.id}`, true, false);
       logout();
       router.push('/');
     } catch (err) {

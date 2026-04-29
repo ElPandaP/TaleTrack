@@ -29,7 +29,7 @@ export default function LoginPage() {
       const res = await authService.login(email, password);
       if (res.success && res.token) {
         const decoded = parseJwt(res.token);
-        login({ username: decoded?.username ?? email.split('@')[0], email: decoded?.email ?? email });
+        login({ id: parseInt(decoded?.sub ?? '0'), username: decoded?.unique_name ?? email.split('@')[0], email: decoded?.email ?? email });
         router.push('/dashboard');
       }
     } catch (err) {
@@ -46,7 +46,7 @@ export default function LoginPage() {
       const res = await authService.googleLogin(credential);
       if (res.success && res.token) {
         const decoded = parseJwt(res.token);
-        login({ username: decoded?.username ?? 'User', email: decoded?.email ?? '' });
+        login({ id: parseInt(decoded?.sub ?? '0'), username: decoded?.unique_name ?? 'User', email: decoded?.email ?? '' });
         router.push('/dashboard');
       }
     } catch (err) {

@@ -56,7 +56,7 @@ export default function RegisterPage() {
           const loginRes = await authService.login(email, password);
           if (loginRes.success && loginRes.token) {
             const decoded = parseJwt(loginRes.token);
-            login({ username: decoded?.username ?? username, email: decoded?.email ?? email });
+            login({ id: parseInt(decoded?.sub ?? '0'), username: decoded?.unique_name ?? username, email: decoded?.email ?? email });
             router.push('/dashboard');
           }
         } catch { router.push('/login'); }
@@ -75,7 +75,7 @@ export default function RegisterPage() {
       const res = await authService.googleLogin(credential);
       if (res.success && res.token) {
         const decoded = parseJwt(res.token);
-        login({ username: decoded?.username ?? 'User', email: decoded?.email ?? '' });
+        login({ id: parseInt(decoded?.sub ?? '0'), username: decoded?.unique_name ?? 'User', email: decoded?.email ?? '' });
         router.push('/dashboard');
       }
     } catch (err) {

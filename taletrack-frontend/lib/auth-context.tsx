@@ -1,9 +1,10 @@
 'use client';
 
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '@/lib/api/services';
 
 export interface AuthUser {
+  id: number;
   username: string;
   email: string;
 }
@@ -18,13 +19,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
-  loading: false,
+  loading: true,
   user: null,
   login: () => {},
   logout: () => {},
 });
 
-export function parseJwt(token: string): { email?: string; username?: string } | null {
+export function parseJwt(token: string): { email?: string; unique_name?: string; sub?: string } | null {
   try {
     return JSON.parse(atob(token.split('.')[1]));
   } catch {
@@ -33,24 +34,25 @@ export function parseJwt(token: string): { email?: string; username?: string } |
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      // Sync pre-existing localStorage token to cookie for SSR middleware
       const maxAge = 60 * 60 * 24 * 30;
       document.cookie = `tt-token=${token}; path=/; SameSite=Lax; max-age=${maxAge}`;
+      const decoded = parseJwt(token);
+      setIsAuthenticated(true);
+      setUser({
+        id: parseInt(decoded?.sub ?? '0'),
+        username: decoded?.unique_name ?? 'User',
+        email: decoded?.email ?? '',
+      });
     }
-    return !!token;
-  });
-
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    if (typeof window === 'undefined') return null;
-    const token = localStorage.getItem('token');
-    if (!token) return null;
-    const decoded = parseJwt(token);
-    return { username: decoded?.username ?? 'User', email: decoded?.email ?? '' };
-  });
+    setLoading(false);
+  }, []);
 
   const login = (u: AuthUser) => {
     setIsAuthenticated(true);
@@ -64,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, loading: false, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, loading, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
