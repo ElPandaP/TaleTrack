@@ -46,11 +46,25 @@ function subscribeAuth(callback: () => void) {
   return () => authListeners.delete(callback);
 }
 
-function getAuthSnapshot() {
+type AuthSnapshot =
+  | { isAuthenticated: false; loading: false; user: null }
+  | { isAuthenticated: true; loading: false; user: AuthUser };
+
+const UNAUTHENTICATED: AuthSnapshot = { isAuthenticated: false, loading: false, user: null };
+
+let cachedToken: string | null | undefined = undefined;
+let cachedSnapshot: AuthSnapshot = UNAUTHENTICATED;
+
+function getAuthSnapshot(): AuthSnapshot {
   const token = localStorage.getItem('token');
-  if (!token) return { isAuthenticated: false, loading: false, user: null } as const;
+  if (token === cachedToken) return cachedSnapshot;
+  cachedToken = token;
+  if (!token) {
+    cachedSnapshot = UNAUTHENTICATED;
+    return cachedSnapshot;
+  }
   const decoded = parseJwt(token);
-  return {
+  cachedSnapshot = {
     isAuthenticated: true,
     loading: false,
     user: {
@@ -58,11 +72,12 @@ function getAuthSnapshot() {
       username: decoded?.unique_name ?? 'User',
       email: decoded?.email ?? '',
     },
-  } as const;
+  };
+  return cachedSnapshot;
 }
 
 function getServerAuthSnapshot() {
-  return { isAuthenticated: false, loading: false, user: null } as const;
+  return UNAUTHENTICATED;
 }
 
 // --- Provider ---
