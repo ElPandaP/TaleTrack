@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useSyncExternalStore } from 'react';
 import { authService } from '@/lib/api/services';
 
 export interface AuthUser {
@@ -33,40 +33,56 @@ export function parseJwt(token: string): { email?: string; unique_name?: string;
   }
 }
 
-type AuthState = {
-  isAuthenticated: boolean;
-  loading: boolean;
-  user: AuthUser | null;
-};
+// --- External store ---
+
+const authListeners = new Set<() => void>();
+
+function notifyAuthChange() {
+  authListeners.forEach((fn) => fn());
+}
+
+function subscribeAuth(callback: () => void) {
+  authListeners.add(callback);
+  return () => authListeners.delete(callback);
+}
+
+function getAuthSnapshot() {
+  const token = localStorage.getItem('token');
+  if (!token) return { isAuthenticated: false, loading: false, user: null } as const;
+  const decoded = parseJwt(token);
+  return {
+    isAuthenticated: true,
+    loading: false,
+    user: {
+      id: parseInt(decoded?.sub ?? '0'),
+      username: decoded?.unique_name ?? 'User',
+      email: decoded?.email ?? '',
+    },
+  } as const;
+}
+
+function getServerAuthSnapshot() {
+  return { isAuthenticated: false, loading: false, user: null } as const;
+}
+
+// --- Provider ---
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<AuthState>({ isAuthenticated: false, loading: true, user: null });
+  const state = useSyncExternalStore(subscribeAuth, getAuthSnapshot, getServerAuthSnapshot);
 
-  useEffect(() => {
+  const login = () => {
     const token = localStorage.getItem('token');
     if (token) {
       const maxAge = 60 * 60 * 24 * 30;
       document.cookie = `tt-token=${token}; path=/; SameSite=Lax; max-age=${maxAge}`;
-      const decoded = parseJwt(token);
-      setState({
-        isAuthenticated: true,
-        loading: false,
-        user: {
-          id: parseInt(decoded?.sub ?? '0'),
-          username: decoded?.unique_name ?? 'User',
-          email: decoded?.email ?? '',
-        },
-      });
-    } else {
-      setState({ isAuthenticated: false, loading: false, user: null });
     }
-  }, []);
-
-  const login = (u: AuthUser) => setState({ isAuthenticated: true, loading: false, user: u });
+    notifyAuthChange();
+  };
 
   const logout = () => {
     authService.logout();
-    setState({ isAuthenticated: false, loading: false, user: null });
+    document.cookie = 'tt-token=; path=/; max-age=0';
+    notifyAuthChange();
   };
 
   return (
