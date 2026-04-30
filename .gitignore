@@ -12,4 +12,11 @@ Thumbs.db
 
 # Workspace
 .vscode
+
+# AI
+CLAUDE.md
+AGENTS.md
+.agents
+.opencode
 .claude
+skills-lock.json
