@@ -22,7 +22,7 @@ public static class LoginEndpoint
         if (user == null || !userService.VerifyPassword(request.Password, user.PasswordHash))
         {
             logger.LogWarning($"Failed login attempt for email: {request.Email}");
-            return Results.Unauthorized();
+            return Results.Json(new { message = "Invalid email or password." }, statusCode: 401);
         }
 
         // Generate JWT token

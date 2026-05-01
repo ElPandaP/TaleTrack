@@ -2,6 +2,8 @@ import { cookies } from 'next/headers';
 import { API_CONFIG } from './config';
 import type { GetTrackingEventsResponse, GetUserBooksResponse } from '../types';
 
+const SERVER_BASE_URL = process.env.INTERNAL_API_URL ?? 'http://localhost:8080/api';
+
 async function serverFetch<T>(
   endpoint: string,
   requireApiKey = false,
@@ -15,7 +17,7 @@ async function serverFetch<T>(
     headers['X-Internal-Api-Key'] = API_CONFIG.internalApiKey;
   }
 
-  const res = await fetch(`${API_CONFIG.baseURL}${endpoint}`, {
+  const res = await fetch(`${SERVER_BASE_URL}${endpoint}`, {
     headers,
     cache: 'no-store', // user-specific data — never cache across requests
   });
