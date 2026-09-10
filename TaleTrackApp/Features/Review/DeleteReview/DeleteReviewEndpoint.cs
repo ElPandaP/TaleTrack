@@ -10,9 +10,8 @@ public static class DeleteReviewEndpoint
     {
         group.MapDelete("/review/{id}", HandleAsync)
             .WithName("DeleteReview")
-            .WithDescription("Deletes a review (requires JWT + internal API key)")
-            .RequireAuthorization(Policies.UserPolicy)
-            .RequireAuthorization(Policies.InternalOnly);
+            .WithDescription("Deletes a review")
+            .RequireAuthorization(Policies.UserPolicy);
     }
 
     private static async Task<IResult> HandleAsync(

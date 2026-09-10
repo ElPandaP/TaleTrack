@@ -10,10 +10,9 @@ public static class EditUserEndpoint
     {
         group.MapPut("/user/{id}", HandleAsync)
             .WithName("EditUser")
-            .WithDescription("Edit a user (requires JWT + internal API key)")
+            .WithDescription("Edit a user (requires JWT)")
             .AddEndpointFilter<ValidationFilter>()
-            .RequireAuthorization(Policies.UserPolicy)
-            .RequireAuthorization(Policies.InternalOnly);
+            .RequireAuthorization(Policies.UserPolicy);
     }
 
     private static async Task<IResult> HandleAsync(

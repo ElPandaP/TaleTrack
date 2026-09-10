@@ -10,22 +10,22 @@ export interface ProfileUpdate {
 
 export const userService = {
   async getMe(): Promise<UserProfileResponse> {
-    return apiClient.get<UserProfileResponse>('/user/me', true, false);
+    return apiClient.get<UserProfileResponse>('/user/me', true);
   },
 
-  /** EditUser is JWT + internal key on the backend. */
+  
   async updateProfile(id: number, patch: ProfileUpdate): Promise<{ success: boolean; message?: string }> {
-    return apiClient.put(`/user/${id}`, patch, true, true);
+    return apiClient.put(`/user/${id}`, patch, true);
   },
 
   /** Uploads a profile photo; the backend crops it to a 256×256 WebP and returns its URL. */
   async uploadAvatar(file: File): Promise<{ success: boolean; avatarUrl: string }> {
     const form = new FormData();
     form.append('file', file);
-    return apiClient.postForm('/user/avatar', form, true, true);
+    return apiClient.postForm('/user/avatar', form, true);
   },
 
   async removeAvatar(): Promise<{ success: boolean }> {
-    return apiClient.delete('/user/avatar', true, true);
+    return apiClient.delete('/user/avatar', true);
   },
 };

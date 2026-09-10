@@ -18,7 +18,6 @@ public class AccountDeletionFlowTests(CustomWebApplicationFactory factory)
     private HttpClient NewClient()
     {
         var client = _factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Internal-Api-Key", CustomWebApplicationFactory.TestInternalApiKey);
         return client;
     }
 
@@ -51,20 +50,11 @@ public class AccountDeletionFlowTests(CustomWebApplicationFactory factory)
     }
 
     [Fact]
-    public async Task RequestAccountDeletion_RequiresJwtAndInternalKey()
+    public async Task RequestAccountDeletion_RequiresAuth()
     {
-        // No JWT, no key.
-        var bare = _factory.CreateClient();
-        Assert.Equal(HttpStatusCode.Unauthorized,
-            (await bare.PostAsJsonAsync("/api/auth/request-account-deletion", new { Locale = "en" })).StatusCode);
-
-        // JWT but no internal key.
-        var client = NewClient();
-        var (_, jwt) = await RegisterAndLoginAsync(client, "del-nokey@test.com", "delnokey");
-        var noKey = _factory.CreateClient();
-        noKey.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwt);
-        var res = await noKey.PostAsJsonAsync("/api/auth/request-account-deletion", new { Locale = "en" });
-        Assert.True(res.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden);
+        var res = await _factory.CreateClient()
+            .PostAsJsonAsync("/api/auth/request-account-deletion", new { Locale = "en" });
+        Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
     }
 
     [Fact]

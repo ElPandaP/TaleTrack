@@ -29,7 +29,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     private static readonly string DbName = $"taletrack_test_{Guid.NewGuid():N}";
     private static readonly SqliteConnection KeepAlive;
 
-    public const string TestInternalApiKey = "test-internal-api-key";
     private const string TestJwtSecret = "test-jwt-secret-key-minimum-32-characters!!";
 
     static CustomWebApplicationFactory()
@@ -38,7 +37,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         // configureAuth() reads JwtSettings:Secret eagerly from builder.Configuration,
         // which picks up JwtSettings__Secret (double-underscore = hierarchy in .NET config)
         Environment.SetEnvironmentVariable("JwtSettings__Secret", TestJwtSecret);
-        Environment.SetEnvironmentVariable("INTERNAL_API_KEY", TestInternalApiKey);
         // Fake key so TmdbService doesn't short-circuit before making a (stubbed) HTTP
         // call — exercises the same code path production traffic takes.
         Environment.SetEnvironmentVariable("TMDB_API_KEY", "test-tmdb-api-key");

@@ -17,14 +17,14 @@ export const libraryService = {
       if (value !== undefined && value !== null) params.set(key, String(value));
     }
     const qs = params.toString();
-    return apiClient.get<GetLibraryResponse>(`/library${qs ? `?${qs}` : ''}`, true, false);
+    return apiClient.get<GetLibraryResponse>(`/library${qs ? `?${qs}` : ''}`, true);
   },
 
   async getPendingReviews(): Promise<GetLibraryResponse> {
-    return apiClient.get<GetLibraryResponse>('/reviews/pending', true, false);
+    return apiClient.get<GetLibraryResponse>('/reviews/pending', true);
   },
 
   async getStats(year?: number): Promise<GetStatsResponse> {
-    return apiClient.get<GetStatsResponse>(`/stats${year ? `?year=${year}` : ''}`, true, false);
+    return apiClient.get<GetStatsResponse>(`/stats${year ? `?year=${year}` : ''}`, true);
   },
 };

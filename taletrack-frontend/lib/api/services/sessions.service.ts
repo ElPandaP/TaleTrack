@@ -13,17 +13,16 @@ export const sessionsService = {
     const res = await apiClient.get<{ success: boolean; data: Session[] }>(
       '/auth/sessions',
       true,
-      false,
     );
     return res.data ?? [];
   },
 
   async revoke(id: number): Promise<void> {
-    await apiClient.delete(`/auth/sessions/${id}`, true, false);
+    await apiClient.delete(`/auth/sessions/${id}`, true);
   },
 
   /** Trades the current web JWT for an extension access + refresh token pair. */
   async extensionGrant(): Promise<{ token: string; refreshToken: string; expiresIn: number }> {
-    return apiClient.post('/auth/extension-grant', {}, true, false);
+    return apiClient.post('/auth/extension-grant', {}, true);
   },
 };

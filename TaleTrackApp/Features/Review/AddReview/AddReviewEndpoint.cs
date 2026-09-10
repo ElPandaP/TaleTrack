@@ -10,10 +10,9 @@ public static class AddReviewEndpoint
     {
         group.MapPost("/review", HandleAsync)
             .WithName("AddReview")
-            .WithDescription("Adds a review (requires JWT + internal API key)")
+            .WithDescription("Adds a review")
             .AddEndpointFilter<ValidationFilter>()
-            .RequireAuthorization(Policies.UserPolicy)
-            .RequireAuthorization(Policies.InternalOnly);
+            .RequireAuthorization(Policies.UserPolicy);
     }
 
     private static async Task<IResult> HandleAsync(

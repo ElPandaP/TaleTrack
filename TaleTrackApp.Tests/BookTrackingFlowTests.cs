@@ -41,7 +41,6 @@ public class BookTrackingFlowTests(CustomWebApplicationFactory factory)
     [Fact]
     public async Task RegisterLoginTrackBook_AppearsInLibrary()
     {
-        _client.DefaultRequestHeaders.Add("X-Internal-Api-Key", CustomWebApplicationFactory.TestInternalApiKey);
 
         var token = await RegisterAndLoginAsync("flow@test.com", "flowuser", "Password1!");
         SetBearerToken(token);
@@ -73,7 +72,6 @@ public class BookTrackingFlowTests(CustomWebApplicationFactory factory)
     [Fact]
     public async Task TrackSameBookTwice_OnlyOneEntryInLibrary()
     {
-        _client.DefaultRequestHeaders.Add("X-Internal-Api-Key", CustomWebApplicationFactory.TestInternalApiKey);
 
         var token = await RegisterAndLoginAsync("dedup@test.com", "dedupuser", "Password1!");
         SetBearerToken(token);
@@ -102,7 +100,6 @@ public class BookTrackingFlowTests(CustomWebApplicationFactory factory)
     [Fact]
     public async Task TrackBookProgress_RisesButNeverDrops()
     {
-        _client.DefaultRequestHeaders.Add("X-Internal-Api-Key", CustomWebApplicationFactory.TestInternalApiKey);
 
         var token = await RegisterAndLoginAsync("progress@test.com", "progressuser", "Password1!");
         SetBearerToken(token);
@@ -143,7 +140,6 @@ public class BookTrackingFlowTests(CustomWebApplicationFactory factory)
     [Fact]
     public async Task NewUser_BooksListIsEmpty()
     {
-        _client.DefaultRequestHeaders.Add("X-Internal-Api-Key", CustomWebApplicationFactory.TestInternalApiKey);
 
         var token = await RegisterAndLoginAsync("empty@test.com", "emptyuser", "Password1!");
         SetBearerToken(token);

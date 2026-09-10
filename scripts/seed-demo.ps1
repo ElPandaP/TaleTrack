@@ -21,15 +21,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# INTERNAL_API_KEY is needed to hit /register
-$envFile = Join-Path $PSScriptRoot "..\.env"
-$internalKey = ((Get-Content $envFile | Where-Object { $_ -match '^INTERNAL_API_KEY=' }) -replace '^INTERNAL_API_KEY=', '').Trim()
-if (-not $internalKey) { throw "INTERNAL_API_KEY not found in $envFile" }
-
 Write-Host "-> Registering $Email ..."
 try {
     Invoke-RestMethod -Method Post -Uri "$ApiBase/register" `
-        -Headers @{ "X-Internal-Api-Key" = $internalKey } `
         -ContentType "application/json" `
         -Body (@{ email = $Email; username = $Username; password = $Password } | ConvertTo-Json) | Out-Null
     Write-Host "   registered."
@@ -204,7 +198,7 @@ function New-SeedUser {
 
     try {
         Invoke-RestMethod -Method Post -Uri "$ApiBase/register" `
-            -Headers @{ "X-Internal-Api-Key" = $internalKey } -ContentType "application/json" `
+            -ContentType "application/json" `
             -Body (@{ email = $Mail; username = $Name; password = $Password } | ConvertTo-Json) | Out-Null
     } catch {
         if ("$($_.ErrorDetails.Message)" -notmatch "email_taken|already registered|registrado") { throw }
@@ -213,11 +207,10 @@ function New-SeedUser {
     $lg = Invoke-RestMethod -Method Post -Uri "$ApiBase/login" -ContentType "application/json" `
         -Body (@{ email = $Mail; password = $Password } | ConvertTo-Json)
     $h  = @{ Authorization = "Bearer $($lg.token)" }
-    $hk = @{ Authorization = "Bearer $($lg.token)"; "X-Internal-Api-Key" = $internalKey }
     $me = Invoke-RestMethod -Uri "$ApiBase/user/me" -Headers $h
 
     # avatar + share everything (per-media-type privacy: 3 types x {progress, reviews})
-    Invoke-RestMethod -Method Put -Uri "$ApiBase/user/$($me.data.id)" -Headers $hk -ContentType "application/json" `
+    Invoke-RestMethod -Method Put -Uri "$ApiBase/user/$($me.data.id)" -Headers $h -ContentType "application/json" `
         -Body (@{ avatarUrl = (& $avatar $Seed); privacy = $shareAll } | ConvertTo-Json) | Out-Null
 
     foreach ($ti in $Titles) {
@@ -231,7 +224,7 @@ function New-SeedUser {
     $rated = 0
     foreach ($item in $lib.data) {
         if ($rated -ge 3) { break }
-        Invoke-RestMethod -Method Post -Uri "$ApiBase/review" -Headers $hk -ContentType "application/json" `
+        Invoke-RestMethod -Method Post -Uri "$ApiBase/review" -Headers $h -ContentType "application/json" `
             -Body (@{ mediaId = $item.mediaId; rating = (6, 7, 8, 9, 10 | Get-Random); comment = "Loved this one." } | ConvertTo-Json) | Out-Null
         $rated++
     }
@@ -280,7 +273,7 @@ Write-Host "   friendships: demo<->alice, demo<->bob, alice<->bob  |  carol->dem
 # demo: avatar + share everything (the migration defaulted existing rows to off)
 $demoMe = Invoke-RestMethod -Uri "$ApiBase/user/me" -Headers $auth
 Invoke-RestMethod -Method Put -Uri "$ApiBase/user/$($demoMe.data.id)" `
-    -Headers @{ Authorization = "Bearer $($login.token)"; "X-Internal-Api-Key" = $internalKey } `
+    -Headers $auth `
     -ContentType "application/json" `
     -Body (@{ avatarUrl = (& $avatar "Milo"); privacy = $shareAll } | ConvertTo-Json) | Out-Null
 

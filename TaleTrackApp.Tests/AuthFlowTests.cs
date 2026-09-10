@@ -14,7 +14,6 @@ public class AuthFlowTests(CustomWebApplicationFactory factory)
     private HttpClient NewClient()
     {
         var client = _factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Internal-Api-Key", CustomWebApplicationFactory.TestInternalApiKey);
         return client;
     }
 

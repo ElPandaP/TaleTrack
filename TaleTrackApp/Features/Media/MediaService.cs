@@ -123,40 +123,4 @@ public class MediaService
         await _context.SaveChangesAsync();
         _logger.LogInformation("Media {MediaId} enriched from TMDB", mediaId);
     }
-
-    public async Task<List<Model.Media>> GetWithFiltersAsync(
-        string? mediaType = null,
-        int? limit = null,
-        string? orderBy = null)
-    {
-        var query = _context.Medias.AsQueryable();
-
-        if (!string.IsNullOrEmpty(mediaType))
-        {
-            query = query.Where(m => m.Type == mediaType);
-        }
-
-        if (!string.IsNullOrEmpty(orderBy))
-        {
-            query = orderBy.ToLower() switch
-            {
-                "title_asc" => query.OrderBy(m => m.Title),
-                "title_desc" => query.OrderByDescending(m => m.Title),
-                "date_asc" => query.OrderBy(m => m.FirstTrackedAt),
-                "date_desc" => query.OrderByDescending(m => m.FirstTrackedAt),
-                _ => query.OrderByDescending(m => m.FirstTrackedAt)
-            };
-        }
-        else
-        {
-            query = query.OrderByDescending(m => m.FirstTrackedAt);
-        }
-
-        if (limit.HasValue && limit > 0)
-        {
-            query = query.Take(limit.Value);
-        }
-
-        return await query.ToListAsync();
-    }
 }

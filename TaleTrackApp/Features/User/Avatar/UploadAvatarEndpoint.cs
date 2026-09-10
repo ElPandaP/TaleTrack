@@ -11,10 +11,9 @@ public static class UploadAvatarEndpoint
     {
         group.MapPost("/user/avatar", HandleAsync)
             .WithName("UploadAvatar")
-            .WithDescription("Uploads a profile photo; it is cropped to a 256x256 square (requires JWT + internal API key)")
+            .WithDescription("Uploads a profile photo; it is cropped to a 256x256 square (requires JWT)")
             .DisableAntiforgery()
-            .RequireAuthorization(Policies.UserPolicy)
-            .RequireAuthorization(Policies.InternalOnly);
+            .RequireAuthorization(Policies.UserPolicy);
     }
 
     private static async Task<IResult> HandleAsync(

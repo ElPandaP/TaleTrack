@@ -1,6 +1,5 @@
 import { cache } from 'react';
 import { cookies } from 'next/headers';
-import { API_CONFIG } from './config';
 import type {
   GetStatsResponse,
   GetLibraryResponse,
@@ -14,18 +13,12 @@ import type {
 
 const SERVER_BASE_URL = process.env.INTERNAL_API_URL ?? 'http://localhost:8080/api';
 
-async function serverFetch<T>(
-  endpoint: string,
-  requireApiKey = false,
-): Promise<T> {
+async function serverFetch<T>(endpoint: string): Promise<T> {
   const cookieStore = await cookies();
   const token = cookieStore.get('tt-token')?.value;
 
   const headers: HeadersInit = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  if (requireApiKey && API_CONFIG.internalApiKey) {
-    headers['X-Internal-Api-Key'] = API_CONFIG.internalApiKey;
-  }
 
   const res = await fetch(`${SERVER_BASE_URL}${endpoint}`, {
     headers,

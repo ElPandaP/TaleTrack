@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace TaleTrackApp.Tests;
@@ -22,7 +23,6 @@ public class TmdbTrackingFlowTests(CustomWebApplicationFactory factory)
     private async Task<HttpClient> AuthedClientAsync(string email, string username)
     {
         var client = _factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Internal-Api-Key", CustomWebApplicationFactory.TestInternalApiKey);
 
         await client.PostAsJsonAsync("/api/register",
             new { Email = email, Username = username, Password = "Password1!" });
@@ -42,15 +42,11 @@ public class TmdbTrackingFlowTests(CustomWebApplicationFactory factory)
         return await res.Content.ReadFromJsonAsync<JsonElement>();
     }
 
-    private async Task<JsonElement> AllMediaNamed(string title)
+    /// <summary>How many Media rows exist globally for a title (dedup check).</summary>
+    private async Task<int> MediaRowCountAsync(string title)
     {
-        var client = _factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Internal-Api-Key", CustomWebApplicationFactory.TestInternalApiKey);
-        var res = await client.GetAsync("/api/media");
-        Assert.True(res.IsSuccessStatusCode, $"GET /api/media failed: {await res.Content.ReadAsStringAsync()}");
-        var body = await res.Content.ReadFromJsonAsync<JsonElement>();
-        return JsonSerializer.SerializeToElement(
-            body.GetProperty("data").EnumerateArray().Where(m => m.GetProperty("title").GetString() == title));
+        using var scope = _factory.NewDbScope(out var db);
+        return await db.Medias.CountAsync(m => m.Title == title);
     }
 
     // ─── 1. New movie/series, not registered yet ──────────────────────────
@@ -72,8 +68,7 @@ public class TmdbTrackingFlowTests(CustomWebApplicationFactory factory)
 
         // exactly one Media row was created for it — TMDB enrichment (stubbed to
         // miss) must not have spun up a second/duplicate row
-        var rows = await AllMediaNamed("The Endless Horizon");
-        Assert.Single(rows.EnumerateArray());
+        Assert.Equal(1, await MediaRowCountAsync("The Endless Horizon"));
     }
 
     [Fact]
@@ -88,8 +83,7 @@ public class TmdbTrackingFlowTests(CustomWebApplicationFactory factory)
         var lib = await LibraryRows(client, "Series");
         Assert.Equal(1, lib.GetProperty("count").GetInt32());
 
-        var rows = await AllMediaNamed("Static Frontier");
-        Assert.Single(rows.EnumerateArray());
+        Assert.Equal(1, await MediaRowCountAsync("Static Frontier"));
     }
 
     // ─── 2. Registered (by someone else), but this user doesn't have it ──
@@ -107,8 +101,7 @@ public class TmdbTrackingFlowTests(CustomWebApplicationFactory factory)
         Assert.True(res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
 
         // still exactly one Media row for it, globally
-        var rows = await AllMediaNamed("Nebula Drift");
-        Assert.Single(rows.EnumerateArray());
+        Assert.Equal(1, await MediaRowCountAsync("Nebula Drift"));
 
         // both users see the SAME mediaId, but each their own progress
         var ownerLib = await LibraryRows(owner, "Movie");
@@ -145,8 +138,7 @@ public class TmdbTrackingFlowTests(CustomWebApplicationFactory factory)
         Assert.Equal(mediaId, item.GetProperty("mediaId").GetInt32()); // same media
         Assert.Equal(60, item.GetProperty("progress").GetInt32());     // progress updated
 
-        var rows = await AllMediaNamed("Quiet Static");
-        Assert.Single(rows.EnumerateArray());
+        Assert.Equal(1, await MediaRowCountAsync("Quiet Static"));
     }
 
     // ─── 4. Edit progress (library "edit progress" action) ───────────────

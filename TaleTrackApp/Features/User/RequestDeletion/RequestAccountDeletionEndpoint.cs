@@ -19,10 +19,9 @@ public static class RequestAccountDeletionEndpoint
     {
         group.MapPost("/auth/request-account-deletion", HandleAsync)
             .WithName("RequestAccountDeletion")
-            .WithDescription("Emails a link that confirms and performs account deletion (requires JWT + internal API key)")
+            .WithDescription("Emails a link that confirms and performs account deletion (requires JWT)")
             .AddEndpointFilter<ValidationFilter>()
-            .RequireAuthorization(Policies.UserPolicy)
-            .RequireAuthorization(Policies.InternalOnly);
+            .RequireAuthorization(Policies.UserPolicy);
     }
 
     private static async Task<IResult> HandleAsync(

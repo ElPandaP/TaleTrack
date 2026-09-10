@@ -14,7 +14,6 @@ public class StatsFlowTests(CustomWebApplicationFactory factory)
     private async Task<HttpClient> AuthedClientAsync(string email, string username)
     {
         var client = _factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Internal-Api-Key", CustomWebApplicationFactory.TestInternalApiKey);
 
         await client.PostAsJsonAsync("/api/register",
             new { Email = email, Username = username, Password = "Password1!" });

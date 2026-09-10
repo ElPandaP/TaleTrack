@@ -80,7 +80,6 @@ oscuro — variables OKLCH en `app/globals.css`. Tipografía: Geist (sans) + Cor
 |---|---|
 | `NEXT_PUBLIC_API_URL` | base de la API vista por el navegador (normalmente `/api`, vía el rewrite) |
 | `INTERNAL_API_URL` | base que usan los Server Components para llamar directo al backend (`http://backend:8080/api` en Docker) |
-| `NEXT_PUBLIC_INTERNAL_API_KEY` | inyectada en los endpoints que requieren `X-Internal-Api-Key` |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | login con Google |
 
 ## Notas

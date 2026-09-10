@@ -55,14 +55,11 @@ Ver `.env.example` para la lista completa. Las importantes para que todo se habl
 | Variable | Para qué |
 |---|---|
 | `POSTGRES_*` | conexión a la base de datos |
-| `JWT_SECRET`, `INTERNAL_API_KEY` | autenticación del backend (JWT + API key interna) |
+| `JWT_SECRET` | firma del JWT del backend |
 | `GOOGLE_CLIENT_ID` | login con Google |
 | `RESEND_API_KEY` | envío de códigos OTP por email |
 | `TMDB_API_KEY` | portadas/duración/título traducido para películas y series (opcional — sin ella simplemente no enriquece) |
 | `NEXT_PUBLIC_API_URL`, `CORS_ALLOWED_ORIGINS` | cómo se hablan frontend ↔ backend |
-
-`docker-compose.dev.yml` copia `INTERNAL_API_KEY` en `NEXT_PUBLIC_INTERNAL_API_KEY` automáticamente
-para que el navegador la tenga disponible — no hace falta definirla aparte en `.env`.
 
 ## Desplegar en una VM
 

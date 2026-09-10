@@ -9,9 +9,8 @@ public static class DeleteAvatarEndpoint
     {
         group.MapDelete("/user/avatar", HandleAsync)
             .WithName("DeleteAvatar")
-            .WithDescription("Removes the authenticated user's profile photo (requires JWT + internal API key)")
-            .RequireAuthorization(Policies.UserPolicy)
-            .RequireAuthorization(Policies.InternalOnly);
+            .WithDescription("Removes the authenticated user's profile photo (requires JWT)")
+            .RequireAuthorization(Policies.UserPolicy);
     }
 
     private static async Task<IResult> HandleAsync(

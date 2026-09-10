@@ -10,9 +10,9 @@ public static class RegisterEndpoint
     {
         group.MapPost("/register", HandleAsync)
             .WithName("Register")
-            .WithDescription("Register a new user (only with internal API key)")
+            .WithDescription("Register a new user")
             .AddEndpointFilter<ValidationFilter>()
-            .RequireAuthorization(Policies.InternalOnly);
+            .AllowAnonymous();
     }
 
     private static async Task<IResult> HandleAsync(

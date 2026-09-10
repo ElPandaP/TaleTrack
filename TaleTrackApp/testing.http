@@ -4,7 +4,6 @@
 @userId = a
 @mediaId = 1
 @reviewId = 1
-@internalApiKey = dev-internal-key-change-in-production
 
 
 POST {{api}}/api/login
@@ -17,7 +16,6 @@ Content-Type: {{contentType}}
 
 POST {{api}}/api/register
 Content-Type: {{contentType}}
-X-Internal-Api-Key: {{internalApiKey}}
 
 {
   "email": "newuser2@example.com",
@@ -35,28 +33,27 @@ Authorization: Bearer {{token}}
   "length": 9
 }
 
-POST {{api}}/api/tracking
+POST {{api}}/api/tracking/series
 Content-Type: {{contentType}}
 Authorization: Bearer {{token}}
 
 {
   "title": "The Last of Us",
-  "type": "Series",
-  "length": 9,
+  "season": 1,
+  "episode": 3,
+  "minutes": 50,
   "progress": 50
 }
 
-GET {{api}}/api/tracking?Type=Series&Limit=10&OrderBy=date_desc
+GET {{api}}/api/library?type=Series&limit=10
 Authorization: Bearer {{token}}
-X-Internal-Api-Key: {{internalApiKey}}
 
-GET {{api}}/api/media?Type=Movie&Limit=5&OrderBy=title_asc
-X-Internal-Api-Key: {{internalApiKey}}
+GET {{api}}/api/media/{{mediaId}}
+Authorization: Bearer {{token}}
 
 PUT {{api}}/api/user/{{userId}}
 Content-Type: {{contentType}}
 Authorization: Bearer {{token}}
-X-Internal-Api-Key: {{internalApiKey}}
 
 {
   "username": "newusername",
@@ -66,12 +63,10 @@ X-Internal-Api-Key: {{internalApiKey}}
 
 DELETE {{api}}/api/user/{{userId}}
 Authorization: Bearer {{token}}
-X-Internal-Api-Key: {{internalApiKey}}
 
 PUT {{api}}/api/review/{{reviewId}}
 Content-Type: {{contentType}}
 Authorization: Bearer {{token}}
-X-Internal-Api-Key: {{internalApiKey}}
 
 {
   "rating": 9,
@@ -80,6 +75,3 @@ X-Internal-Api-Key: {{internalApiKey}}
 
 DELETE {{api}}/api/review/{{reviewId}}
 Authorization: Bearer {{token}}
-X-Internal-Api-Key: {{internalApiKey}}
-
-

@@ -19,16 +19,14 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 export class ApiClient {
   private baseURL: string;
-  private internalApiKey: string;
   /** Shared in-flight refresh so parallel 401s trigger only one /auth/refresh. */
   private refreshInFlight: Promise<boolean> | null = null;
 
   constructor() {
     this.baseURL = API_CONFIG.baseURL;
-    this.internalApiKey = API_CONFIG.internalApiKey;
   }
 
-  private getHeaders(includeAuth: boolean = false, includeApiKey: boolean = false): HeadersInit {
+  private getHeaders(includeAuth: boolean = false): HeadersInit {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
@@ -38,10 +36,6 @@ export class ApiClient {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-    }
-
-    if (includeApiKey && this.internalApiKey) {
-      headers['X-Internal-Api-Key'] = this.internalApiKey;
     }
 
     return headers;
@@ -119,11 +113,10 @@ export class ApiClient {
     endpoint: string,
     options: RequestInit = {},
     requireAuth: boolean = false,
-    requireApiKey: boolean = false,
     _retried: boolean = false,
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
-    const headers = this.getHeaders(requireAuth, requireApiKey) as Record<string, string>;
+    const headers = this.getHeaders(requireAuth) as Record<string, string>;
 
     // Let the browser set multipart/form-data with its boundary.
     if (options.body instanceof FormData) delete headers['Content-Type'];
@@ -149,7 +142,7 @@ export class ApiClient {
       ) {
         const refreshed = await this.refresh();
         if (refreshed) {
-          return this.request<T>(endpoint, options, requireAuth, requireApiKey, true);
+          return this.request<T>(endpoint, options, requireAuth, true);
         }
       }
 
@@ -181,55 +174,24 @@ export class ApiClient {
     return response.json();
   }
 
-  async get<T>(endpoint: string, requireAuth: boolean = false, requireApiKey: boolean = false): Promise<T> {
-    return this.request<T>(endpoint, { method: 'GET' }, requireAuth, requireApiKey);
+  async get<T>(endpoint: string, requireAuth: boolean = false): Promise<T> {
+    return this.request<T>(endpoint, { method: 'GET' }, requireAuth);
   }
 
-  async post<T>(
-    endpoint: string,
-    body: unknown,
-    requireAuth: boolean = false,
-    requireApiKey: boolean = false
-  ): Promise<T> {
-    return this.request<T>(
-      endpoint,
-      {
-        method: 'POST',
-        body: JSON.stringify(body),
-      },
-      requireAuth,
-      requireApiKey
-    );
+  async post<T>(endpoint: string, body: unknown, requireAuth: boolean = false): Promise<T> {
+    return this.request<T>(endpoint, { method: 'POST', body: JSON.stringify(body) }, requireAuth);
   }
 
-  async postForm<T>(
-    endpoint: string,
-    form: FormData,
-    requireAuth: boolean = false,
-    requireApiKey: boolean = false
-  ): Promise<T> {
-    return this.request<T>(endpoint, { method: 'POST', body: form }, requireAuth, requireApiKey);
+  async postForm<T>(endpoint: string, form: FormData, requireAuth: boolean = false): Promise<T> {
+    return this.request<T>(endpoint, { method: 'POST', body: form }, requireAuth);
   }
 
-  async put<T>(
-    endpoint: string,
-    body: unknown,
-    requireAuth: boolean = false,
-    requireApiKey: boolean = false
-  ): Promise<T> {
-    return this.request<T>(
-      endpoint,
-      {
-        method: 'PUT',
-        body: JSON.stringify(body),
-      },
-      requireAuth,
-      requireApiKey
-    );
+  async put<T>(endpoint: string, body: unknown, requireAuth: boolean = false): Promise<T> {
+    return this.request<T>(endpoint, { method: 'PUT', body: JSON.stringify(body) }, requireAuth);
   }
 
-  async delete<T>(endpoint: string, requireAuth: boolean = false, requireApiKey: boolean = false): Promise<T> {
-    return this.request<T>(endpoint, { method: 'DELETE' }, requireAuth, requireApiKey);
+  async delete<T>(endpoint: string, requireAuth: boolean = false): Promise<T> {
+    return this.request<T>(endpoint, { method: 'DELETE' }, requireAuth);
   }
 }
 

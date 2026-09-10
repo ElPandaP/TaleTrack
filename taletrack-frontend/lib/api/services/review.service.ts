@@ -6,12 +6,11 @@ import type {
 } from '../../types';
 
 export const reviewService = {
-  /** Create a review. Backend policy: JWT + internal API key. */
+  /** Create a review. */
   async addReview(mediaId: number, rating: number, comment?: string): Promise<AddReviewResponse> {
     return apiClient.post<AddReviewResponse>(
       '/review',
       { mediaId, rating, comment },
-      true,
       true,
     );
   },
@@ -21,7 +20,6 @@ export const reviewService = {
       `/review/${id}`,
       { rating, comment } as EditReviewRequest,
       true,
-      true,
     );
   },
 
@@ -29,12 +27,11 @@ export const reviewService = {
     return apiClient.delete<{ success: boolean; message: string }>(
       `/review/${id}`,
       true,
-      true,
     );
   },
 
   /** Reviews written by the current user. Backend policy: JWT only. */
   async getMine(): Promise<GetReviewsResponse> {
-    return apiClient.get<GetReviewsResponse>('/reviews', true, false);
+    return apiClient.get<GetReviewsResponse>('/reviews', true);
   },
 };

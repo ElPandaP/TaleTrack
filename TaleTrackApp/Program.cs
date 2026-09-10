@@ -21,7 +21,6 @@ using TaleTrackApp.Features.User.GetMe;
 using TaleTrackApp.Features.User.SearchUsers;
 using TaleTrackApp.Features.User.GetUserProfile;
 using TaleTrackApp.Features.Media.AddMedia;
-using TaleTrackApp.Features.Media.GetMedia;
 using TaleTrackApp.Features.Media.GetMediaById;
 using TaleTrackApp.Features.TrackingEvent.TrackMovie;
 using TaleTrackApp.Features.TrackingEvent.TrackSeries;
@@ -116,21 +115,11 @@ void configureAuth()
         });
 
     builder.Services.AddAuthorizationBuilder()
-        .AddPolicy(Policies.UserPolicy, policy => 
+        .AddPolicy(Policies.UserPolicy, policy =>
         {
             policy.RequireAuthenticatedUser();
-        })
-        .AddPolicy(Policies.InternalOnly, policy =>
-        {
-            policy.Requirements.Add(new InternalApiKeyRequirement());
-        })
-        .AddPolicy(Policies.UserAndInternal, policy =>
-        {
-            policy.RequireAuthenticatedUser();
-            policy.Requirements.Add(new InternalApiKeyRequirement());
         });
 
-    builder.Services.AddScoped<IAuthorizationHandler, InternalApiKeyHandler>();
     builder.Services.AddScoped<JwtService>();
     builder.Services.AddMemoryCache();
     builder.Services.AddScoped<RefreshTokenService>();
@@ -264,10 +253,7 @@ void configurePipeline()
     RemoveFriendEndpoint.Map(apiGroup);
     GetActivityEndpoint.Map(apiGroup);
 
-    // Internal API endpoints (API Key)
-    GetMediaEndpoint.Map(apiGroup);
-    
-    // User management endpoints (JWT + API Key)
+    // User management endpoints (JWT)
     EditUserEndpoint.Map(apiGroup);
     RequestAccountDeletionEndpoint.Map(apiGroup);
     UploadAvatarEndpoint.Map(apiGroup);

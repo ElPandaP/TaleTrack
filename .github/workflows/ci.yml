@@ -47,7 +47,6 @@ jobs:
         working-directory: taletrack-frontend
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8080/api
-          NEXT_PUBLIC_INTERNAL_API_KEY: ci-placeholder
         run: bun run build
 
   netflix-extension-build:
@@ -83,6 +82,5 @@ jobs:
         run: |
           docker build \
             --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080/api \
-            --build-arg NEXT_PUBLIC_INTERNAL_API_KEY=ci-placeholder \
             -t taletrack-frontend \
             ./taletrack-frontend

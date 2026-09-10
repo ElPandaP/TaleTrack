@@ -1,7 +1,10 @@
 # TaleTrack — Backend
 
 ASP.NET Core 10 (.NET 10), Minimal APIs, patrón **REPR** (Request → Endpoint → Response).
-PostgreSQL 15 vía EF Core. Autenticación JWT + refresh tokens + API key interna.
+PostgreSQL 15 vía EF Core. Autenticación JWT + refresh tokens.
+
+> La API es pública por diseño: cualquier cliente (frontend, extensión de Netflix, plugin de
+> KOReader, o uno de terceros) se autentica igual, con el JWT del usuario. No hay clave de API.
 
 > Mapa rápido para reorientarse. Para el detalle vivo, mira siempre `Program.cs` (registro de
 > endpoints y pipeline) y la carpeta `Features/`.
@@ -15,7 +18,7 @@ Todo el arranque está en el top-level `Program.cs` con funciones locales:
 ```
 loadEnvironment()      -> carga ../.env con DotNetEnv (relativo al cwd)
 configureDatabase()    -> DbContext Npgsql; se SALTA si Environment == "Testing"
-configureAuth()        -> JWT bearer + 3 policies + handler de API key + EmailService HttpClient
+configureAuth()        -> JWT bearer + policy UserPolicy + EmailService HttpClient
 configureApi()         -> Swagger, servicios scoped (REPR), OpenLibrary/TMDB HttpClient, ValidationFilter
 configureCors()        -> policy "FrontendCors" desde CORS_ALLOWED_ORIGINS (coma-separado)
 --- build ---
@@ -42,10 +45,9 @@ TaleTrackApp/
 ├── Program.cs                 # arranque + registro de TODOS los endpoints
 ├── appsettings.json           # JwtSettings, Logging, OpenLibrary:SimilarityThreshold
 ├── Auth/
-│   ├── Policies.cs            # constantes: UserPolicy / InternalOnly / UserAndInternal
+│   ├── Policies.cs            # constante: UserPolicy (JWT válido)
 │   ├── JwtService.cs          # GenerateToken(userId, email, username)
 │   ├── RefreshTokenService.cs # emite/rota/revoca refresh tokens; lista sesiones activas
-│   ├── InternalApiKeyHandler.cs  # valida header X-Internal-Api-Key contra env INTERNAL_API_KEY
 │   ├── ValidationFilter.cs    # IEndpointFilter: valida DataAnnotations de cada argumento -> 400
 │   └── EmailService.cs        # manda códigos OTP vía API de Resend (https://api.resend.com/emails)
 ├── Data/
@@ -85,12 +87,11 @@ El `userId` se saca siempre de `user.FindFirst(ClaimTypes.NameIdentifier)?.Value
 
 | Policy | Requiere | Se usa para |
 |---|---|---|
-| `UserPolicy` | JWT válido (`RequireAuthenticatedUser`) | endpoints de datos del usuario |
-| `InternalOnly` | header `X-Internal-Api-Key` == env `INTERNAL_API_KEY` | register, lectura interna de media |
-| `UserAndInternal` | ambos | definido pero **no usado** actualmente |
+| `UserPolicy` | JWT válido (`RequireAuthenticatedUser`) | todos los endpoints de datos del usuario |
 
-Varios endpoints encadenan `.RequireAuthorization(UserPolicy).RequireAuthorization(InternalOnly)` →
-exigen **JWT + API key** a la vez (reseñas, editar/borrar usuario).
+Es la única policy. La API es pública por diseño (un tercero puede construir su propio
+cliente y autenticarse igual que el usuario); el JWT es el único control de acceso.
+`POST /api/register` y `GET /api/users/{id}/avatar` son anónimos.
 
 **Claims del JWT**: `sub` / `NameIdentifier` (userId), `email`, `unique_name` (username), `jti`.
 Expira a los 60 min; el frontend/extensión lo renuevan con el refresh token sin que el usuario haga nada.
@@ -109,8 +110,8 @@ Expira a los 60 min; el frontend/extensión lo renuevan con el refresh token sin
 - `POST /api/auth/extension-grant` — con el JWT del navegador, emite un par de tokens propio para la
   extensión de Netflix (aparece como sesión `"Netflix extension"`).
 
-**Registro**: `POST /api/register` → **solo con API key interna** (el frontend la inyecta desde
-`NEXT_PUBLIC_INTERNAL_API_KEY`). No hace auto-login; el frontend llama a `/login` después.
+**Registro**: `POST /api/register` → **anónimo** (registro abierto). No hace auto-login; el
+frontend llama a `/login` después.
 
 **Hash de contraseñas**: PBKDF2-HMAC-SHA512 con sal por hash y 210 000 iteraciones, vía
 `PasswordHasher<User>` de ASP.NET Core Identity (`UserService`). La migración
@@ -136,22 +137,22 @@ entran con código por email y se ponen contraseña nueva desde el perfil.
 | POST | `/auth/extension-grant` | JWT | emite tokens propios para la extensión |
 | GET | `/auth/sessions` | JWT | lista tus sesiones activas |
 | DELETE | `/auth/sessions/{id}` | JWT | revoca una sesión tuya |
-| POST | `/register` | **InternalOnly** | crea usuario (email, username, password ≥6) |
+| POST | `/register` | anónimo | crea usuario (email, username, password ≥6) |
 
 ### User
 | Método | Ruta | Auth | Qué hace |
 |---|---|---|---|
 | GET | `/user/me` | JWT | perfil completo (avatar, privacidad) del usuario autenticado |
-| PUT | `/user/{id}` | JWT + Internal | edita username/email/password/avatarUrl + `privacy{...}`; solo uno mismo (403 si no) |
-| DELETE | `/user/{id}` | JWT + Internal | borra la cuenta; solo uno mismo. Cascade borra Reviews + TrackingEvents |
+| PUT | `/user/{id}` | JWT | edita username/email/password/avatarUrl + `privacy{...}`; solo uno mismo (403 si no) |
+| DELETE | `/user/{id}` | JWT | borra la cuenta; solo uno mismo. Cascade borra Reviews + TrackingEvents |
 | GET | `/users/{id}` | JWT | perfil público: `{ id, username, avatarUrl, createdAt, relationship, counts{book,movie,series,total} }` |
+| GET | `/users/{id}/avatar` | anónimo | sirve la foto de perfil (WebP 256×256) desde la BD |
 | GET | `/users/search?username=` | JWT | busca usuario por username exacto (quita `@` inicial) |
 
 ### Media
 | Método | Ruta | Auth | Qué hace |
 |---|---|---|---|
 | POST | `/media` | JWT | crea Media suelto vía `MediaService.CreateAsync` (**sin dedup**) |
-| GET | `/media` | **InternalOnly** | lista media con filtros `?type=&limit=&orderBy=` (no filtra por usuario) |
 | GET | `/media/{id}` | JWT | ficha de un media: datos + tu progreso/reseña + todas las reseñas + nota media |
 
 ### Tracking (`Features/TrackingEvent/`)
@@ -192,9 +193,9 @@ tener ningún consumidor real.)
 ### Review
 | Método | Ruta | Auth | Qué hace |
 |---|---|---|---|
-| POST | `/review` | JWT + Internal | crea reseña (mediaId, rating 1–10, comment opcional) |
-| PUT | `/review/{id}` | JWT + Internal | edita; solo el dueño (403 si no) |
-| DELETE | `/review/{id}` | JWT + Internal | borra; solo el dueño (403 si no) |
+| POST | `/review` | JWT | crea reseña (mediaId, rating 1–10, comment opcional) |
+| PUT | `/review/{id}` | JWT | edita; solo el dueño (403 si no) |
+| DELETE | `/review/{id}` | JWT | borra; solo el dueño (403 si no) |
 
 **Validación de entrada**: `ValidationFilter` (IEndpointFilter) recorre los argumentos y valida sus
 DataAnnotations; si falla devuelve `400 { message: "err1; err2" }`. El texto de esos mensajes está en
@@ -243,8 +244,9 @@ encontrada, parámetro interno ausente...).
 | `DotNetEnv` | cargar `.env` |
 | `Swashbuckle.AspNetCore` | Swagger / OpenAPI |
 
-Sin librería de hashing (usa `System.Security.Cryptography.SHA256`), sin MediatR, sin FluentValidation,
-sin AutoMapper. DI a mano en `Program.cs`. TMDB y Open Library se consumen con `HttpClient` a pelo, sin SDK.
+Hashing de contraseñas vía `PasswordHasher<User>` de `Microsoft.AspNetCore.Identity` (PBKDF2-HMAC-SHA512,
+sal por hash, 210 000 iteraciones). Sin MediatR, sin FluentValidation, sin AutoMapper. DI a mano en
+`Program.cs`. TMDB y Open Library se consumen con `HttpClient` a pelo, sin SDK.
 
 ---
 
@@ -256,7 +258,6 @@ Se leen de `../.env` (repo root).
 |---|---|
 | `POSTGRES_HOST/PORT/USER/PASSWORD/DB` | connection string (se construye a mano en `configureDatabase`) |
 | `JWT_SECRET` / `JwtSettings__Secret` | firma del JWT |
-| `INTERNAL_API_KEY` | policy `InternalOnly` |
 | `GOOGLE_CLIENT_ID` | audience al validar el idToken de Google |
 | `RESEND_API_KEY` | Bearer para la API de Resend (emails OTP) |
 | `TMDB_API_KEY` | enriquecimiento de películas/series (portada, duración, título en el otro idioma). Sin ella, ese enriquecimiento simplemente no hace nada |
@@ -270,7 +271,7 @@ Se leen de `../.env` (repo root).
 - `CustomWebApplicationFactory`: fuerza `Environment=Testing` (salta Npgsql), inyecta **SQLite in-memory**
   (con conexión KeepAlive compartida entre toda la colección de tests), stubbea las llamadas HTTP de
   OpenLibrary y TMDB (siempre 404 — nunca pegan a la red real), y fija `JwtSettings__Secret` /
-  `INTERNAL_API_KEY` / `TMDB_API_KEY` de test.
+  `TMDB_API_KEY` de test.
 - Un fichero de tests por área de negocio, todos con el sufijo `*FlowTests.cs`:
   `AuthFlowTests`, `TrackingSplitTests` (movies/series, upsert, progreso monótono), `BookTrackingFlowTests`,
   `TmdbTrackingFlowTests` (dedup entre usuarios, enriquecimiento), `ReviewFlowTests`, `FriendFlowTests`,
@@ -306,7 +307,7 @@ Para meter un usuario de prueba con datos: `../scripts/seed-demo.ps1` (registra 
 
 | Cliente | Cómo llama |
 |---|---|
-| `taletrack-frontend` (Next.js) | navegador → `/api/*` (rewrite a `backend:8080`). SSR usa `lib/api/server.ts` con la cookie `tt-token` + `X-Internal-Api-Key` |
+| `taletrack-frontend` (Next.js) | navegador → `/api/*` (rewrite a `backend:8080`). SSR usa `lib/api/server.ts` con la cookie `tt-token` |
 | `taletrack.koplugin` (KOReader, Lua, submódulo git) | login por OTP (`/api/auth/request-code` + `/verify-code`), luego `POST /api/tracking/books` con `Authorization: Bearer` al terminar un libro |
 | `taletrack-netflix-extension` | detecta reproducción en Netflix, extrae título/temporada/episodio/progreso/idioma y postea a `/api/tracking/movies` o `/api/tracking/series` cada ~15s (con throttle por % de avance) vía el service worker |
 

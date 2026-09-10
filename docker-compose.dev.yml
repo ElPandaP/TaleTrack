@@ -34,7 +34,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       JwtSettings__Secret: ${JWT_SECRET}
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       RESEND_API_KEY: ${RESEND_API_KEY}
       TMDB_API_KEY: ${TMDB_API_KEY}
@@ -62,7 +61,6 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: /api
       INTERNAL_API_URL: http://backend:8080/api
-      NEXT_PUBLIC_INTERNAL_API_KEY: ${INTERNAL_API_KEY}
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       # --no-turbopack usa webpack, que sí respeta WATCHPACK_POLLING en Docker/Windows
       WATCHPACK_POLLING: "true"
