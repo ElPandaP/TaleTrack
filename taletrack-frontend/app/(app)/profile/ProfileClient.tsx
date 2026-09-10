@@ -5,6 +5,7 @@ import {
   User, Mail, BookOpen, Film, Tv, Activity, Calendar, LogOut, Trash2, Save, Check,
 } from 'lucide-react';
 import { UserAvatar } from '@/components/media/user-avatar';
+import ConnectionsCard from '@/components/profile/connections-card';
 import { useAuth } from '@/lib/auth-context';
 import { userService } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n';
@@ -292,6 +293,11 @@ export default function ProfileClient({
           {saving ? t('profile.saving') : t('profile.save')}
         </button>
       </form>
+
+      {/* Connections / active sessions */}
+      <div className="mt-6">
+        <ConnectionsCard />
+      </div>
 
       {/* Account actions */}
       <div className="tt-card mt-6 p-6">

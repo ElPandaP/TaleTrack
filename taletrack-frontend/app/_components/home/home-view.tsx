@@ -9,7 +9,6 @@ import { MonthlyStatsCard } from './monthly-stats-card';
 import { TypeCarousel } from './type-carousel';
 import { InProgressCard } from './in-progress-card';
 import { PendingReviewsCard } from './pending-reviews-card';
-import { TopOfYearCard } from './top-of-year-card';
 
 export interface HomeData {
   username: string;
@@ -21,7 +20,6 @@ export interface HomeData {
   totals: Record<LibraryType, number>;
   inProgress: LibraryItem[];
   pending: LibraryItem[];
-  topOfYear: LibraryItem[];
 }
 
 export default function HomeView({ data }: { data: HomeData }) {
@@ -67,7 +65,6 @@ export default function HomeView({ data }: { data: HomeData }) {
         <aside className="grid gap-4 sm:grid-cols-2 lg:col-span-2 xl:col-span-1 xl:block xl:space-y-4">
           <InProgressCard items={data.inProgress} />
           <PendingReviewsCard items={data.pending} onReview={openReview} />
-          <TopOfYearCard items={data.topOfYear} />
         </aside>
       </div>
 

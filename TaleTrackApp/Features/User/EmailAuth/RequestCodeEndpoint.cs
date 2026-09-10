@@ -6,8 +6,8 @@ namespace TaleTrackApp.Features.User.EmailAuth;
 
 public class RequestCodeRequest
 {
-    [Required]
-    [EmailAddress]
+    [Required(ErrorMessage = "Email es requerido")]
+    [EmailAddress(ErrorMessage = "Email debe ser válido")]
     public required string Email { get; set; }
 }
 
@@ -17,7 +17,7 @@ public static class RequestCodeEndpoint
     {
         group.MapPost("/auth/request-code", HandleAsync)
             .WithName("RequestEmailCode")
-            .WithDescription("Envía un código de verificación al email indicado")
+            .WithDescription("Sends a verification code to the given email")
             .AddEndpointFilter<ValidationFilter>()
             .AllowAnonymous();
     }

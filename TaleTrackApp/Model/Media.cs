@@ -10,7 +10,12 @@ public class Media
     [Required(ErrorMessage = "Title is required")]
     [StringLength(255, MinimumLength = 1, ErrorMessage = "Title must be between 1 and 255 characters")]
     public required string Title { get; set; }
-    
+
+    /// <summary>Title in the "other" language (en/es), from TMDB — lets a Netflix UI
+    /// language switch match back to this same row instead of creating a duplicate.</summary>
+    [StringLength(255)]
+    public string? AltTitle { get; set; }
+
     [StringLength(1000, ErrorMessage = "Description cannot exceed 1000 characters")]
     public string? Description { get; set; }
     

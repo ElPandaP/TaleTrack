@@ -10,7 +10,7 @@ public static class DeleteReviewEndpoint
     {
         group.MapDelete("/review/{id}", HandleAsync)
             .WithName("DeleteReview")
-            .WithDescription("Elimina una reseña (requiere JWT + API Key interna)")
+            .WithDescription("Deletes a review (requires JWT + internal API key)")
             .RequireAuthorization(Policies.UserPolicy)
             .RequireAuthorization(Policies.InternalOnly);
     }
@@ -21,7 +21,6 @@ public static class DeleteReviewEndpoint
         ClaimsPrincipal user,
         ILogger<int> logger)
     {
-        // Obtener el UserId del JWT
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
@@ -39,7 +38,7 @@ public static class DeleteReviewEndpoint
                 return Results.NotFound(new { success = false, message = "Reseña no encontrada" });
             }
 
-            // Solo el dueño de la reseña puede eliminarla
+            // Only the review's owner may delete it
             if (review.UserId != userId)
             {
                 logger.LogWarning($"User {userId} tried to delete review {id} owned by {review.UserId}");

@@ -34,7 +34,7 @@ public class EmailService
         {
             var error = await response.Content.ReadAsStringAsync();
             _logger.LogError("Resend error {Status}: {Error}", response.StatusCode, error);
-            throw new Exception("Error al enviar el email de verificación");
+            throw new Exception("Failed to send verification email");
         }
 
         _logger.LogInformation("Verification code sent to {Email}", toEmail);

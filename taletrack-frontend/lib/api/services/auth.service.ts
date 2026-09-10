@@ -11,9 +11,9 @@ export const authService = {
     );
     
     if (response.success && response.token) {
-      apiClient.setToken(response.token);
+      apiClient.setToken(response.token, response.refreshToken);
     }
-    
+
     return response;
   },
 
@@ -35,7 +35,7 @@ export const authService = {
     );
 
     if (response.success && response.token) {
-      apiClient.setToken(response.token);
+      apiClient.setToken(response.token, response.refreshToken);
     }
 
     return response;

@@ -1,17 +1,18 @@
 using System.ComponentModel.DataAnnotations;
 using TaleTrackApp.Auth;
+using TaleTrackApp.Features.Auth;
 using TaleTrackApp.Features.User;
 
 namespace TaleTrackApp.Features.User.EmailAuth;
 
 public class VerifyCodeRequest
 {
-    [Required]
-    [EmailAddress]
+    [Required(ErrorMessage = "Email es requerido")]
+    [EmailAddress(ErrorMessage = "Email debe ser válido")]
     public required string Email { get; set; }
 
-    [Required]
-    [StringLength(6, MinimumLength = 6)]
+    [Required(ErrorMessage = "El código es requerido")]
+    [StringLength(6, MinimumLength = 6, ErrorMessage = "El código debe tener 6 caracteres")]
     public required string Code { get; set; }
 }
 
@@ -21,7 +22,7 @@ public static class VerifyCodeEndpoint
     {
         group.MapPost("/auth/verify-code", HandleAsync)
             .WithName("VerifyEmailCode")
-            .WithDescription("Verifica el código de email y devuelve un JWT")
+            .WithDescription("Verifies the email code and returns a JWT")
             .AddEndpointFilter<ValidationFilter>()
             .AllowAnonymous();
     }
@@ -30,6 +31,7 @@ public static class VerifyCodeEndpoint
         VerifyCodeRequest request,
         UserService userService,
         JwtService jwtService,
+        RefreshTokenService refreshTokens,
         ILogger<VerifyCodeRequest> logger)
     {
         var user = await userService.GetByEmailAsync(request.Email);
@@ -51,8 +53,16 @@ public static class VerifyCodeEndpoint
         await userService.ClearEmailCodeAsync(user.Id);
 
         var token = jwtService.GenerateToken(user.Id, user.Email, user.Username);
+        var refreshToken = await refreshTokens.IssueAsync(user.Id, "Web");
         logger.LogInformation("User {Username} authenticated via email code", user.Username);
 
-        return Results.Ok(new { success = true, message = "Verificación exitosa", token });
+        return Results.Ok(new
+        {
+            success = true,
+            message = "Verificación exitosa",
+            token,
+            refreshToken,
+            expiresIn = jwtService.ExpirationMinutes * 60,
+        });
     }
 }

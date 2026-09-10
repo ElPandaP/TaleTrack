@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
-import en from "@/messages/en.json";
-import es from "@/messages/es.json";
 import { Providers } from "./providers";
 import TopNav from "@/components/layout/topnav";
 import { getMe } from "@/lib/api/server";
 import { isJwtValid } from "@/lib/jwt";
-import { isLocale, localeFromHeader, type Locale } from "@/lib/i18n-shared";
+import { getServerDict, getServerLocale } from "@/lib/i18n-server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,14 +25,8 @@ const cormorant = Cormorant_Garamond({
   style: ["normal", "italic"],
 });
 
-async function resolveLocale(): Promise<Locale> {
-  const cookie = (await cookies()).get("tt-locale")?.value;
-  if (isLocale(cookie)) return cookie;
-  return localeFromHeader((await headers()).get("accept-language"));
-}
-
 export async function generateMetadata(): Promise<Metadata> {
-  const dict = (await resolveLocale()) === "es" ? es : en;
+  const dict = await getServerDict();
   return {
     title: dict["meta.title"],
     description: dict["meta.description"],
@@ -47,7 +39,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const authed = isJwtValid((await cookies()).get("tt-token")?.value);
-  const locale = await resolveLocale();
+  const locale = await getServerLocale();
   const avatarUrl = authed ? await getMe().then((r) => r.data.avatarUrl).catch(() => null) : null;
 
   return (

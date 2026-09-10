@@ -39,7 +39,7 @@ public static class SendFriendRequestEndpoint
         return result switch
         {
             SendRequestResult.Ok => Results.Ok(new { success = true, code = "sent", message = "Friend request sent." }),
-            SendRequestResult.TargetNotFound => Results.NotFound(new { success = false, code = "target_not_found", message = "User not found." }),
+            SendRequestResult.TargetNotFound => Results.NotFound(new { success = false, code = "target_not_found", message = "Usuario no encontrado." }),
             SendRequestResult.Self => Results.BadRequest(new { success = false, code = "self", message = "You can't add yourself." }),
             SendRequestResult.AlreadyFriends => Results.BadRequest(new { success = false, code = "already_friends", message = "You are already friends." }),
             SendRequestResult.AlreadyPending => Results.BadRequest(new { success = false, code = "already_pending", message = "You already sent this user a request." }),

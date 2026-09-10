@@ -10,7 +10,7 @@ public static class EditReviewEndpoint
     {
         group.MapPut("/review/{id}", HandleAsync)
             .WithName("EditReview")
-            .WithDescription("Edita una reseña (requiere JWT + API Key interna)")
+            .WithDescription("Edits a review (requires JWT + internal API key)")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy)
             .RequireAuthorization(Policies.InternalOnly);
@@ -23,7 +23,6 @@ public static class EditReviewEndpoint
         ClaimsPrincipal user,
         ILogger<EditReviewRequest> logger)
     {
-        // Obtener el UserId del JWT
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
@@ -41,7 +40,7 @@ public static class EditReviewEndpoint
                 return Results.NotFound(new { success = false, message = "Reseña no encontrada" });
             }
 
-            // Solo el dueño de la reseña puede editarla
+            // Only the review's owner may edit it
             if (review.UserId != userId)
             {
                 logger.LogWarning($"User {userId} tried to edit review {id} owned by {review.UserId}");

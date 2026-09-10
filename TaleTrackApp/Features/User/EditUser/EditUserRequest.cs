@@ -14,18 +14,18 @@ public class FeedPrivacyRequest
 
 public class EditUserRequest
 {
-    [StringLength(50, MinimumLength = 3, ErrorMessage = "username must be between 3 and 50 characters")]
+    [StringLength(50, MinimumLength = 3, ErrorMessage = "El nombre de usuario debe tener entre 3 y 50 caracteres")]
     public string? Username { get; set; }
 
-    [EmailAddress(ErrorMessage = "invalid email")]
-    [StringLength(256, ErrorMessage = "email cannot exceed 256 characters")]
+    [EmailAddress(ErrorMessage = "Email debe ser válido")]
+    [StringLength(256, ErrorMessage = "El email no puede superar los 256 caracteres")]
     public string? Email { get; set; }
 
-    [StringLength(100, MinimumLength = 6, ErrorMessage = "password must be between 6 and 100 characters")]
+    [StringLength(100, MinimumLength = 6, ErrorMessage = "La contraseña debe tener entre 6 y 100 caracteres")]
     public string? Password { get; set; }
 
-    [StringLength(2048, ErrorMessage = "avatarUrl cannot exceed 2048 characters")]
-    [Url(ErrorMessage = "avatarUrl must be a valid URL")]
+    [StringLength(2048, ErrorMessage = "La URL del avatar no puede superar los 2048 caracteres")]
+    [Url(ErrorMessage = "La URL del avatar debe ser válida")]
     public string? AvatarUrl { get; set; }
 
     public FeedPrivacyRequest? Privacy { get; set; }

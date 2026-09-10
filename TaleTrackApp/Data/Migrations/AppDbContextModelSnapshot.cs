@@ -65,6 +65,10 @@ namespace TaleTrackApp.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AltTitle")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<string>("Author")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
@@ -103,6 +107,53 @@ namespace TaleTrackApp.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Medias");
+                });
+
+            modelBuilder.Entity("TaleTrackApp.Model.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Device")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReplacedByTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("TaleTrackApp.Model.Review", b =>
@@ -149,6 +200,13 @@ namespace TaleTrackApp.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("Episode")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EpisodeTitle")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<DateTime>("EventDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -156,6 +214,9 @@ namespace TaleTrackApp.Data.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int?>("Progress")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Season")
                         .HasColumnType("integer");
 
                     b.Property<int>("UserId")
@@ -266,6 +327,17 @@ namespace TaleTrackApp.Data.Migrations
                     b.Navigation("Addressee");
 
                     b.Navigation("Requester");
+                });
+
+            modelBuilder.Entity("TaleTrackApp.Model.RefreshToken", b =>
+                {
+                    b.HasOne("TaleTrackApp.Model.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("TaleTrackApp.Model.Review", b =>

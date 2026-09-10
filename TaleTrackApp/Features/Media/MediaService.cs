@@ -15,11 +15,6 @@ public class MediaService
         _logger = logger;
     }
 
-    public async Task<List<Model.Media>> GetAllAsync()
-    {
-        return await _context.Medias.ToListAsync();
-    }
-
     public async Task<Model.Media?> GetByIdAsync(int id)
     {
         return await _context.Medias.FindAsync(id);
@@ -81,6 +76,17 @@ public class MediaService
             return byTitle;
         }
 
+        // 4. Deduplicate by AltTitle — catches the same movie/series tracked again
+        // after the Netflix UI language changed (e.g. "Rick y Morty" vs "Rick and
+        // Morty"), once TMDB enrichment has recorded the other-language title.
+        var byAltTitle = await _context.Medias
+            .FirstOrDefaultAsync(m => m.AltTitle == title && m.Type == type);
+        if (byAltTitle != null)
+        {
+            _logger.LogInformation("Media found by AltTitle: {Title} (ID: {Id})", byAltTitle.Title, byAltTitle.Id);
+            return byAltTitle;
+        }
+
         return await CreateAsync(title, type, length, author, isbn);
     }
 
@@ -101,6 +107,23 @@ public class MediaService
         _logger.LogInformation("Media {MediaId} enriched from OpenLibrary", mediaId);
     }
 
+    public async Task ApplyTmdbEnrichmentAsync(int mediaId, TmdbResult result)
+    {
+        var media = await _context.Medias.FindAsync(mediaId);
+        if (media == null) return;
+
+        if (!string.IsNullOrWhiteSpace(result.PosterUrl) && string.IsNullOrWhiteSpace(media.PosterUrl))
+            media.PosterUrl = result.PosterUrl;
+        if (result.RuntimeMinutes is int minutes && minutes > 0 && media.Length <= 0)
+            media.Length = minutes;
+        if (!string.IsNullOrWhiteSpace(result.AltTitle) && string.IsNullOrWhiteSpace(media.AltTitle))
+            media.AltTitle = result.AltTitle;
+
+        media.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Media {MediaId} enriched from TMDB", mediaId);
+    }
+
     public async Task<List<Model.Media>> GetWithFiltersAsync(
         string? mediaType = null,
         int? limit = null,
@@ -108,13 +131,11 @@ public class MediaService
     {
         var query = _context.Medias.AsQueryable();
 
-        // Filtrar por tipo de media si se especifica
         if (!string.IsNullOrEmpty(mediaType))
         {
             query = query.Where(m => m.Type == mediaType);
         }
 
-        // Aplicar ordenamiento
         if (!string.IsNullOrEmpty(orderBy))
         {
             query = orderBy.ToLower() switch
@@ -123,7 +144,7 @@ public class MediaService
                 "title_desc" => query.OrderByDescending(m => m.Title),
                 "date_asc" => query.OrderBy(m => m.FirstTrackedAt),
                 "date_desc" => query.OrderByDescending(m => m.FirstTrackedAt),
-                _ => query.OrderByDescending(m => m.FirstTrackedAt) // default: más recientes primero
+                _ => query.OrderByDescending(m => m.FirstTrackedAt)
             };
         }
         else
@@ -131,7 +152,6 @@ public class MediaService
             query = query.OrderByDescending(m => m.FirstTrackedAt);
         }
 
-        // Aplicar límite si se especifica
         if (limit.HasValue && limit > 0)
         {
             query = query.Take(limit.Value);

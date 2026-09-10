@@ -37,14 +37,6 @@ public class FriendService
             .ToList();
     }
 
-    public async Task<List<int>> GetFriendIdsAsync(int userId)
-    {
-        return await _context.Friendships
-            .Where(f => f.Status == "Accepted" && (f.RequesterId == userId || f.AddresseeId == userId))
-            .Select(f => f.RequesterId == userId ? f.AddresseeId : f.RequesterId)
-            .ToListAsync();
-    }
-
     /// <summary>Pending requests addressed to the user.</summary>
     public async Task<List<FriendRequestDto>> GetIncomingAsync(int userId)
     {

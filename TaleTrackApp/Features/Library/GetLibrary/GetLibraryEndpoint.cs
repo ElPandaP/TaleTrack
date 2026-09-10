@@ -9,7 +9,7 @@ public static class GetLibraryEndpoint
     {
         group.MapGet("/library", HandleAsync)
             .WithName("GetLibrary")
-            .WithDescription("Biblioteca del usuario autenticado (una fila por media) con filtros type/status/sort/year/limit")
+            .WithDescription("The authenticated user's library (one row per media) with type/status/sort/year/limit filters")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy);
     }

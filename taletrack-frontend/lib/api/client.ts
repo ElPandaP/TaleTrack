@@ -13,9 +13,15 @@ export class ApiError extends Error {
   }
 }
 
+const TOKEN_KEY = 'token';
+const REFRESH_KEY = 'tt-refresh';
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+
 export class ApiClient {
   private baseURL: string;
   private internalApiKey: string;
+  /** Shared in-flight refresh so parallel 401s trigger only one /auth/refresh. */
+  private refreshInFlight: Promise<boolean> | null = null;
 
   constructor() {
     this.baseURL = API_CONFIG.baseURL;
@@ -43,27 +49,78 @@ export class ApiClient {
 
   private getToken(): string | null {
     if (typeof window === 'undefined') return null;
-    return localStorage.getItem('token');
+    return localStorage.getItem(TOKEN_KEY);
   }
 
-  public setToken(token: string): void {
+  public getRefreshToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(REFRESH_KEY);
+  }
+
+  public setToken(token: string, refreshToken?: string): void {
     if (typeof window === 'undefined') return;
-    localStorage.setItem('token', token);
-    const maxAge = 60 * 60 * 24 * 30; // 30 days
-    document.cookie = `tt-token=${token}; path=/; SameSite=Lax; max-age=${maxAge}`;
+    localStorage.setItem(TOKEN_KEY, token);
+    document.cookie = `tt-token=${token}; path=/; SameSite=Lax; max-age=${COOKIE_MAX_AGE}`;
+    if (refreshToken) {
+      localStorage.setItem(REFRESH_KEY, refreshToken);
+      document.cookie = `tt-refresh=${refreshToken}; path=/; SameSite=Lax; max-age=${COOKIE_MAX_AGE}`;
+    }
   }
 
   public clearToken(): void {
     if (typeof window === 'undefined') return;
-    localStorage.removeItem('token');
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_KEY);
     document.cookie = 'tt-token=; path=/; max-age=0';
+    document.cookie = 'tt-refresh=; path=/; max-age=0';
+  }
+
+  /**
+   * Exchange the stored refresh token for a fresh access + refresh pair.
+   * Returns false (and clears tokens) when there is no refresh token or it is rejected.
+   * Concurrent callers share a single request.
+   */
+  public refresh(): Promise<boolean> {
+    if (this.refreshInFlight) return this.refreshInFlight;
+
+    this.refreshInFlight = (async () => {
+      const refreshToken = this.getRefreshToken();
+      if (!refreshToken) return false;
+
+      try {
+        const res = await fetch(`${this.baseURL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (!res.ok) {
+          this.clearToken();
+          return false;
+        }
+        const data = (await res.json()) as { token?: string; refreshToken?: string };
+        if (!data.token) {
+          this.clearToken();
+          return false;
+        }
+        this.setToken(data.token, data.refreshToken);
+        return true;
+      } catch {
+        // Network hiccup — keep tokens, let the caller surface the error.
+        return false;
+      } finally {
+        this.refreshInFlight = null;
+      }
+    })();
+
+    return this.refreshInFlight;
   }
 
   async request<T>(
     endpoint: string,
     options: RequestInit = {},
     requireAuth: boolean = false,
-    requireApiKey: boolean = false
+    requireApiKey: boolean = false,
+    _retried: boolean = false,
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     const headers = this.getHeaders(requireAuth, requireApiKey);
@@ -78,6 +135,21 @@ export class ApiClient {
 
     if (!response.ok) {
       const status = response.status;
+
+      // Access token likely expired — refresh once and replay the request.
+      if (
+        status === 401 &&
+        requireAuth &&
+        !_retried &&
+        endpoint !== '/auth/refresh' &&
+        this.getRefreshToken()
+      ) {
+        const refreshed = await this.refresh();
+        if (refreshed) {
+          return this.request<T>(endpoint, options, requireAuth, requireApiKey, true);
+        }
+      }
+
       const expectedCodes = [400, 401, 403, 409, 422, 429];
 
       if (expectedCodes.includes(status)) {

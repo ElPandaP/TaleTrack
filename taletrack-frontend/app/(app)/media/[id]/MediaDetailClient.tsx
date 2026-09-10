@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Cover, typeMeta } from '@/components/media/cover';
 import { StarRating, toStars } from '@/components/media/star-rating';
@@ -13,7 +13,18 @@ import type { MediaDetail } from '@/lib/types';
 
 export default function MediaDetailClient({ detail }: { detail: MediaDetail }) {
   const { t, tp, locale } = useI18n();
+  const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
+  // Next.js exposes the client-side history depth as history.state.idx — only
+  // > 0 once the user has navigated within the app, so `back()` is safe to use
+  // (it returns to wherever they came from: home, library, a friend's profile…).
+  // A direct load / refresh / external link has no such history, so we fall
+  // back to the library instead of leaving the app. Not used in the render
+  // output, so computing it lazily on mount (client-only) needs no effect.
+  const [hasAppHistory] = useState(
+    () => typeof window !== 'undefined' && (window.history.state?.idx ?? 0) > 0,
+  );
+  const goBack = () => (hasAppHistory ? router.back() : router.push('/library'));
   const meta = typeMeta[detail.type];
 
   const fmtDate = (iso: string) =>
@@ -35,13 +46,14 @@ export default function MediaDetailClient({ detail }: { detail: MediaDetail }) {
 
   return (
     <div>
-      <Link
-        href="/library"
-        className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      <button
+        type="button"
+        onClick={goBack}
+        className="mb-6 inline-flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
-        {t('nav.library')}
-      </Link>
+        {t('common.back')}
+      </button>
 
       <div className="flex flex-col gap-6 sm:flex-row">
         <Cover

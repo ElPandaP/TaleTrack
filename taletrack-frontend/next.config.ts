@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
         source: '/api/:path*',
         destination: 'http://backend:8080/api/:path*',
       },
+      {
+        source: '/swagger/:path*',
+        destination: 'http://backend:8080/swagger/:path*',
+      },
     ];
   },
   async headers() {

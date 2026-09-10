@@ -8,28 +8,37 @@ if (existsSync("./dist")) {
 }
 mkdirSync("./dist", { recursive: true });
 
-// Build TypeScript with Bun
-console.log("Building content.ts...");
-await Bun.build({
+// Server URLs baked in at build time. Override for local dev, e.g.
+//   TT_BACKEND_URL=http://localhost:8080 TT_FRONTEND_URL=http://localhost:8090 bun build.ts
+const BACKEND_URL = process.env.TT_BACKEND_URL ?? "http://143.47.54.63";
+const FRONTEND_URL = process.env.TT_FRONTEND_URL ?? "http://143.47.54.63";
+console.log(`Backend:  ${BACKEND_URL}`);
+console.log(`Frontend: ${FRONTEND_URL}`);
+
+const define = {
+  __TT_BACKEND_URL__: JSON.stringify(BACKEND_URL),
+  __TT_FRONTEND_URL__: JSON.stringify(FRONTEND_URL),
+};
+
+console.log("Building extension scripts...");
+const result = await Bun.build({
   entrypoints: [
-    './src/popup.ts',
-    './src/content.ts',
-    './src/injected.ts'
+    "./src/popup.ts",
+    "./src/content.ts",
+    "./src/injected.ts",
+    "./src/background.ts",
   ],
   outdir: "./dist",
   target: "browser",
   minify: false,
   sourcemap: "external",
+  define,
 });
 
-console.log("Building popup.ts...");
-await Bun.build({
-  entrypoints: ["./src/popup.ts"],
-  outdir: "./dist",
-  target: "browser",
-  minify: false,
-  sourcemap: "external",
-});
+if (!result.success) {
+  for (const log of result.logs) console.error(log);
+  process.exit(1);
+}
 
 // Copy static files
 console.log("Copying static files...");

@@ -7,8 +7,20 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 using TaleTrackApp.Data;
 using TaleTrackApp.Features.Media;
+using Xunit;
 
 namespace TaleTrackApp.Tests;
+
+/// <summary>
+/// Shares one factory (and thus one in-memory SQLite DB) across every test class.
+/// The factory disposes its keep-alive connection on teardown, so multiple
+/// independent <c>IClassFixture</c> instances would tear the DB down mid-run.
+/// </summary>
+[CollectionDefinition(Name)]
+public class ApiCollection : ICollectionFixture<CustomWebApplicationFactory>
+{
+    public const string Name = "Api";
+}
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
@@ -26,6 +38,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         // which picks up JwtSettings__Secret (double-underscore = hierarchy in .NET config)
         Environment.SetEnvironmentVariable("JwtSettings__Secret", TestJwtSecret);
         Environment.SetEnvironmentVariable("INTERNAL_API_KEY", TestInternalApiKey);
+        // Fake key so TmdbService doesn't short-circuit before making a (stubbed) HTTP
+        // call — exercises the same code path production traffic takes.
+        Environment.SetEnvironmentVariable("TMDB_API_KEY", "test-tmdb-api-key");
 
         KeepAlive = new SqliteConnection($"DataSource={DbName};Mode=Memory;Cache=Shared");
         KeepAlive.Open();
@@ -46,6 +61,16 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             // tests only verify the synchronous tracking path
             services.PostConfigure<HttpClientFactoryOptions>(
                 typeof(OpenLibraryService).FullName!,
+                opts =>
+                {
+                    opts.HttpMessageHandlerBuilderActions.Clear();
+                    opts.HttpMessageHandlerBuilderActions.Add(b =>
+                        b.PrimaryHandler = new StubHttpMessageHandler());
+                });
+
+            // Same for TMDB — never hit the real API from tests.
+            services.PostConfigure<HttpClientFactoryOptions>(
+                typeof(TmdbService).FullName!,
                 opts =>
                 {
                     opts.HttpMessageHandlerBuilderActions.Clear();

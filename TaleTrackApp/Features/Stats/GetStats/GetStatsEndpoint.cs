@@ -9,7 +9,7 @@ public static class GetStatsEndpoint
     {
         group.MapGet("/stats", HandleAsync)
             .WithName("GetStats")
-            .WithDescription("Resumen de consumo del usuario autenticado para un año (por defecto, el actual)")
+            .WithDescription("The authenticated user's consumption summary for a year (defaults to the current one)")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy);
     }

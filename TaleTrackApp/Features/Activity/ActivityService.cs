@@ -110,8 +110,10 @@ public class ActivityService
                 $"start-{g.Key.UserId}-{g.Key.MediaId}", u.Id, u.Username, u.AvatarUrl,
                 "started", started.EventDate, media.Id, media.Title, media.Type, media.PosterUrl, null, null));
 
+            // With upsert, a title finished in one sitting is a single row — so a lone
+            // Progress==100 event still counts as "finished".
             var finished = g.Where(x => x.Progress == 100).OrderByDescending(x => x.EventDate).FirstOrDefault();
-            if (finished != null && finished.EventDate > started.EventDate)
+            if (finished != null && (g.Count() == 1 || finished.EventDate > started.EventDate))
             {
                 items.Add(new ActivityItem(
                     $"finish-{g.Key.UserId}-{g.Key.MediaId}", u.Id, u.Username, u.AvatarUrl,

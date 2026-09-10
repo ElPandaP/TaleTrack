@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { UserPlus, UserMinus, Clock, BookOpen, Film, Tv } from 'lucide-react';
+import { UserPlus, UserMinus, Clock, BookOpen, Film, Tv, ChevronLeft, ChevronRight } from 'lucide-react';
 import { UserAvatar } from '@/components/media/user-avatar';
 import { Cover } from '@/components/media/cover';
 import { StarRating, toStars } from '@/components/media/star-rating';
@@ -12,6 +12,8 @@ import { friendService } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n';
 import { sendErrorKey } from '@/lib/api/friend-errors';
 import type { ActivityItem, PublicProfile } from '@/lib/types';
+
+const PAGE_SIZE = 15;
 
 function useRelativeTime() {
   const { locale } = useI18n();
@@ -40,11 +42,16 @@ export default function PublicProfileClient({
   const [busy, setBusy] = useState(false);
   const [rel_, setRel] = useState(profile.relationship);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const memberSince = new Date(profile.createdAt).toLocaleDateString(locale, {
     month: 'long',
     year: 'numeric',
   });
+
+  const totalPages = Math.max(1, Math.ceil(activity.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = activity.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const add = async () => {
     setBusy(true);
@@ -138,36 +145,65 @@ export default function PublicProfileClient({
           {t('publicProfile.activityPrivate')}
         </p>
       ) : (
-        <ul className="flex flex-col gap-3">
-          {activity.map((it) => (
-            <li key={it.id} className="tt-card flex items-start gap-3 p-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-foreground">
-                  {t(`activity.${it.kind}`)}{' '}
-                  <Link href={`/media/${it.mediaId}`} className="font-medium text-primary hover:underline">
-                    {it.mediaTitle}
-                  </Link>
-                  <span className="ml-2 text-xs text-muted-foreground">{rel(it.date)}</span>
-                </p>
-                {it.kind === 'reviewed' && it.rating != null && (
-                  <StarRating stars={toStars(it.rating)} className="mt-1.5" />
-                )}
-                {it.kind === 'reviewed' && it.comment && (
-                  <p className="mt-1.5 line-clamp-3 text-sm text-foreground/80">{it.comment}</p>
-                )}
-              </div>
-              <Link href={`/media/${it.mediaId}`} className="shrink-0">
-                <Cover
-                  title={it.mediaTitle}
-                  type={it.mediaType}
-                  posterUrl={it.mediaPosterUrl}
-                  className="w-10 rounded-md"
-                  sizes="40px"
-                />
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="flex flex-col gap-3">
+            {pageItems.map((it) => (
+              <li key={it.id} className="tt-card flex items-start gap-3 p-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-foreground">
+                    {t(`activity.${it.kind}`)}{' '}
+                    <Link href={`/media/${it.mediaId}`} className="font-medium text-primary hover:underline">
+                      {it.mediaTitle}
+                    </Link>
+                    <span className="ml-2 text-xs text-muted-foreground">{rel(it.date)}</span>
+                  </p>
+                  {it.kind === 'reviewed' && it.rating != null && (
+                    <StarRating stars={toStars(it.rating)} className="mt-1.5" />
+                  )}
+                  {it.kind === 'reviewed' && it.comment && (
+                    <p className="mt-1.5 line-clamp-3 text-sm text-foreground/80">{it.comment}</p>
+                  )}
+                </div>
+                <Link href={`/media/${it.mediaId}`} className="shrink-0">
+                  <Cover
+                    title={it.mediaTitle}
+                    type={it.mediaType}
+                    posterUrl={it.mediaPosterUrl}
+                    className="w-10 rounded-md"
+                    sizes="40px"
+                  />
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          {totalPages > 1 && (
+            <nav className="mt-6 flex items-center justify-center gap-2" aria-label="Pagination">
+              <button
+                type="button"
+                onClick={() => setPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                aria-label={t('a11y.previousPage')}
+                className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
+              >
+                <ChevronLeft aria-hidden="true" className="size-4" />
+              </button>
+              <span className="px-2 text-sm text-muted-foreground">
+                {t('pagination.pageLabel')} <span className="font-medium text-foreground">{currentPage}</span>{' '}
+                {t('pagination.of')} {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                aria-label={t('a11y.nextPage')}
+                className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
+              >
+                <ChevronRight aria-hidden="true" className="size-4" />
+              </button>
+            </nav>
+          )}
+        </>
       )}
     </div>
   );

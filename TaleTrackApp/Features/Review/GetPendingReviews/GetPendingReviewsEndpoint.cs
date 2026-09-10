@@ -10,7 +10,7 @@ public static class GetPendingReviewsEndpoint
     {
         group.MapGet("/reviews/pending", HandleAsync)
             .WithName("GetPendingReviews")
-            .WithDescription("Media terminada por el usuario que aún no ha reseñado")
+            .WithDescription("Media the user has finished but not yet reviewed")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

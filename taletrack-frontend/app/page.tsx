@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import Landing from './_components/landing';
 import HomeView, { type HomeData } from './_components/home/home-view';
+import Footer from '@/components/layout/footer';
 import { getStats, getLibrary, getPendingReviews, getMe } from '@/lib/api/server';
 import { isJwtValid } from '@/lib/jwt';
 import type { GetLibraryResponse, GetStatsResponse, LibraryItem } from '@/lib/types';
@@ -31,8 +32,7 @@ export default async function RootPage() {
   // Logged-out or expired visitors get the public landing page.
   if (!token || !isJwtValid(token)) return <Landing />;
 
-  const year = new Date().getFullYear();
-  const [me, stats, books, movies, series, inProgress, pending, top] = await Promise.allSettled([
+  const [me, stats, books, movies, series, inProgress, pending] = await Promise.allSettled([
     getMe(),
     getStats(),
     getLibrary({ type: 'Book', limit: CAROUSEL_LIMIT }),
@@ -40,7 +40,6 @@ export default async function RootPage() {
     getLibrary({ type: 'Series', limit: CAROUSEL_LIMIT }),
     getLibrary({ status: 'in_progress', limit: IN_PROGRESS_LIMIT }),
     getPendingReviews(),
-    getLibrary({ sort: 'rating', year, limit: 3 }),
   ]);
 
   const data: HomeData = {
@@ -57,12 +56,14 @@ export default async function RootPage() {
     totals: { Book: libTotal(books), Movie: libTotal(movies), Series: libTotal(series) },
     inProgress: libData(inProgress),
     pending: libData(pending),
-    topOfYear: libData(top),
   };
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-6 lg:px-6 lg:py-8">
-      <HomeView data={data} />
-    </main>
+    <>
+      <main className="mx-auto max-w-6xl px-4 py-6 lg:px-6 lg:py-8">
+        <HomeView data={data} />
+      </main>
+      <Footer />
+    </>
   );
 }

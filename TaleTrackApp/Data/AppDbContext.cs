@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Review> Reviews { get; set; }
     public DbSet<TrackingEvent> TrackingEvents { get; set; }
     public DbSet<Friendship> Friendships { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,6 +26,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasOne(te => te.User)
             .WithMany(u => u.TrackingEvents)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<RefreshToken>(rt =>
+        {
+            rt.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            rt.HasIndex(x => x.TokenHash).IsUnique();
+        });
 
         modelBuilder.Entity<Friendship>(f =>
         {

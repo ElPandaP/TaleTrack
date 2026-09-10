@@ -9,14 +9,13 @@ public static class AddMediaEndpoint
     {
         group.MapPost("/media", HandleAsync)
             .WithName("AddMedia")
-            .WithDescription("Agrega un nuevo media item")
+            .WithDescription("Adds a new media item")
             .AddEndpointFilter<ValidationFilter>()
-            .RequireAuthorization(Policies.UserPolicy); // Requiere usuario autenticado
+            .RequireAuthorization(Policies.UserPolicy);
     }
 
     private static async Task<IResult> HandleAsync(AddMediaRequest request, MediaService mediaService, ILogger<AddMediaRequest> logger)
     {
-        // Process
         try
         {
             var media = await mediaService.CreateAsync(request.Title, request.Type, request.Length);

@@ -9,7 +9,7 @@ public static class GetMediaEndpoint
     {
         group.MapGet("/media", HandleAsync)
             .WithName("GetMedia")
-            .WithDescription("Obtiene la lista de medias con filtros (solo API interna)")
+            .WithDescription("Lists media with filters (internal API only)")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.InternalOnly);
     }

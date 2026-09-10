@@ -1,5 +1,6 @@
 using Google.Apis.Auth;
 using TaleTrackApp.Auth;
+using TaleTrackApp.Features.Auth;
 using TaleTrackApp.Features.User;
 
 namespace TaleTrackApp.Features.User.GoogleLogin;
@@ -10,7 +11,7 @@ public static class GoogleLoginEndpoint
     {
         group.MapPost("/auth/google", HandleAsync)
             .WithName("GoogleLogin")
-            .WithDescription("Inicia sesión con Google OAuth")
+            .WithDescription("Signs in with Google OAuth")
             .AddEndpointFilter<ValidationFilter>()
             .AllowAnonymous();
     }
@@ -19,6 +20,7 @@ public static class GoogleLoginEndpoint
         GoogleLoginRequest request,
         UserService userService,
         JwtService jwtService,
+        RefreshTokenService refreshTokens,
         ILogger<GoogleLoginRequest> logger)
     {
         var clientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
@@ -56,8 +58,16 @@ public static class GoogleLoginEndpoint
         }
 
         var token = jwtService.GenerateToken(user.Id, user.Email, user.Username);
+        var refreshToken = await refreshTokens.IssueAsync(user.Id, "Web");
         logger.LogInformation("User {Username} logged in via Google", user.Username);
 
-        return Results.Ok(new { success = true, message = "Login exitoso", token });
+        return Results.Ok(new
+        {
+            success = true,
+            message = "Login exitoso",
+            token,
+            refreshToken,
+            expiresIn = jwtService.ExpirationMinutes * 60,
+        });
     }
 }

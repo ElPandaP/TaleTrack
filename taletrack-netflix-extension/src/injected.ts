@@ -1,7 +1,4 @@
-// Runs in the page (MAIN) context
-// Has access to window.netflix
-
-console.log('Netflix data extractor injected in MAIN world');
+// Runs in the page (MAIN) context — has access to window.netflix.
 
 // Pull live playback state from Netflix's own player API.
 // Returns times in milliseconds, plus the raw player metadata (has seasons/episodes).

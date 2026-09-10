@@ -38,7 +38,7 @@ export default function ThemeToggle({ compact = false }: { compact?: boolean }) 
       onClick={toggleTheme}
       aria-label={t('a11y.toggleTheme')}
       className="relative inline-flex items-center h-8 w-16 rounded-full p-1 border border-border transition-colors duration-300 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-      style={{ backgroundColor: isDark ? 'oklch(0.17 0.033 62)' : 'oklch(0.93 0.025 82)' }}
+      style={{ backgroundColor: isDark ? 'oklch(0.24 0.012 260)' : 'oklch(0.93 0.025 82)' }}
     >
       {/* Sliding pill */}
       <motion.div

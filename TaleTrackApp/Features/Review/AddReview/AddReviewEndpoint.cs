@@ -10,7 +10,7 @@ public static class AddReviewEndpoint
     {
         group.MapPost("/review", HandleAsync)
             .WithName("AddReview")
-            .WithDescription("Agrega una reseña (requiere JWT + API Key interna)")
+            .WithDescription("Adds a review (requires JWT + internal API key)")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy)
             .RequireAuthorization(Policies.InternalOnly);
@@ -22,7 +22,6 @@ public static class AddReviewEndpoint
         ClaimsPrincipal user,
         ILogger<AddReviewRequest> logger)
     {
-        // Obtener el UserId del JWT
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
