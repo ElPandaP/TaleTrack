@@ -10,7 +10,7 @@ public static class DeleteUserEndpoint
     {
         group.MapDelete("/user/{id}", HandleAsync)
             .WithName("DeleteUser")
-            .WithDescription("Elimina un usuario (requiere JWT + API Key interna)")
+            .WithDescription("Deletes a user (requires JWT + internal API key)")
             .RequireAuthorization(Policies.UserPolicy)
             .RequireAuthorization(Policies.InternalOnly);
     }
@@ -21,7 +21,6 @@ public static class DeleteUserEndpoint
         ClaimsPrincipal user,
         ILogger<int> logger)
     {
-        // Obtener el UserId del JWT
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
@@ -30,7 +29,7 @@ public static class DeleteUserEndpoint
             return Results.Unauthorized();
         }
 
-        // Solo el usuario puede eliminar su propia cuenta
+        // A user may only delete their own account
         if (userId != id)
         {
             logger.LogWarning($"User {userId} tried to delete user {id}");

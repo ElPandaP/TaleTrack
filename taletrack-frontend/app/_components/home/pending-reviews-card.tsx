@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Cover } from '@/components/media/cover';
 import type { ReviewTarget } from '@/components/media/review-modal';
@@ -27,9 +28,17 @@ export function PendingReviewsCard({
 
   return (
     <div className="tt-card flex flex-col gap-3 p-4">
-      <p className="text-[10px] font-semibold tracking-widest text-muted-foreground/70 uppercase">
-        {t('home.toReview')}
-      </p>
+      <div className="flex items-baseline justify-between">
+        <Link
+          href="/library?reviews=todo"
+          className="text-[10px] font-semibold tracking-widest text-muted-foreground/70 uppercase transition-colors hover:text-foreground"
+        >
+          {t('home.toReview')}
+        </Link>
+        {items.length > 0 && (
+          <span className="text-[10px] text-muted-foreground/70">{items.length}</span>
+        )}
+      </div>
 
       {items.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('home.toReview.empty')}</p>

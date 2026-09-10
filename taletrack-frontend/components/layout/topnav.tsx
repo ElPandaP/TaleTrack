@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Leaf, Search, User, LogOut, Users } from 'lucide-react';
+import { Leaf, User, LogOut, Users } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -106,7 +106,7 @@ function NavItems({ className, compact = false }: { className?: string; compact?
 }
 
 // Routes that render their own full-screen layout, without the app nav.
-const bareRoutes = new Set(['/login', '/register']);
+const bareRoutes = new Set(['/login', '/register', '/extension-auth']);
 
 /**
  * The top navigation bar. Mounted once in the root layout so it survives every
@@ -123,10 +123,8 @@ export default function TopNav({
   avatarUrl?: string | null;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const t = useT();
   const { user, isAuthenticated, logout } = useAuth();
-  const [query, setQuery] = useState('');
   const menuRef = useRef<HTMLDetailsElement>(null);
 
   // Close the account menu on outside click.
@@ -140,12 +138,6 @@ export default function TopNav({
   }, []);
 
   if (!authed || bareRoutes.has(pathname)) return null;
-
-  const onSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = query.trim();
-    router.push(q ? `/library?q=${encodeURIComponent(q)}` : '/library');
-  };
 
   const handleLogout = () => {
     menuRef.current?.removeAttribute('open');
@@ -169,22 +161,6 @@ export default function TopNav({
         <NavItems className="hidden sm:flex" />
 
         <div className="flex flex-1 items-center justify-end gap-2">
-          {/* Search */}
-          <form onSubmit={onSearch} className="relative hidden md:block">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground/50"
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('nav.search')}
-              aria-label={t('nav.searchAria')}
-              className="h-8 w-40 rounded-lg border border-border bg-secondary/50 pr-3 pl-8 text-sm text-foreground transition-colors placeholder:text-muted-foreground/50 focus:border-primary/60 focus:bg-secondary/70 focus:outline-none"
-            />
-          </form>
-
           <LocaleToggle />
           <ThemeToggle compact />
 

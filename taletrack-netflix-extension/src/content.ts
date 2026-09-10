@@ -1,13 +1,12 @@
-import type { NetflixMedia, ExtractDataMessage, ExtractDataResponse } from './types';
+// While the user watches (logged in), report title + progress to the backend
+// via the service worker. Metadata is resolved once per video; each tick only
+// re-reads the live <video> position. The service worker throttles the writes.
+// Page-reading logic (what's on this Netflix page) lives in ./netflix-extract.
 
-// Cache for data from the page
-let netflixData: any = null;
+import type { NetflixMedia, ExtractDataMessage } from './types';
+import { NO_TITLE, extractNetflixData, requestNetflixData } from './netflix-extract';
 
-const PROGRESS_THRESHOLD = 0.8;
-const PROGRESS_POLL_MS = 10000;
-const reportedVideos = new Set<string>();
-
-chrome.runtime.onMessage.addListener((message: ExtractDataMessage, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: ExtractDataMessage, _sender, sendResponse) => {
   if (message.action === 'extractData') {
     // Ask the page context for Netflix data
     requestNetflixData().then(() => {
@@ -26,563 +25,124 @@ chrome.runtime.onMessage.addListener((message: ExtractDataMessage, sender, sendR
   return true;
 });
 
-// Pull data from the main page context
-async function requestNetflixData(): Promise<void> {
-  return new Promise((resolve) => {
-    // Unique request id
-    const requestId = `netflix-data-${Date.now()}`;
-
-    // Listen for the response
-    const messageHandler = (event: MessageEvent) => {
-      if (event.source !== window) {
-        return;
-      }
-      if (event.data?.type === 'NETFLIX_DATA_RESPONSE' && event.data?.requestId === requestId) {
-        netflixData = event.data.data;
-        if (netflixData) {
-          console.log('Received Netflix data:', netflixData);
-        }
-        window.removeEventListener('message', messageHandler);
-        resolve();
-      }
-    };
-
-    window.addEventListener('message', messageHandler);
-
-    // Ask the page for data
-    window.postMessage({
-      type: 'GET_NETFLIX_DATA',
-      requestId: requestId
-    }, '*');
-
-    // Timeout after 1 second
-    setTimeout(() => {
-      window.removeEventListener('message', messageHandler);
-      resolve();
-    }, 1000);
-  });
-}
-
-/** "1h 47min" / "48min" from a total number of seconds. */
-function formatRuntime(totalSeconds: number): string {
-  const s = Math.max(0, Math.round(totalSeconds));
-  const h = Math.floor(s / 3600);
-  const m = Math.round((s % 3600) / 60);
-  return h > 0 ? `${h}h ${m}min` : `${m}min`;
-}
-
-/** Current playback position + total runtime + progress %, when watching. */
-function extractPlayback(): { progressPercent?: number; positionSeconds?: number; runtimeSeconds?: number } | null {
-  let positionMs: number | undefined;
-  let durationMs: number | undefined;
-
-  // 1. Netflix player API (from the MAIN-world injected script) — most accurate
-  const player = netflixData?.player;
-  if (player) {
-    if (Number.isFinite(player.currentTime)) positionMs = player.currentTime;
-    if (Number.isFinite(player.duration) && player.duration > 0) durationMs = player.duration;
-  }
-
-  // 2. The <video> element (content scripts share the page DOM)
-  const video = document.querySelector('video') as HTMLVideoElement | null;
-  if (video) {
-    if (positionMs === undefined && Number.isFinite(video.currentTime)) {
-      positionMs = video.currentTime * 1000;
-    }
-    if (durationMs === undefined && Number.isFinite(video.duration) && video.duration > 0) {
-      durationMs = video.duration * 1000;
-    }
-  }
-
-  // 3. Falcor runtime (seconds) — total length only, last resort
-  if (durationMs === undefined && Number.isFinite(netflixData?.runtime)) {
-    durationMs = netflixData.runtime * 1000;
-  }
-
-  if (positionMs === undefined && durationMs === undefined) return null;
-
-  const result: { progressPercent?: number; positionSeconds?: number; runtimeSeconds?: number } = {};
-  if (positionMs !== undefined) result.positionSeconds = Math.round(positionMs / 1000);
-  if (durationMs !== undefined) result.runtimeSeconds = Math.round(durationMs / 1000);
-  if (positionMs !== undefined && durationMs !== undefined && durationMs > 0) {
-    result.progressPercent = Math.max(0, Math.min(100, Math.round((positionMs / durationMs) * 100)));
-  }
-  return result;
-}
-
-function extractNetflixData(): NetflixMedia | null {
-  try {
-    console.log('URL:', window.location.href);
-
-    const rawTitle = extractTitle() || 'Título no encontrado';
-    console.log('Raw title:', rawTitle);
-
-    const { season, episode } = extractSeasonEpisode(rawTitle);
-    console.log('Season:', season, 'Episode:', episode);
-
-    const type = extractType(season, episode);
-    console.log('Type:', type);
-
-    const { title, episodeTitle } = cleanTitle(rawTitle);
-    console.log('Clean title:', title, 'Episode title:', episodeTitle);
-
-    const metaEpisodeTitle = seasonEpisodeFromMetadata()?.episodeTitle ?? null;
-
-    const playback = extractPlayback();
-    console.log('Playback:', playback);
-
-    const year = extractYear();
-    const genres = extractGenres();
-    const duration = extractDuration();
-    const description = extractDescription();
-    const imageUrl = extractImageUrl();
-
-    const media: NetflixMedia = {
-      title,
-      type,
-      genres,
-      netflixUrl: window.location.href,
-      extractedAt: new Date().toISOString()
-    };
-
-    if (year) {
-      media.year = year;
-    }
-    if (description) {
-      media.description = description;
-    }
-    if (imageUrl) {
-      media.imageUrl = imageUrl;
-    }
-
-    // Playback: progress %, current position, total runtime
-    if (playback) {
-      if (playback.progressPercent !== undefined) {
-        media.progressPercent = playback.progressPercent;
-      }
-      if (playback.positionSeconds !== undefined) {
-        media.positionSeconds = playback.positionSeconds;
-      }
-      if (playback.runtimeSeconds !== undefined) {
-        media.runtimeSeconds = playback.runtimeSeconds;
-      }
-    }
-
-    // Prefer the real runtime for the human-readable duration; fall back to the
-    // DOM string (only present on browse/title pages, not while watching).
-    if (media.runtimeSeconds !== undefined) {
-      media.duration = formatRuntime(media.runtimeSeconds);
-    } else if (duration) {
-      media.duration = duration;
-    }
-
-    if (type === 'series') {
-      if (season) {
-        media.season = season;
-      }
-      if (episode) {
-        media.episode = episode;
-      }
-      if (metaEpisodeTitle || episodeTitle) {
-        media.episodeTitle = metaEpisodeTitle || episodeTitle || undefined;
-      }
-    }
-
-    return media;
-  } catch (error) {
-    console.error('Error extrayendo datos:', error);
-    return null;
-  }
-}
-
-/** Find season/episode sequence numbers in the Netflix player metadata. */
-function seasonEpisodeFromMetadata(): { season: number | null; episode: number | null; episodeTitle: string | null } | null {
-  const video = netflixData?.player?.metadata?.video ?? netflixData?.player?.metadata?._metadata?.video;
-  if (!video || !Array.isArray(video.seasons)) return null;
-
-  const currentId = video.currentEpisode ?? video.episodeId;
-  if (!currentId) return null;
-
-  for (const season of video.seasons) {
-    const ep = (season.episodes ?? []).find((e: any) => e.id === currentId);
-    if (ep) {
-      return {
-        season: season.seq ?? season.season ?? null,
-        episode: ep.seq ?? ep.episode ?? null,
-        episodeTitle: ep.title ?? null,
-      };
-    }
-  }
-  return null;
-}
-
-function extractSeasonEpisode(rawTitle: string): { season: number | null; episode: number | null } {
-  const url = window.location.href;
-
-  // Netflix player metadata is the most reliable source while watching
-  const fromMeta = seasonEpisodeFromMetadata();
-  if (fromMeta && (fromMeta.season !== null || fromMeta.episode !== null)) {
-    return { season: fromMeta.season, episode: fromMeta.episode };
-  }
-
-  // Use data from the injected script first
-  if (netflixData?.summary) {
-    const summary = netflixData.summary;
-    console.log('Netflix data from MAIN world:', summary);
-
-    if (summary.type === 'episode' && summary.season && summary.episode) {
-      return {
-        season: summary.season,
-        episode: summary.episode
-      };
-    }
-  }
-
-  // Check query parameters
-  let seasonMatch = url.match(/[?&]season=(\d+)/);
-  let episodeMatch = url.match(/[?&]episode=(\d+)/);
-
-  if (seasonMatch && seasonMatch[1] && episodeMatch && episodeMatch[1]) {
-    return {
-      season: parseInt(seasonMatch[1], 10),
-      episode: parseInt(episodeMatch[1], 10)
-    };
-  }
-
-  // Check hash fragments
-  seasonMatch = url.match(/#.*season=(\d+)/);
-  episodeMatch = url.match(/#.*episode=(\d+)/);
-
-  if (seasonMatch && seasonMatch[1] && episodeMatch && episodeMatch[1]) {
-    return {
-      season: parseInt(seasonMatch[1], 10),
-      episode: parseInt(episodeMatch[1], 10)
-    };
-  }
-
-  // Parse title text
-  const titlePattern = /T(\d+):? E(\d+)|E(\d+)/i;
-  const titleMatch = rawTitle.match(titlePattern);
-
-  if (titleMatch) {
-    if (titleMatch[1] && titleMatch[2]) {
-      return {
-        season: parseInt(titleMatch[1], 10),
-        episode: parseInt(titleMatch[2], 10)
-      };
-    }
-
-    if (titleMatch[3]) {
-      return {
-        season: null,
-        episode: parseInt(titleMatch[3], 10)
-      };
-    }
-  }
-
-  // Look in the DOM
-  const episodeInfo = document.querySelector('[data-uia="video-title"]')?.textContent;
-  if (episodeInfo) {
-    const match = episodeInfo.match(/T(\d+):?\s*E(\d+)/i);
-    if (match && match[1] && match[2]) {
-      return {
-        season: parseInt(match[1], 10),
-        episode: parseInt(match[2], 10)
-      };
-    }
-  }
-
-  return {
-    season: null,
-    episode: null
-  };
-}
-
-function cleanTitle(rawTitle: string): { title: string; episodeTitle: string | null } {
-  const pattern1 = /^(.+?)(?:T(\d+):)?E(\d+)(.*)$/i;
-  const match1 = rawTitle.match(pattern1);
-
-  if (match1 && match1[1]) {
-    return {
-      title: match1[1].trim(),
-      episodeTitle: match1[4] ? match1[4].trim() : null
-    };
-  }
-
-  const pattern2 = /^(.+?):\s*(.+)$/;
-  const match2 = rawTitle.match(pattern2);
-
-  if (match2 && match2[1] && match2[2]) {
-    if (!match2[2].match(/^(La |El |Una |Un )/i)) {
-      return {
-        title: match2[1].trim(),
-        episodeTitle: match2[2].trim()
-      };
-    }
-  }
-
-  const pattern3 = /^(.+? )\s*[-–]\s*(.+)$/;
-  const match3 = rawTitle.match(pattern3);
-
-  if (match3 && match3[1] && match3[2]) {
-    return {
-      title: match3[1].trim(),
-      episodeTitle: match3[2].trim()
-    };
-  }
-
-  return {
-    title: rawTitle.trim(),
-    episodeTitle: null
-  };
-}
-
-function extractTitle(): string | null {
-  const selectors = [
-    '.title-title',
-    'h1.title-title',
-    '[data-uia="video-title"]',
-    '[data-uia="title-name"]',
-    'h1[class*="title"]',
-    '.ellipsize-text h4',
-    '.video-title'
-  ];
-
-  for (const selector of selectors) {
-    const element = document.querySelector(selector);
-    if (element?.textContent?.trim()) {
-      return element.textContent.trim();
-    }
-  }
-
-  const pageTitle = document.title;
-  if (pageTitle && pageTitle !== 'Netflix') {
-    const match = pageTitle.match(/^(.+? )\s*[-–|]\s*Netflix/);
-    if (match && match[1]) {
-      return match[1].trim();
-    }
-  }
-
-  const jsonLd = document.querySelector('script[type="application/ld+json"]');
-  if (jsonLd?.textContent) {
-    try {
-      const data = JSON.parse(jsonLd.textContent);
-      if (data.name) return data.name;
-      if (data['@graph']?.[0]?.name) return data['@graph'][0].name;
-    } catch (e) {
-      // Ignore
-    }
-  }
-
-  return null;
-}
-
-function extractYear(): number | null {
-  const selectors = [
-    '.title-info-metadata-item:first-child',
-    '[data-uia="title-year"]',
-    '.year',
-    '.item-year'
-  ];
-
-  for (const selector of selectors) {
-    const element = document.querySelector(selector);
-    const text = element?.textContent?.trim();
-    if (text) {
-      const match = text.match(/(\d{4})/);
-      if (match && match[1]) {
-        return parseInt(match[1], 10);
-      }
-    }
-  }
-
-  return null;
-}
-
-function extractType(season: number | null, episode: number | null): 'movie' | 'series' {
-  if (season !== null || episode !== null) {
-    console.log('Método 1');
-    return 'series';
-  }
-
-  // Netflix player metadata is explicit about show vs movie
-  const metaVideo = netflixData?.player?.metadata?.video ?? netflixData?.player?.metadata?._metadata?.video;
-  if (metaVideo?.type === 'show' || Array.isArray(metaVideo?.seasons)) {
-    console.log('Método 0 (metadata)');
-    return 'series';
-  }
-  if (metaVideo?.type === 'movie') {
-    return 'movie';
-  }
-
-  const url = window.location.href;
-
-  if (url.match(/[?&#]season=/) || url.match(/[?&#]episode=/)) {
-    console.log('Método 2');
-    return 'series';
-  }
-
-  const seriesIndicators = [
-    '.episodes-container',
-    '[data-uia="season-selector"]',
-    '.season-selector',
-    '.episode-selector',
-    '[class*="episode"]',
-    '[class*="season"]'
-  ];
-
-  for (const selector of seriesIndicators) {
-    if (document.querySelector(selector)) {
-      console.log('Método 3');
-      return 'series';
-    }
-  }
-
-  const titleText = document.querySelector('[data-uia="video-title"]')?.textContent;
-  if (titleText?.match(/T\d+:?\s*E\d+/i)) {
-    console.log('Método 4');
-    return 'series';
-  }
-
-  if (url.includes('/watch/')) {
-    const pageTitle = document.title;
-    if (pageTitle.match(/T\d+|E\d+|Temporada|Episodio/i)) {
-      console.log('Método 5');
-      console.log("");
-      return 'series';
-    }
-  }
-
-  return 'movie';
-}
-
-function extractGenres(): string[] {
-  const genres: string[] = [];
-
-  const selectors = [
-    '.item-genres',
-    '[data-uia="item-genres"]',
-    '.genre',
-    '.title-info-metadata .item-genre'
-  ];
-
-  for (const selector of selectors) {
-    const elements = document.querySelectorAll(selector);
-    elements.forEach(el => {
-      const text = el.textContent?.trim();
-      if (text) {
-        genres.push(...text.split(/[,•·]/).map(g => g.trim()).filter(Boolean));
-      }
-    });
-
-    if (genres.length > 0) {
-      break;
-    }
-  }
-
-  return [...new Set(genres)];
-}
-
-function extractDuration(): string | null {
-  const selectors = [
-    '.duration',
-    '[data-uia="item-duration"]',
-    '.title-info-metadata .runtime',
-    '.item-runtime'
-  ];
-
-  for (const selector of selectors) {
-    const element = document.querySelector(selector);
-    const text = element?.textContent?.trim();
-    if (text && (text.includes('min') || text.includes('h') || text.includes('temporada'))) {
-      return text;
-    }
-  }
-
-  return null;
-}
-
-function extractDescription(): string | null {
-  const selectors = [
-    '.title-info-synopsis',
-    '[data-uia="title-description"]',
-    '.previewModal--info-synopsis',
-    'div.ptrack-content p',
-    '.synopsis'
-  ];
-
-  for (const selector of selectors) {
-    const element = document.querySelector(selector);
-    if (element?.textContent?.trim()) {
-      return element.textContent.trim();
-    }
-  }
-
-  return null;
-}
-
-function extractImageUrl(): string | null {
-  const selectors = [
-    '.title-logo img',
-    '.previewModal--player-titleTreatment-logo img',
-    'img[data-uia="title-image"]',
-    '.boxart-image'
-  ];
-
-  for (const selector of selectors) {
-    const img = document.querySelector(selector) as HTMLImageElement;
-    if (img?.src) {
-      return img.src;
-    }
-  }
-
-  return null;
-}
-
 function getCurrentVideoId(): string | null {
   const match = window.location.href.match(/\/watch\/(\d+)/);
   return match && match[1] ? match[1] : null;
 }
 
-async function sendViewed(media: NetflixMedia, progress: number): Promise<void> {
-  console.log('View threshold reached:', { ...media, progress, reportedAt: new Date().toISOString() });
-}
+const AUTO_POLL_MS = 15000;
+const AUTH_BACKOFF_MS = 5 * 60 * 1000;
 
-async function checkProgressAndReport(): Promise<void> {
+let trackedVideoId: string | null = null;
+let trackedMedia: NetflixMedia | null = null;
+let backoffUntil = 0;
+
+function livePlayback(): { percent: number; runtimeSeconds: number } | null {
   const video = document.querySelector('video') as HTMLVideoElement | null;
-  if (!video || !video.duration || !Number.isFinite(video.duration)) {
-    console.error('No video found');
-    return;
-  }
+  if (!video || !Number.isFinite(video.duration) || video.duration <= 0) return null;
+  if (!Number.isFinite(video.currentTime)) return null;
+  return {
+    percent: Math.max(0, Math.min(100, Math.round((video.currentTime / video.duration) * 100))),
+    runtimeSeconds: Math.round(video.duration),
+  };
+}
 
-  const progress = video.currentTime / video.duration;
-  console.log('Progress check:', { current: progress, target: PROGRESS_THRESHOLD });
-  if (progress < PROGRESS_THRESHOLD) {
-    return;
-  }
+let resolvingVideoId: string | null = null;
 
-  const videoId = getCurrentVideoId() || window.location.href;
-  if (reportedVideos.has(videoId)) {
-    return;
-  }
-  reportedVideos.add(videoId);
+async function resolveMediaFor(videoId: string): Promise<void> {
+  if (trackedVideoId === videoId && trackedMedia) return;
+  if (resolvingVideoId === videoId) return; // already retrying for this video
+  resolvingVideoId = videoId;
 
-  await requestNetflixData();
-  const data = extractNetflixData();
-  if (data) {
-    await sendViewed(data, progress);
+  try {
+    await requestNetflixData();
+    let media = extractNetflixData();
+
+    // The on-screen title bar fades out a few seconds into playback — if we
+    // land here after it's already gone, retry briefly. It's reliably shown
+    // right when a video starts loading (see the 'loadedmetadata' listener
+    // in startAutoTracker, which calls us at that exact moment).
+    for (const delay of [500, 1000, 2000, 4000]) {
+      if (media?.title !== NO_TITLE) break;
+      if (getCurrentVideoId() !== videoId) return; // moved on to another video
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      if (getCurrentVideoId() !== videoId) return;
+      await requestNetflixData();
+      media = extractNetflixData();
+    }
+
+    trackedVideoId = videoId;
+    trackedMedia = media;
+  } finally {
+    resolvingVideoId = null;
   }
 }
 
-function startProgressWatcher(): void {
+function reportProgress(flush: boolean): void {
+  if (Date.now() < backoffUntil) return;
+  const videoId = getCurrentVideoId();
+  if (!videoId || !trackedMedia || trackedVideoId !== videoId) return;
+
+  const playback = livePlayback();
+  if (!playback) return;
+
+  const media: NetflixMedia = {
+    ...trackedMedia,
+    progressPercent: playback.percent,
+    runtimeSeconds: trackedMedia.runtimeSeconds ?? playback.runtimeSeconds,
+  };
+
+  chrome.runtime.sendMessage(
+    { type: 'TRACK_PROGRESS', payload: { videoId, media, progressPercent: playback.percent, flush } },
+    (res?: { ok: boolean; reason?: string }) => {
+      if (chrome.runtime.lastError) return; // service worker asleep / popup closed
+      if (res && !res.ok && res.reason === 'unauthenticated') {
+        backoffUntil = Date.now() + AUTH_BACKOFF_MS;
+      }
+    },
+  );
+}
+
+async function autoTick(): Promise<void> {
+  const videoId = getCurrentVideoId();
+  if (!videoId) return;
+
+  // Switched episodes / titles: send a final reading for the previous one.
+  if (trackedVideoId && trackedVideoId !== videoId) {
+    reportProgress(true);
+    trackedMedia = null;
+  }
+
+  await resolveMediaFor(videoId);
+  reportProgress(false);
+}
+
+function startAutoTracker(): void {
   setInterval(() => {
-    checkProgressAndReport().catch(err => console.error('Fallo en checkProgressAndReport:', err));
-  }, PROGRESS_POLL_MS);
+    autoTick().catch((err) => console.error('TaleTrack auto-tick failed:', err));
+  }, AUTO_POLL_MS);
+
+  // The title bar is reliably on screen right when a new video starts
+  // loading — react immediately instead of waiting for the next poll tick
+  // (up to AUTO_POLL_MS later, by which point it has usually faded out).
+  document.addEventListener(
+    'loadedmetadata',
+    (e) => {
+      if ((e.target as HTMLElement)?.tagName === 'VIDEO') {
+        autoTick().catch((err) => console.error('TaleTrack auto-tick failed:', err));
+      }
+    },
+    true,
+  );
+
+  const flush = () => reportProgress(true);
+  window.addEventListener('pagehide', flush);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flush();
+  });
+  document.addEventListener('ended', (e) => {
+    if ((e.target as HTMLElement)?.tagName === 'VIDEO') flush();
+  }, true);
 }
 
-if (window.location.href.includes('/watch/')) {
-  startProgressWatcher();
-  console.log('Netflix Tracker progress watcher started');
-} else {
-  console.log('Netflix Tracker content script loaded (not on watch page)');
-}
+startAutoTracker();

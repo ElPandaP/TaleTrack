@@ -16,6 +16,10 @@ public class JwtService
         _logger = logger;
     }
 
+    /// <summary>Lifetime of a freshly issued access token, in minutes.</summary>
+    public int ExpirationMinutes =>
+        int.TryParse(_configuration["JwtSettings:ExpirationMinutes"], out var m) ? m : 60;
+
     public string GenerateToken(int userId, string email, string username)
     {
         var jwtSecret = _configuration["JwtSettings:Secret"];

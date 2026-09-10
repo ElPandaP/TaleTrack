@@ -1,5 +1,85 @@
-import type { ExtractDataMessage, ExtractDataResponse } from './types';
+import type { ExtractDataMessage, ExtractDataResponse, AuthState, NetflixMedia } from './types';
 
+// Auth view.
+const authView = document.getElementById('authView') as HTMLDivElement;
+
+const spinner = '<div class="auth-loading"><span class="spinner"></span></div>';
+const checkIcon =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+const esc = (s: string) =>
+  s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+
+function renderSignedOut() {
+  authView.innerHTML = `
+    <p class="auth-title">Conecta tu cuenta de TaleTrack</p>
+    <p class="auth-sub">Inicia sesión para que la extensión registre automáticamente lo que ves en Netflix.</p>
+    <button id="signInBtn">Iniciar sesión</button>
+  `;
+  document.getElementById('signInBtn')!.addEventListener('click', doSignIn);
+}
+
+function renderSignedIn(state: AuthState) {
+  const who = state.user ? `${esc(state.user.username)} · ${esc(state.user.email)}` : 'Sesión iniciada';
+  authView.innerHTML = `
+    <div class="auth-status">
+      <span class="dot">${checkIcon}</span>
+      <div>
+        <div class="auth-title">TaleTrack activo</div>
+        <div class="auth-sub">Sincronizando tu Netflix — ${who}</div>
+      </div>
+    </div>
+    <button id="signOutBtn" class="secondary">Cerrar sesión</button>
+  `;
+  document.getElementById('signOutBtn')!.addEventListener('click', doSignOut);
+}
+
+function renderError(msg: string) {
+  authView.innerHTML = `
+    <p class="status error">${esc(msg)}</p>
+    <button id="retryBtn" class="secondary">Reintentar</button>
+  `;
+  document.getElementById('retryBtn')!.addEventListener('click', loadAuth);
+}
+
+async function loadAuth() {
+  authView.innerHTML = spinner;
+  try {
+    const state = (await chrome.runtime.sendMessage({ type: 'AUTH_STATE' })) as AuthState;
+    if (state?.authenticated) renderSignedIn(state);
+    else renderSignedOut();
+  } catch {
+    renderError('No se pudo contactar con la extensión. Recarga la página.');
+  }
+}
+
+async function doSignIn() {
+  authView.innerHTML = spinner;
+  try {
+    const res = (await chrome.runtime.sendMessage({ type: 'SIGN_IN' })) as {
+      ok: boolean;
+      state?: AuthState;
+    };
+    if (res?.ok && res.state?.authenticated) renderSignedIn(res.state);
+    else renderSignedOut();
+  } catch {
+    renderError('No se pudo completar el inicio de sesión.');
+  }
+}
+
+async function doSignOut() {
+  authView.innerHTML = spinner;
+  try {
+    await chrome.runtime.sendMessage({ type: 'SIGN_OUT' });
+  } catch {
+    /* ignore */
+  }
+  renderSignedOut();
+}
+
+loadAuth();
+
+// Manual extraction (debug view, behind a <details>).
 const extractBtn = document.getElementById('extractBtn') as HTMLButtonElement;
 const resultDiv = document.getElementById('result') as HTMLDivElement;
 
@@ -13,10 +93,8 @@ extractBtn.addEventListener('click', async () => {
   extractBtn.disabled = true;
 
   try {
-    // Get current tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-    // Basic tab checks
     if (!tab) {
       throw new Error('No se pudo obtener la pestaña activa');
     }
@@ -29,14 +107,12 @@ extractBtn.addEventListener('click', async () => {
       throw new Error('La pestaña no tiene URL');
     }
 
-    // Only run on Netflix
     if (!tab.url.includes('netflix.com')) {
       resultDiv.innerHTML = statusRow('error', 'Abre una página de Netflix primero.');
       extractBtn.disabled = false;
       return;
     }
 
-    // Ask content script for data
     const message: ExtractDataMessage = { action: 'extractData' };
 
     chrome.tabs.sendMessage(
@@ -73,7 +149,7 @@ function fmtSecs(totalSeconds: number): string {
   return h > 0 ? `${h}h ${m}min` : `${m}min`;
 }
 
-function displayData(data: any) {
+function displayData(data: NetflixMedia) {
   const isSeries = data.type === 'series';
 
   const progressValue =
@@ -152,6 +228,4 @@ function displayData(data: any) {
       <pre>${JSON.stringify(data, null, 2)}</pre>
     </details>
   `;
-
-  console.log('📊 Datos extraídos:', data);
 }

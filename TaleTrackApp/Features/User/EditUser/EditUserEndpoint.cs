@@ -23,7 +23,6 @@ public static class EditUserEndpoint
         ClaimsPrincipal user,
         ILogger<EditUserRequest> logger)
     {
-        // Obtener el UserId del JWT
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
@@ -32,8 +31,7 @@ public static class EditUserEndpoint
             return Results.Unauthorized();
         }
 
-        // Solo el admin (API Key) puede editar a otros usuarios
-        // El usuario solo puede editarse a sí mismo sin API Key
+        // A user may only edit their own account
         if (userId != id)
         {
             logger.LogWarning($"User {userId} tried to edit user {id}");
@@ -52,14 +50,14 @@ public static class EditUserEndpoint
             
             if (updatedUser == null)
             {
-                return Results.NotFound(new { success = false, message = "User not found." });
+                return Results.NotFound(new { success = false, message = "Usuario no encontrado." });
             }
 
             logger.LogInformation($"User {id} updated successfully");
             return Results.Ok(new 
             { 
-                success = true, 
-                message = "User updated successfully.",
+                success = true,
+                message = "Usuario actualizado exitosamente.",
                 data = new
                 {
                     id = updatedUser.Id,

@@ -2,12 +2,14 @@
 
 import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Search, Trash2 } from 'lucide-react';
 import { Cover } from '@/components/media/cover';
 import { StarRating, toStars } from '@/components/media/star-rating';
 import { ReviewModal, type ReviewTarget } from '@/components/media/review-modal';
+import { TrackingProgressModal, type TrackingProgressTarget } from '@/components/media/tracking-progress-modal';
+import { trackingService } from '@/lib/api/services';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { LibraryItem, LibraryType } from '@/lib/types';
@@ -76,18 +78,31 @@ function Segmented<T extends string>({
   );
 }
 
+const REVIEW_KEYS: ReviewKey[] = ['all', 'done', 'todo'];
+const STATUS_KEYS: StatusKey[] = ['all', 'reading', 'done'];
+
 export default function LibraryClient({ items }: { items: LibraryItem[] }) {
   const t = useT();
+  const router = useRouter();
   const params = useSearchParams();
   const initialTab = (params.get('type') as Tab) ?? 'all';
-  const query = params.get('q')?.toLowerCase() ?? '';
+  const initialReviews = (params.get('reviews') as ReviewKey) ?? 'all';
+  const initialStatus = (params.get('status') as StatusKey) ?? 'all';
 
   const [tab, setTab] = useState<Tab>(TABS.includes(initialTab) ? initialTab : 'all');
   const [sort, setSort] = useState<SortKey>('newest');
-  const [status, setStatus] = useState<StatusKey>('all');
-  const [reviews, setReviews] = useState<ReviewKey>('all');
+  const [status, setStatus] = useState<StatusKey>(
+    STATUS_KEYS.includes(initialStatus) ? initialStatus : 'all',
+  );
+  const [reviews, setReviews] = useState<ReviewKey>(
+    REVIEW_KEYS.includes(initialReviews) ? initialReviews : 'all',
+  );
+  const [query, setQuery] = useState(params.get('q') ?? '');
   const [target, setTarget] = useState<ReviewTarget | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [progressTarget, setProgressTarget] = useState<TrackingProgressTarget | null>(null);
+  const [progressModalOpen, setProgressModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   // Target 24 per page (4 rows × 6 cols); when the grid shows fewer columns we
   // drop to the largest multiple of that column count that is ≤ 24, so the last
@@ -103,10 +118,13 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
     return c;
   }, [items]);
 
+  const trimmedQuery = query.trim().toLowerCase();
+
   const visible = useMemo(() => {
     const list = items.filter((it) => {
       if (tab !== 'all' && it.type !== tab) return false;
-      if (query && !`${it.title} ${it.author ?? ''}`.toLowerCase().includes(query)) return false;
+      if (trimmedQuery && !`${it.title} ${it.author ?? ''}`.toLowerCase().includes(trimmedQuery))
+        return false;
       if (status === 'reading' && it.progress === 100) return false;
       if (status === 'done' && it.progress !== 100) return false;
       if (reviews === 'done' && it.myReviewId == null) return false;
@@ -128,7 +146,7 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
     });
 
     return list;
-  }, [items, tab, query, status, reviews, sort]);
+  }, [items, tab, trimmedQuery, status, reviews, sort]);
 
   // Measure the column count once the grid mounts and pick the largest whole
   // number of rows that fits in ~24 items. A ref callback (not an effect) so it
@@ -142,7 +160,7 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
   }, []);
 
   // Reset to page 1 whenever the filter changes (adjust state during render).
-  const filterKey = `${tab}|${query}|${sort}|${status}|${reviews}`;
+  const filterKey = `${tab}|${trimmedQuery}|${sort}|${status}|${reviews}`;
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
   if (filterKey !== prevFilterKey) {
     setPrevFilterKey(filterKey);
@@ -170,10 +188,48 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
     gridRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   };
 
+  const openEditProgress = (it: LibraryItem) => {
+    setProgressTarget({
+      mediaId: it.mediaId,
+      title: it.title,
+      type: it.type,
+      posterUrl: it.posterUrl,
+      progress: it.progress,
+    });
+    setProgressModalOpen(true);
+  };
+
+  const removeTracking = async (it: LibraryItem) => {
+    if (!confirm(t('library.removeConfirm', { title: it.title }))) return;
+    setDeleting(it.mediaId);
+    try {
+      await trackingService.deleteTracking(it.mediaId);
+      router.refresh();
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-x-5 gap-y-3">
-        <h1 className="font-heading text-2xl font-semibold">{t('library.title')}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="font-heading text-2xl font-semibold">{t('library.title')}</h1>
+          <div className="relative">
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground/50"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('nav.search')}
+              aria-label={t('nav.searchAria')}
+              className="h-8 w-40 rounded-lg border border-border bg-secondary/50 pr-3 pl-8 text-sm text-foreground transition-colors placeholder:text-muted-foreground/50 focus:border-primary/60 focus:bg-secondary/70 focus:outline-none sm:w-56"
+            />
+          </div>
+        </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <select
@@ -231,14 +287,14 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
         ))}
       </div>
 
-      {query && (
+      {trimmedQuery && (
         <p className="mb-4 text-sm text-muted-foreground">
           {(() => {
             const [before, after = ''] = t('library.resultsFor').split('{query}');
             return (
               <>
                 {before}
-                <span className="font-medium text-foreground">“{query}”</span>
+                <span className="font-medium text-foreground">“{query.trim()}”</span>
                 {after}
               </>
             );
@@ -260,7 +316,7 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
               const finished = it.progress === 100;
               const rated = it.myRating != null;
               return (
-                <li key={it.mediaId} className="flex flex-col">
+                <li key={it.mediaId} className="group/item relative flex flex-col">
                   <Link href={`/media/${it.mediaId}`} className="group block">
                     <Cover
                       title={it.title}
@@ -273,6 +329,25 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
                       {it.title}
                     </p>
                   </Link>
+                  <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 transition-opacity group-hover/item:opacity-100 focus-within:opacity-100">
+                    <button
+                      type="button"
+                      onClick={() => openEditProgress(it)}
+                      aria-label={t('library.editProgressOf', { title: it.title })}
+                      className="flex size-6 cursor-pointer items-center justify-center rounded-md bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-background hover:text-foreground"
+                    >
+                      <Pencil aria-hidden="true" className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeTracking(it)}
+                      disabled={deleting === it.mediaId}
+                      aria-label={t('library.removeFromLibrary', { title: it.title })}
+                      className="flex size-6 cursor-pointer items-center justify-center rounded-md bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                    >
+                      <Trash2 aria-hidden="true" className="size-3.5" />
+                    </button>
+                  </div>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">{t(`type.${it.type}`)}</p>
                   {rated ? (
                     <button
@@ -330,6 +405,11 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
       )}
 
       <ReviewModal target={target} open={modalOpen} onOpenChange={setModalOpen} />
+      <TrackingProgressModal
+        target={progressTarget}
+        open={progressModalOpen}
+        onOpenChange={setProgressModalOpen}
+      />
     </div>
   );
 }

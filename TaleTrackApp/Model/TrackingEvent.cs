@@ -20,7 +20,17 @@ public class TrackingEvent
     
     [Range(0, 100, ErrorMessage = "Progress must be between 0 and 100")]
     public int? Progress { get; set; }
-    
+
+    // Series only — null for movies and books.
+    [Range(0, int.MaxValue)]
+    public int? Season { get; set; }
+
+    [Range(0, int.MaxValue)]
+    public int? Episode { get; set; }
+
+    [StringLength(255)]
+    public string? EpisodeTitle { get; set; }
+
     [Required]
     public DateTime EventDate { get; set; } = DateTime.UtcNow;
     

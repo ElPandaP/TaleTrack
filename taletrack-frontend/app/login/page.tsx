@@ -3,6 +3,13 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+
+/** Only allow same-origin relative paths as a post-login redirect (no open redirect). */
+function safeNext(): string {
+  if (typeof window === 'undefined') return '/';
+  const raw = new URLSearchParams(window.location.search).get('next');
+  return raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
+}
 import { GoogleLogin } from '@react-oauth/google';
 import { Leaf, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { authService } from '@/lib/api/services';
@@ -21,13 +28,14 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && isAuthenticated) router.replace('/');
+    if (!loading && isAuthenticated) router.replace(safeNext());
   }, [isAuthenticated, loading, router]);
 
   // `/` renders a different tree depending on the auth cookie (landing vs home),
   // so an auth transition needs a full document load, not a soft navigation.
+  // `next` (e.g. the extension-auth flow) also needs the fresh cookie server-side.
   const goHome = () => {
-    window.location.assign('/');
+    window.location.assign(safeNext());
   };
 
   const handleLogin = async (e: React.FormEvent) => {

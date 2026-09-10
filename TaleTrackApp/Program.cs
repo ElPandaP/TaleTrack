@@ -6,6 +6,11 @@ using TaleTrackApp.Features.User.Login;
 using TaleTrackApp.Features.User.Register;
 using TaleTrackApp.Features.User.GoogleLogin;
 using TaleTrackApp.Features.User.EmailAuth;
+using TaleTrackApp.Features.Auth;
+using TaleTrackApp.Features.Auth.Refresh;
+using TaleTrackApp.Features.Auth.Logout;
+using TaleTrackApp.Features.Auth.ExtensionGrant;
+using TaleTrackApp.Features.Auth.Sessions;
 using TaleTrackApp.Features.User.EditUser;
 using TaleTrackApp.Features.User.DeleteUser;
 using TaleTrackApp.Features.User.GetMe;
@@ -14,8 +19,11 @@ using TaleTrackApp.Features.User.GetUserProfile;
 using TaleTrackApp.Features.Media.AddMedia;
 using TaleTrackApp.Features.Media.GetMedia;
 using TaleTrackApp.Features.Media.GetMediaById;
-using TaleTrackApp.Features.TrackingEvent.AddTrackingEvent;
-using TaleTrackApp.Features.TrackingEvent.GetTrackingEvents;
+using TaleTrackApp.Features.TrackingEvent.TrackMovie;
+using TaleTrackApp.Features.TrackingEvent.TrackSeries;
+using TaleTrackApp.Features.TrackingEvent.TrackBook;
+using TaleTrackApp.Features.TrackingEvent.DeleteTracking;
+using TaleTrackApp.Features.TrackingEvent.EditTrackingProgress;
 using TaleTrackApp.Features.Review.AddReview;
 using TaleTrackApp.Features.Review.EditReview;
 using TaleTrackApp.Features.Review.DeleteReview;
@@ -25,7 +33,6 @@ using TaleTrackApp.Features.User;
 using TaleTrackApp.Features.Media;
 using TaleTrackApp.Features.TrackingEvent;
 using TaleTrackApp.Features.Review;
-using TaleTrackApp.Features.TrackingEvent.GetUserBooks;
 using TaleTrackApp.Features.Stats;
 using TaleTrackApp.Features.Stats.GetStats;
 using TaleTrackApp.Features.Library;
@@ -121,6 +128,8 @@ void configureAuth()
 
     builder.Services.AddScoped<IAuthorizationHandler, InternalApiKeyHandler>();
     builder.Services.AddScoped<JwtService>();
+    builder.Services.AddMemoryCache();
+    builder.Services.AddScoped<RefreshTokenService>();
 
     var resendApiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY")!;
     builder.Services.AddHttpClient<EmailService>(client =>
@@ -131,7 +140,6 @@ void configureAuth()
 
 void configureApi()
 {
-    builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(options =>
     {
@@ -156,7 +164,11 @@ void configureApi()
     {
         client.Timeout = TimeSpan.FromSeconds(10);
     });
-    
+    builder.Services.AddHttpClient<TmdbService>(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(10);
+    });
+
     // Add automatic model validation filter
     builder.Services.AddScoped<IEndpointFilter, ValidationFilter>();
 }
@@ -207,15 +219,24 @@ void configurePipeline()
     GoogleLoginEndpoint.Map(apiGroup);
     RequestCodeEndpoint.Map(apiGroup);
     VerifyCodeEndpoint.Map(apiGroup);
+    RefreshEndpoint.Map(apiGroup);
+    LogoutEndpoint.Map(apiGroup);
+
+    // Session / token management (JWT)
+    ExtensionGrantEndpoint.Map(apiGroup);
+    GetSessionsEndpoint.Map(apiGroup);
+    RevokeSessionEndpoint.Map(apiGroup);
     
     // User endpoints (JWT + API Key)
     AddMediaEndpoint.Map(apiGroup);
-    AddTrackingEventEndpoint.Map(apiGroup);
+    TrackMovieEndpoint.Map(apiGroup);
+    TrackSeriesEndpoint.Map(apiGroup);
+    TrackBookEndpoint.Map(apiGroup);
+    DeleteTrackingEndpoint.Map(apiGroup);
+    EditTrackingProgressEndpoint.Map(apiGroup);
     RegisterEndpoint.Map(apiGroup);
-    
+
     // User data endpoints (JWT)
-    GetTrackingEventsEndpoint.Map(apiGroup);
-    GetUserBooksEndpoint.Map(apiGroup);
     GetStatsEndpoint.Map(apiGroup);
     GetLibraryEndpoint.Map(apiGroup);
     GetReviewsEndpoint.Map(apiGroup);

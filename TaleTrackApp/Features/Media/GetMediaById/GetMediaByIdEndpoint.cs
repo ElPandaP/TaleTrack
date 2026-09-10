@@ -12,7 +12,7 @@ public static class GetMediaByIdEndpoint
     {
         group.MapGet("/media/{id:int}", HandleAsync)
             .WithName("GetMediaById")
-            .WithDescription("Ficha de un media: datos, progreso y reseña del usuario, y todas las reseñas")
+            .WithDescription("A media's detail page: data, the user's progress and review, and every review")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

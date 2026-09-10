@@ -19,7 +19,6 @@ public static class RegisterEndpoint
         UserService userService,
         ILogger<RegisterRequest> logger)
     {
-        // Process
         if (await userService.EmailExistsAsync(request.Email))
         {
             logger.LogWarning($"Registration attempt with existing email: {request.Email}");

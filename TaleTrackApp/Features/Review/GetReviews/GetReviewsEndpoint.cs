@@ -10,7 +10,7 @@ public static class GetReviewsEndpoint
     {
         group.MapGet("/reviews", HandleAsync)
             .WithName("GetReviews")
-            .WithDescription("Reseñas escritas por el usuario autenticado, con su media asociada")
+            .WithDescription("Reviews written by the authenticated user, with their associated media")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

@@ -2,8 +2,6 @@ import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { API_CONFIG } from './config';
 import type {
-  GetTrackingEventsResponse,
-  GetUserBooksResponse,
   GetStatsResponse,
   GetLibraryResponse,
   GetReviewsResponse,
@@ -36,19 +34,6 @@ async function serverFetch<T>(
 
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json() as Promise<T>;
-}
-
-export async function getTrackingEvents(
-  type?: string,
-  limit = 200,
-): Promise<GetTrackingEventsResponse> {
-  const params = new URLSearchParams({ limit: String(limit), orderBy: 'desc' });
-  if (type) params.set('type', type);
-  return serverFetch<GetTrackingEventsResponse>(`/tracking?${params}`, true);
-}
-
-export async function getBooks(): Promise<GetUserBooksResponse> {
-  return serverFetch<GetUserBooksResponse>('/books');
 }
 
 export async function getStats(year?: number): Promise<GetStatsResponse> {

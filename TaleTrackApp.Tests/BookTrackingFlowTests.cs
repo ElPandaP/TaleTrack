@@ -5,24 +5,20 @@ using Xunit;
 
 namespace TaleTrackApp.Tests;
 
+[Collection(ApiCollection.Name)]
 public class BookTrackingFlowTests(CustomWebApplicationFactory factory)
-    : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly HttpClient _client = factory.CreateClient();
-
-    // ─── helpers ────────────────────────────────────────────────────────────
 
     private async Task<string> RegisterAndLoginAsync(
         string email, string username, string password)
     {
-        // Register (requires internal API key)
         var registerRes = await _client.PostAsJsonAsync("/api/register",
             new { Email = email, Username = username, Password = password });
 
         Assert.True(registerRes.IsSuccessStatusCode,
             $"Register failed: {await registerRes.Content.ReadAsStringAsync()}");
 
-        // Login
         var loginRes = await _client.PostAsJsonAsync("/api/login",
             new { Email = email, Password = password });
 
@@ -38,26 +34,22 @@ public class BookTrackingFlowTests(CustomWebApplicationFactory factory)
     private void SetBearerToken(string token) =>
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-    // ─── tests ──────────────────────────────────────────────────────────────
-
     /// <summary>
     /// Full happy-path flow:
-    ///   register → login → POST tracking (book) → GET /api/books → 1 book with correct data
+    ///   register → login → POST tracking (book) → GET /api/library?type=Book → 1 book with correct data
     /// </summary>
     [Fact]
-    public async Task RegisterLoginTrackBook_AppearsInBooksList()
+    public async Task RegisterLoginTrackBook_AppearsInLibrary()
     {
         _client.DefaultRequestHeaders.Add("X-Internal-Api-Key", CustomWebApplicationFactory.TestInternalApiKey);
 
         var token = await RegisterAndLoginAsync("flow@test.com", "flowuser", "Password1!");
         SetBearerToken(token);
 
-        // Track a book
-        var trackRes = await _client.PostAsJsonAsync("/api/tracking", new
+        var trackRes = await _client.PostAsJsonAsync("/api/tracking/books", new
         {
             Title    = "Dune",
-            Type     = "Book",
-            Length   = 412,
+            Pages    = 412,
             Progress = 100,
             Author   = "Frank Herbert",
             Isbn     = "9780441013593",
@@ -65,12 +57,11 @@ public class BookTrackingFlowTests(CustomWebApplicationFactory factory)
         Assert.True(trackRes.IsSuccessStatusCode,
             $"Track failed: {await trackRes.Content.ReadAsStringAsync()}");
 
-        // Verify book appears in the list
-        var booksRes = await _client.GetAsync("/api/books");
-        Assert.True(booksRes.IsSuccessStatusCode,
-            $"GET /api/books failed: {await booksRes.Content.ReadAsStringAsync()}");
+        var libraryRes = await _client.GetAsync("/api/library?type=Book");
+        Assert.True(libraryRes.IsSuccessStatusCode,
+            $"GET /api/library failed: {await libraryRes.Content.ReadAsStringAsync()}");
 
-        var books = await booksRes.Content.ReadFromJsonAsync<JsonElement>();
+        var books = await libraryRes.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(1, books.GetProperty("count").GetInt32());
 
         var first = books.GetProperty("data")[0];
@@ -78,11 +69,9 @@ public class BookTrackingFlowTests(CustomWebApplicationFactory factory)
         Assert.Equal("Frank Herbert", first.GetProperty("author").GetString());
     }
 
-    /// <summary>
-    /// Tracking the same book twice must NOT create a duplicate entry.
-    /// </summary>
+    /// <summary>Tracking the same book twice must NOT create a duplicate entry.</summary>
     [Fact]
-    public async Task TrackSameBookTwice_OnlyOneEntryInList()
+    public async Task TrackSameBookTwice_OnlyOneEntryInLibrary()
     {
         _client.DefaultRequestHeaders.Add("X-Internal-Api-Key", CustomWebApplicationFactory.TestInternalApiKey);
 
@@ -92,24 +81,21 @@ public class BookTrackingFlowTests(CustomWebApplicationFactory factory)
         var payload = new
         {
             Title    = "El Nombre del Viento",
-            Type     = "Book",
-            Length   = 662,
+            Pages    = 662,
             Progress = 100,
             Author   = "Patrick Rothfuss",
         };
 
-        await _client.PostAsJsonAsync("/api/tracking", payload);
-        await _client.PostAsJsonAsync("/api/tracking", payload);
+        await _client.PostAsJsonAsync("/api/tracking/books", payload);
+        await _client.PostAsJsonAsync("/api/tracking/books", payload);
 
-        var booksRes = await _client.GetAsync("/api/books");
-        var books = await booksRes.Content.ReadFromJsonAsync<JsonElement>();
+        var libraryRes = await _client.GetAsync("/api/library?type=Book");
+        var books = await libraryRes.Content.ReadFromJsonAsync<JsonElement>();
 
         Assert.Equal(1, books.GetProperty("count").GetInt32());
     }
 
-    /// <summary>
-    /// A freshly logged-in user with no tracked books gets an empty list.
-    /// </summary>
+    /// <summary>A freshly logged-in user with no tracked books gets an empty list.</summary>
     [Fact]
     public async Task NewUser_BooksListIsEmpty()
     {
@@ -118,21 +104,19 @@ public class BookTrackingFlowTests(CustomWebApplicationFactory factory)
         var token = await RegisterAndLoginAsync("empty@test.com", "emptyuser", "Password1!");
         SetBearerToken(token);
 
-        var booksRes = await _client.GetAsync("/api/books");
-        Assert.True(booksRes.IsSuccessStatusCode);
+        var libraryRes = await _client.GetAsync("/api/library?type=Book");
+        Assert.True(libraryRes.IsSuccessStatusCode);
 
-        var books = await booksRes.Content.ReadFromJsonAsync<JsonElement>();
+        var books = await libraryRes.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(0, books.GetProperty("count").GetInt32());
     }
 
-    /// <summary>
-    /// GET /api/books without authentication must return 401.
-    /// </summary>
+    /// <summary>GET /api/library without authentication must return 401.</summary>
     [Fact]
-    public async Task GetBooks_WithoutAuth_Returns401()
+    public async Task GetLibrary_WithoutAuth_Returns401()
     {
         var client = factory.CreateClient(); // fresh client, no headers
-        var res = await client.GetAsync("/api/books");
+        var res = await client.GetAsync("/api/library");
         Assert.Equal(System.Net.HttpStatusCode.Unauthorized, res.StatusCode);
     }
 }
