@@ -95,6 +95,50 @@ public class BookTrackingFlowTests(CustomWebApplicationFactory factory)
         Assert.Equal(1, books.GetProperty("count").GetInt32());
     }
 
+    /// <summary>
+    /// The KOReader plugin sends reading progress repeatedly as you read.
+    /// Progress must rise to the reported value but never go back down.
+    /// </summary>
+    [Fact]
+    public async Task TrackBookProgress_RisesButNeverDrops()
+    {
+        _client.DefaultRequestHeaders.Add("X-Internal-Api-Key", CustomWebApplicationFactory.TestInternalApiKey);
+
+        var token = await RegisterAndLoginAsync("progress@test.com", "progressuser", "Password1!");
+        SetBearerToken(token);
+
+        async Task<int?> ProgressAsync()
+        {
+            var lib = await (await _client.GetAsync("/api/library?type=Book")).Content
+                .ReadFromJsonAsync<JsonElement>();
+            var item = lib.GetProperty("data")[0];
+            return item.GetProperty("progress").ValueKind == JsonValueKind.Null
+                ? null
+                : item.GetProperty("progress").GetInt32();
+        }
+
+        async Task PingAsync(int progress) =>
+            await _client.PostAsJsonAsync("/api/tracking/books",
+                new { Title = "Piranesi", Pages = 245, Progress = progress });
+
+        await PingAsync(20);
+        Assert.Equal(20, await ProgressAsync());
+
+        await PingAsync(65);
+        Assert.Equal(65, await ProgressAsync());
+
+        await PingAsync(40);              // a stale ping arriving late
+        Assert.Equal(65, await ProgressAsync());
+
+        await PingAsync(100);
+        Assert.Equal(100, await ProgressAsync());
+
+        // still a single library entry throughout
+        var final = await (await _client.GetAsync("/api/library?type=Book")).Content
+            .ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(1, final.GetProperty("count").GetInt32());
+    }
+
     /// <summary>A freshly logged-in user with no tracked books gets an empty list.</summary>
     [Fact]
     public async Task NewUser_BooksListIsEmpty()
