@@ -123,7 +123,10 @@ export class ApiClient {
     _retried: boolean = false,
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
-    const headers = this.getHeaders(requireAuth, requireApiKey);
+    const headers = this.getHeaders(requireAuth, requireApiKey) as Record<string, string>;
+
+    // Let the browser set multipart/form-data with its boundary.
+    if (options.body instanceof FormData) delete headers['Content-Type'];
 
     const response = await fetch(url, {
       ...options,
@@ -197,6 +200,15 @@ export class ApiClient {
       requireAuth,
       requireApiKey
     );
+  }
+
+  async postForm<T>(
+    endpoint: string,
+    form: FormData,
+    requireAuth: boolean = false,
+    requireApiKey: boolean = false
+  ): Promise<T> {
+    return this.request<T>(endpoint, { method: 'POST', body: form }, requireAuth, requireApiKey);
   }
 
   async put<T>(

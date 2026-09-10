@@ -1,19 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
-  User, Mail, BookOpen, Film, Tv, Activity, Calendar, LogOut, Trash2, Save, Check,
+  User, Mail, BookOpen, Film, Tv, Activity, Calendar, LogOut, Trash2, Save,
 } from 'lucide-react';
 import { UserAvatar } from '@/components/media/user-avatar';
+import AvatarUpload from '@/components/profile/avatar-upload';
 import { useAuth } from '@/lib/auth-context';
 import { userService, authService } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { UserProfile, YearlyStats, FeedPrivacy } from '@/lib/types';
-
-const AVATAR_SEEDS = ['Aneka', 'Felix', 'Luna', 'Milo', 'Nova', 'Sage'];
-const avatarUrlFor = (seed: string) =>
-  `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(seed)}`;
 
 const PRIVACY_GROUPS = [
   { key: 'book', labelKey: 'typePlural.Book', progress: 'bookProgress', reviews: 'bookReviews' },
@@ -79,6 +77,7 @@ export default function ProfileClient({
 }) {
   const { logout } = useAuth();
   const { t, locale } = useI18n();
+  const router = useRouter();
 
   const [username, setUsername] = useState(profile.username);
   const [email, setEmail] = useState(profile.email);
@@ -102,7 +101,7 @@ export default function ProfileClient({
     setSaving(true);
     setSaveMsg(null);
     try {
-      await userService.updateProfile(profile.id, { username, email, avatarUrl, privacy });
+      await userService.updateProfile(profile.id, { username, email, privacy });
       setSaveMsg({ ok: true, text: t('profile.saved') });
     } catch {
       setSaveMsg({ ok: false, text: t('profile.saveError') });
@@ -164,57 +163,18 @@ export default function ProfileClient({
         </div>
       </div>
 
+      <div className="mb-6">
+        <AvatarUpload
+          currentUrl={avatarUrl}
+          username={username}
+          onChange={(url) => {
+            setAvatarUrl(url ?? '');
+            router.refresh();
+          }}
+        />
+      </div>
+
       <form onSubmit={handleSave} className="space-y-6">
-        {/* Avatar */}
-        <div className="tt-card p-6">
-          <h3 className="font-heading text-lg font-semibold">{t('profile.avatar')}</h3>
-          <p className="mt-1 mb-4 text-xs text-muted-foreground">{t('profile.avatar.pick')}</p>
-
-          <div className="flex flex-wrap gap-2">
-            {AVATAR_SEEDS.map((seed) => {
-              const url = avatarUrlFor(seed);
-              const active = avatarUrl === url;
-              return (
-                <button
-                  key={seed}
-                  type="button"
-                  onClick={() => setAvatarUrl(url)}
-                  className={cn(
-                    'relative rounded-full border-2 transition-colors',
-                    active ? 'border-primary' : 'border-transparent hover:border-border',
-                  )}
-                >
-                  <UserAvatar username={seed} avatarUrl={url} size="lg" />
-                  {active && (
-                    <span className="absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                      <Check aria-hidden="true" className="size-3" />
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-4 flex items-center gap-2">
-            <input
-              type="url"
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              placeholder={t('profile.avatar.customUrl')}
-              className="tt-input px-3 py-2 text-sm"
-            />
-            {avatarUrl && (
-              <button
-                type="button"
-                onClick={() => setAvatarUrl('')}
-                className="shrink-0 text-xs text-muted-foreground hover:text-destructive"
-              >
-                {t('profile.avatar.remove')}
-              </button>
-            )}
-          </div>
-        </div>
-
         {/* Edit fields */}
         <div className="tt-card p-6">
           <h3 className="mb-5 flex items-center gap-2 font-heading text-lg font-semibold">

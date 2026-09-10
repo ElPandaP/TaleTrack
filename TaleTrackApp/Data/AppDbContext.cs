@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Friendship> Friendships { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<AuthActionToken> AuthActionTokens { get; set; }
+    public DbSet<UserAvatar> UserAvatars { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -46,6 +47,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
 
             at.HasIndex(x => x.TokenHash).IsUnique();
+        });
+
+        modelBuilder.Entity<UserAvatar>(av =>
+        {
+            av.HasKey(x => x.UserId);
+            av.HasOne(x => x.User)
+                .WithOne()
+                .HasForeignKey<UserAvatar>(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Friendship>(f =>

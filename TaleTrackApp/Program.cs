@@ -16,6 +16,7 @@ using TaleTrackApp.Features.Auth.ConfirmDelete;
 using TaleTrackApp.Features.Auth.RevokeSignup;
 using TaleTrackApp.Features.User.EditUser;
 using TaleTrackApp.Features.User.RequestDeletion;
+using TaleTrackApp.Features.User.Avatar;
 using TaleTrackApp.Features.User.GetMe;
 using TaleTrackApp.Features.User.SearchUsers;
 using TaleTrackApp.Features.User.GetUserProfile;
@@ -164,6 +165,7 @@ void configureApi()
     builder.Services.AddScoped<LibraryService>();
     builder.Services.AddScoped<FriendService>();
     builder.Services.AddScoped<ActivityService>();
+    builder.Services.AddScoped<AvatarService>();
     builder.Services.AddHttpClient<OpenLibraryService>(client =>
     {
         client.Timeout = TimeSpan.FromSeconds(10);
@@ -253,6 +255,7 @@ void configurePipeline()
     GetMeEndpoint.Map(apiGroup);
     SearchUsersEndpoint.Map(apiGroup);
     GetUserProfileEndpoint.Map(apiGroup);
+    GetAvatarEndpoint.Map(apiGroup);
 
     // Friends & activity (JWT)
     GetFriendsEndpoint.Map(apiGroup);
@@ -267,6 +270,8 @@ void configurePipeline()
     // User management endpoints (JWT + API Key)
     EditUserEndpoint.Map(apiGroup);
     RequestAccountDeletionEndpoint.Map(apiGroup);
+    UploadAvatarEndpoint.Map(apiGroup);
+    DeleteAvatarEndpoint.Map(apiGroup);
     
     // Review endpoints (JWT + API Key)
     AddReviewEndpoint.Map(apiGroup);
