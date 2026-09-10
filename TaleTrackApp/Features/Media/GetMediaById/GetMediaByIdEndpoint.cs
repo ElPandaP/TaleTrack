@@ -34,7 +34,7 @@ public static class GetMediaByIdEndpoint
         {
             var media = await mediaService.GetByIdAsync(id);
             if (media == null)
-                return Results.NotFound(new { success = false, message = "Media no encontrada" });
+                return Results.NotFound(new { success = false, message = "Media not found" });
 
             var reviews = await reviewService.GetByMediaIdAsync(id);
             var myTracking = await trackingEventService.GetLatestForMediaAsync(userId, id);

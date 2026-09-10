@@ -31,10 +31,10 @@ public static class DeleteTrackingEndpoint
             var deleted = await trackingEventService.DeleteAllForMediaAsync(userId, mediaId);
 
             if (!deleted)
-                return Results.NotFound(new { success = false, message = "No se encontró seguimiento para este contenido" });
+                return Results.NotFound(new { success = false, message = "No tracking found for this media" });
 
             logger.LogInformation("Tracking for media {MediaId} deleted by user {UserId}", mediaId, userId);
-            return Results.Ok(new { success = true, message = "Seguimiento eliminado exitosamente" });
+            return Results.Ok(new { success = true, message = "Tracking deleted successfully" });
         }
         catch (Exception ex)
         {

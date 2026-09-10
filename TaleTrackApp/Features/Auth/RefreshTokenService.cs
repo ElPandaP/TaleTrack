@@ -130,6 +130,20 @@ public class RefreshTokenService
             .OrderByDescending(rt => rt.LastUsedAt)
             .ToListAsync();
 
+    /// <summary>Revokes every active session for a user (e.g. after a password reset).</summary>
+    public async Task RevokeAllForUserAsync(int userId)
+    {
+        var active = await _context.RefreshTokens
+            .Where(rt => rt.UserId == userId && rt.RevokedAt == null)
+            .ToListAsync();
+        if (active.Count == 0) return;
+
+        var now = DateTime.UtcNow;
+        foreach (var rt in active) rt.RevokedAt = now;
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Revoked {Count} session(s) for user {UserId}", active.Count, userId);
+    }
+
     /// <summary>Revokes whichever token matches this raw value, if any. Silent no-op otherwise.</summary>
     public async Task RevokeByRawTokenAsync(string rawToken)
     {

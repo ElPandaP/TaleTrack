@@ -76,8 +76,8 @@ export function ReviewModal({
       onOpenChange(false);
       onSaved?.();
       router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('reviewModal.saveError'));
+    } catch {
+      setError(t('reviewModal.saveError'));
     } finally {
       setSubmitting(false);
     }

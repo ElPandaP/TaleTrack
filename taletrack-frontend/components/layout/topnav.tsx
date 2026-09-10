@@ -17,6 +17,7 @@ const navItems = [
   { href: '/library', key: 'nav.library' },
   { href: '/reviews', key: 'nav.reviews' },
   { href: '/activity', key: 'nav.activity' },
+  { href: '/connections', key: 'nav.connections' },
 ];
 
 type PillRect = { left: number; top: number; width: number; height: number };

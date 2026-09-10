@@ -4,6 +4,7 @@
 #
 #   ./scripts/start-all.ps1              # up + wait + seed
 #   ./scripts/start-all.ps1 -NoSeed      # up + wait, skip seeding
+#   ./scripts/start-all.ps1 -Fresh       # wipe the db volume first, then up + wait + seed
 #   ./scripts/start-all.ps1 -Down        # tear the stack down and exit
 #   ./scripts/start-all.ps1 -Rebuild     # force image rebuild on up
 
@@ -11,6 +12,7 @@
 param(
     [switch]$NoSeed,
     [switch]$Down,
+    [switch]$Fresh,
     [switch]$Rebuild,
     [int]$TimeoutSeconds = 240
 )
@@ -32,6 +34,11 @@ if ($Down) {
 
 Push-Location $repo
 try {
+    if ($Fresh) {
+        Write-Host "-> Borrando datos previos (docker compose down -v) ..."
+        docker @compose down -v
+    }
+
     Write-Host "-> Levantando el stack (docker compose up -d) ..."
     $upArgs = @("up", "-d")
     if ($Rebuild) { $upArgs += "--build" }

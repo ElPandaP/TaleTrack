@@ -7,12 +7,12 @@ namespace TaleTrackApp.Features.User.EmailAuth;
 
 public class VerifyCodeRequest
 {
-    [Required(ErrorMessage = "Email es requerido")]
-    [EmailAddress(ErrorMessage = "Email debe ser válido")]
+    [Required(ErrorMessage = "Email is required")]
+    [EmailAddress(ErrorMessage = "Email must be valid")]
     public required string Email { get; set; }
 
-    [Required(ErrorMessage = "El código es requerido")]
-    [StringLength(6, MinimumLength = 6, ErrorMessage = "El código debe tener 6 caracteres")]
+    [Required(ErrorMessage = "The code is required")]
+    [StringLength(6, MinimumLength = 6, ErrorMessage = "The code must be 6 characters long")]
     public required string Code { get; set; }
 }
 
@@ -59,7 +59,7 @@ public static class VerifyCodeEndpoint
         return Results.Ok(new
         {
             success = true,
-            message = "Verificación exitosa",
+            message = "Verification successful",
             token,
             refreshToken,
             expiresIn = jwtService.ExpirationMinutes * 60,

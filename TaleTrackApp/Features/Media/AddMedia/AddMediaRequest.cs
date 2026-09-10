@@ -4,14 +4,14 @@ using System.ComponentModel.DataAnnotations;
 
 public class AddMediaRequest
 {
-    [Required(ErrorMessage = "Título es requerido")]
-    [StringLength(255, MinimumLength = 1, ErrorMessage = "Título debe tener entre 1 y 255 caracteres")]
+    [Required(ErrorMessage = "Title is required")]
+    [StringLength(255, MinimumLength = 1, ErrorMessage = "Title must be between 1 and 255 characters")]
     public required string Title { get; set; }
     
-    [Required(ErrorMessage = "Type es requerido")]
-    [RegularExpression(@"^(Movie|Series|Book)$", ErrorMessage = "Type debe ser 'Movie', 'Series' o 'Book'")]
+    [Required(ErrorMessage = "Type is required")]
+    [RegularExpression(@"^(Movie|Series|Book)$", ErrorMessage = "Type must be 'Movie', 'Series' or 'Book'")]
     public required string Type { get; set; }
     
-    [Range(1, int.MaxValue, ErrorMessage = "Length debe ser mayor que 0")]
+    [Range(1, int.MaxValue, ErrorMessage = "Length must be greater than 0")]
     public int Length { get; set; }
 }

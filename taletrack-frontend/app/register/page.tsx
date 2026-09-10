@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation';
 import { GoogleLogin } from '@react-oauth/google';
 import { Leaf, Mail, Lock, User, ArrowRight, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { authService } from '@/lib/api/services';
+import { ApiError } from '@/lib/api/client';
 import { useAuth, parseJwt } from '@/lib/auth-context';
-import { useT } from '@/lib/i18n';
+import { useT, useI18n } from '@/lib/i18n';
 import LocaleToggle from '@/components/layout/locale-toggle';
 
 function PasswordStrength({ password }: { password: string }) {
@@ -35,7 +36,7 @@ function PasswordStrength({ password }: { password: string }) {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const t = useT();
+  const { t, locale } = useI18n();
   const { login, isAuthenticated, loading } = useAuth();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -65,7 +66,7 @@ export default function RegisterPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await authService.register(email, username, password);
+      const res = await authService.register(email, username, password, locale);
       if (res.success) {
         setSuccess(true);
         try {
@@ -84,7 +85,8 @@ export default function RegisterPage() {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.register.failed'));
+      const code = err instanceof ApiError ? err.code : undefined;
+      setError(t(code === 'email_taken' ? 'auth.register.emailTaken' : 'auth.register.failed'));
     } finally {
       setSubmitting(false);
     }
@@ -94,7 +96,7 @@ export default function RegisterPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await authService.googleLogin(credential);
+      const res = await authService.googleLogin(credential, locale);
       if (res.success && res.token) {
         const decoded = parseJwt(res.token);
         login({
@@ -104,8 +106,8 @@ export default function RegisterPage() {
         });
         goHome();
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.googleSignUpFailed'));
+    } catch {
+      setError(t('auth.googleSignUpFailed'));
     } finally {
       setSubmitting(false);
     }

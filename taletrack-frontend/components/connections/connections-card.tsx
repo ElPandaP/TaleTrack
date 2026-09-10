@@ -25,7 +25,7 @@ export default function ConnectionsCard() {
     sessionsService
       .list()
       .then((s) => alive && setSessions(s))
-      .catch(() => alive && setError(t('profile.connections.loadError')));
+      .catch(() => alive && setError(t('connections.sessions.loadError')));
     return () => {
       alive = false;
     };
@@ -43,7 +43,7 @@ export default function ConnectionsCard() {
       await sessionsService.revoke(id);
       setSessions((prev) => prev?.filter((s) => s.id !== id) ?? null);
     } catch {
-      setError(t('profile.connections.revokeError'));
+      setError(t('connections.sessions.revokeError'));
     } finally {
       setRevoking(null);
     }
@@ -51,8 +51,8 @@ export default function ConnectionsCard() {
 
   return (
     <div className="tt-card p-6">
-      <h3 className="font-heading text-lg font-semibold">{t('profile.connections')}</h3>
-      <p className="mt-1 mb-4 text-xs text-muted-foreground">{t('profile.connections.hint')}</p>
+      <h3 className="font-heading text-lg font-semibold">{t('connections.sessions.title')}</h3>
+      <p className="mt-1 mb-4 text-xs text-muted-foreground">{t('connections.sessions.hint')}</p>
 
       {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
 
@@ -65,7 +65,7 @@ export default function ConnectionsCard() {
       )}
 
       {sessions?.length === 0 && (
-        <p className="text-sm text-muted-foreground">{t('profile.connections.empty')}</p>
+        <p className="text-sm text-muted-foreground">{t('connections.sessions.empty')}</p>
       )}
 
       {sessions && sessions.length > 0 && (
@@ -83,7 +83,7 @@ export default function ConnectionsCard() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">{s.device}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {t('profile.connections.lastUsed', { date: fmt(s.lastUsedAt) })}
+                    {t('connections.sessions.lastUsed', { date: fmt(s.lastUsedAt) })}
                   </p>
                 </div>
                 <button
@@ -99,8 +99,8 @@ export default function ConnectionsCard() {
                 >
                   <X className="size-3.5" />
                   {revoking === s.id
-                    ? t('profile.connections.revoking')
-                    : t('profile.connections.revoke')}
+                    ? t('connections.sessions.revoking')
+                    : t('connections.sessions.revoke')}
                 </button>
               </li>
             );

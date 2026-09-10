@@ -33,14 +33,14 @@ public static class EditTrackingProgressEndpoint
             var updated = await trackingEventService.SetProgressAsync(userId, mediaId, request.Progress);
 
             if (updated == null)
-                return Results.NotFound(new { success = false, message = "No se encontró seguimiento para este contenido" });
+                return Results.NotFound(new { success = false, message = "No tracking found for this media" });
 
             logger.LogInformation("Progress for media {MediaId} set to {Progress} by user {UserId}",
                 mediaId, request.Progress, userId);
             return Results.Ok(new
             {
                 success = true,
-                message = "Progreso actualizado exitosamente",
+                message = "Progress updated successfully",
                 data = new { progress = updated.Progress }
             });
         }

@@ -6,6 +6,10 @@
 # Log in at http://localhost:8090/login with the credentials printed at the end.
 # Seeds ~65 books (so the carousel's 50-item cap + "see all" is visible), 3 movies, 3 series.
 # Idempotent-ish: re-running adds more tracking events but media dedupes by title.
+#
+# Needs a FRESH database: users created before the switch to PBKDF2 password hashing had
+# their old hashes invalidated by a migration, so login fails for them. Use
+# `./scripts/start-all.ps1 -Fresh` (drops the db volume) if login errors out below.
 
 [CmdletBinding()]
 param(
@@ -30,15 +34,61 @@ try {
         -Body (@{ email = $Email; username = $Username; password = $Password } | ConvertTo-Json) | Out-Null
     Write-Host "   registered."
 } catch {
-    if ("$($_.ErrorDetails.Message)" -match "registrado") { Write-Host "   already exists, continuing." }
-    else { throw }
+    if ("$($_.ErrorDetails.Message)" -match "email_taken|already registered|registrado") {
+        Write-Host "   already exists, continuing."
+    } else { throw }
 }
 
 Write-Host "-> Logging in ..."
-$login = Invoke-RestMethod -Method Post -Uri "$ApiBase/login" `
-    -ContentType "application/json" `
-    -Body (@{ email = $Email; password = $Password } | ConvertTo-Json)
+try {
+    $login = Invoke-RestMethod -Method Post -Uri "$ApiBase/login" `
+        -ContentType "application/json" `
+        -Body (@{ email = $Email; password = $Password } | ConvertTo-Json)
+} catch {
+    Write-Host ""
+    Write-Warning "No se pudo iniciar sesion como $Email."
+    Write-Warning "Causa mas probable: la BD de dev tiene usuarios creados antes del cambio a hashing"
+    Write-Warning "PBKDF2; la migracion 'ClearLegacyPasswordHashes' invalido sus contrasenas antiguas."
+    Write-Warning "Solucion: borra el volumen de la BD y vuelve a arrancar con datos frescos:"
+    Write-Warning "   ./scripts/start-all.ps1 -Fresh"
+    throw
+}
 $auth = @{ Authorization = "Bearer $($login.token)" }
+
+# The API splits tracking by media type (/tracking/books|movies|series) with different
+# request bodies. This helper routes a seed item to the right endpoint.
+function Add-Tracking {
+    param($Headers, $Item)
+
+    switch ($Item.type) {
+        "Book" {
+            $body = @{ title = $Item.title; progress = $Item.progress }
+            if ($Item.author) { $body.author = $Item.author }
+            if ($Item.isbn)   { $body.isbn   = $Item.isbn }
+            if ($Item.length) { $body.pages  = [int]$Item.length }
+            Invoke-RestMethod -Method Post -Uri "$ApiBase/tracking/books" -Headers $Headers `
+                -ContentType "application/json" -Body ($body | ConvertTo-Json) | Out-Null
+        }
+        "Movie" {
+            $body = @{ title = $Item.title; progress = $Item.progress }
+            if ($Item.length) { $body.minutes = [int]$Item.length }
+            Invoke-RestMethod -Method Post -Uri "$ApiBase/tracking/movies" -Headers $Headers `
+                -ContentType "application/json" -Body ($body | ConvertTo-Json) | Out-Null
+        }
+        "Series" {
+            # Old seed model was one row per series; the API is now per-episode.
+            # Fake a season 1 with a few episodes so the library and stats look real.
+            $totalEps = if ($Item.length -and [int]$Item.length -le 24) { [int]$Item.length } else { 8 }
+            $watched  = if ([int]$Item.progress -ge 100) { $totalEps }
+                        else { [Math]::Max(1, [int][Math]::Ceiling($totalEps * [int]$Item.progress / 100.0)) }
+            for ($ep = 1; $ep -le $watched; $ep++) {
+                $body = @{ title = $Item.title; season = 1; episode = $ep; minutes = 45; progress = 100 }
+                Invoke-RestMethod -Method Post -Uri "$ApiBase/tracking/series" -Headers $Headers `
+                    -ContentType "application/json" -Body ($body | ConvertTo-Json) | Out-Null
+            }
+        }
+    }
+}
 
 # type must be one of: Book | Movie | Series   (see AddTrackingEventRequest)
 # Books with a real ISBN get author + cover auto-filled from OpenLibrary in the background.
@@ -132,8 +182,7 @@ foreach ($line in $bookCatalog) {
 
 Write-Host "-> Adding $($items.Count) tracking events ..."
 foreach ($it in $items) {
-    Invoke-RestMethod -Method Post -Uri "$ApiBase/tracking" -Headers $auth `
-        -ContentType "application/json" -Body ($it | ConvertTo-Json) | Out-Null
+    Add-Tracking $auth $it
     Write-Host ("   + {0,-38} {1,-7} {2}%" -f $it.title, $it.type, $it.progress)
 }
 
@@ -158,7 +207,7 @@ function New-SeedUser {
             -Headers @{ "X-Internal-Api-Key" = $internalKey } -ContentType "application/json" `
             -Body (@{ email = $Mail; username = $Name; password = $Password } | ConvertTo-Json) | Out-Null
     } catch {
-        if ("$($_.ErrorDetails.Message)" -notmatch "registrado") { throw }
+        if ("$($_.ErrorDetails.Message)" -notmatch "email_taken|already registered|registrado") { throw }
     }
 
     $lg = Invoke-RestMethod -Method Post -Uri "$ApiBase/login" -ContentType "application/json" `
@@ -173,8 +222,8 @@ function New-SeedUser {
 
     foreach ($ti in $Titles) {
         $prog = if ($ti[2]) { [int]$ti[2] } else { 100 }
-        Invoke-RestMethod -Method Post -Uri "$ApiBase/tracking" -Headers $h -ContentType "application/json" `
-            -Body (@{ title = $ti[0]; type = $ti[1]; length = 300; progress = $prog } | ConvertTo-Json) | Out-Null
+        $len  = if ($ti[1] -eq "Series") { 8 } else { 300 }
+        Add-Tracking $h @{ title = $ti[0]; type = $ti[1]; length = $len; progress = $prog }
     }
 
     # review the finished ones

@@ -57,8 +57,8 @@ export function TrackingProgressModal({
       onOpenChange(false);
       onSaved?.();
       router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('trackingModal.saveError'));
+    } catch {
+      setError(t('trackingModal.saveError'));
     } finally {
       setSubmitting(false);
     }

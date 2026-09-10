@@ -35,7 +35,7 @@ public static class DeleteReviewEndpoint
             
             if (review == null)
             {
-                return Results.NotFound(new { success = false, message = "Reseña no encontrada" });
+                return Results.NotFound(new { success = false, message = "Review not found" });
             }
 
             // Only the review's owner may delete it
@@ -49,11 +49,11 @@ public static class DeleteReviewEndpoint
 
             if (!success)
             {
-                return Results.NotFound(new { success = false, message = "Reseña no encontrada" });
+                return Results.NotFound(new { success = false, message = "Review not found" });
             }
 
             logger.LogInformation($"Review {id} deleted by user {userId}");
-            return Results.Ok(new { success = true, message = "Reseña eliminada exitosamente" });
+            return Results.Ok(new { success = true, message = "Review deleted successfully" });
         }
         catch (Exception ex)
         {

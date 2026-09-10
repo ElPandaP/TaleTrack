@@ -27,7 +27,7 @@ public static class LoginEndpoint
         if (user == null || !userService.VerifyPassword(request.Password, user))
         {
             logger.LogWarning($"Failed login attempt for email: {request.Email}");
-            return Results.Json(new { message = "Email o contraseña incorrectos." }, statusCode: 401);
+            return Results.Json(new { code = "invalid_credentials", message = "Invalid email or password." }, statusCode: 401);
         }
 
         var token = jwtService.GenerateToken(user.Id, user.Email, user.Username);
@@ -38,7 +38,7 @@ public static class LoginEndpoint
         var response = new LoginResponse
         {
             Success = true,
-            Message = "Login exitoso",
+            Message = "Login successful",
             Token = token,
             RefreshToken = refreshToken,
             ExpiresIn = jwtService.ExpirationMinutes * 60,

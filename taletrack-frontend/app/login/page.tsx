@@ -13,14 +13,16 @@ function safeNext(): string {
 import { GoogleLogin } from '@react-oauth/google';
 import { Leaf, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { authService } from '@/lib/api/services';
+import { ApiError } from '@/lib/api/client';
 import { useAuth, parseJwt } from '@/lib/auth-context';
-import { useT } from '@/lib/i18n';
+import { useI18n } from '@/lib/i18n';
 import LocaleToggle from '@/components/layout/locale-toggle';
 
 export default function LoginPage() {
   const router = useRouter();
-  const t = useT();
+  const { t, locale } = useI18n();
   const { login, isAuthenticated, loading } = useAuth();
+  const [justReset, setJustReset] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,6 +32,10 @@ export default function LoginPage() {
   useEffect(() => {
     if (!loading && isAuthenticated) router.replace(safeNext());
   }, [isAuthenticated, loading, router]);
+
+  useEffect(() => {
+    setJustReset(new URLSearchParams(window.location.search).get('reset') === '1');
+  }, []);
 
   // `/` renders a different tree depending on the auth cookie (landing vs home),
   // so an auth transition needs a full document load, not a soft navigation.
@@ -54,7 +60,8 @@ export default function LoginPage() {
         goHome();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.invalidCredentials'));
+      const code = err instanceof ApiError ? err.code : undefined;
+      setError(t(code === 'invalid_credentials' ? 'auth.invalidCredentials' : 'auth.loginError'));
     } finally {
       setSubmitting(false);
     }
@@ -64,7 +71,7 @@ export default function LoginPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await authService.googleLogin(credential);
+      const res = await authService.googleLogin(credential, locale);
       if (res.success && res.token) {
         const decoded = parseJwt(res.token);
         login({
@@ -74,8 +81,8 @@ export default function LoginPage() {
         });
         goHome();
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.googleSignInFailed'));
+    } catch {
+      setError(t('auth.googleSignInFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -102,6 +109,12 @@ export default function LoginPage() {
           <h1 className="font-heading text-2xl font-semibold mb-1">{t('auth.login.title')}</h1>
           <p className="text-muted-foreground text-sm mb-8">{t('auth.login.subtitle')}</p>
 
+          {justReset && (
+            <div className="mb-6 p-3 bg-primary/10 border border-primary/20 rounded-xl text-sm text-foreground">
+              {t('auth.reset.doneNotice')}
+            </div>
+          )}
+
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">
@@ -122,9 +135,17 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                {t('auth.password')}
-              </label>
+              <div className="flex items-baseline justify-between mb-1.5">
+                <label className="block text-xs font-medium text-muted-foreground">
+                  {t('auth.password')}
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-primary hover:text-primary/80 transition-colors"
+                >
+                  {t('auth.login.forgotPassword')}
+                </Link>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
                 <input

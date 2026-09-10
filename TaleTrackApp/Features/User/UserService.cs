@@ -198,6 +198,19 @@ public class UserService
         await _context.SaveChangesAsync();
     }
 
+    /// <summary>Sets a new password (PBKDF2) for a user. Returns false if the user is gone.</summary>
+    public async Task<bool> SetPasswordAsync(int userId, string newPassword)
+    {
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null) return false;
+
+        user.PasswordHash = HashPassword(user, newPassword);
+        user.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Password reset for user {UserId}", userId);
+        return true;
+    }
+
     public bool VerifyPassword(string password, Model.User user)
     {
         if (string.IsNullOrEmpty(user.PasswordHash)) return false;

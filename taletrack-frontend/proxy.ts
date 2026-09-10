@@ -4,6 +4,7 @@ import { isJwtValid } from '@/lib/jwt';
 
 const protectedPrefixes = [
   '/dashboard', '/library', '/reviews', '/activity', '/friends', '/profile', '/media', '/u',
+  '/connections',
 ];
 const authPrefixes = ['/login', '/register'];
 

@@ -5,9 +5,8 @@ import {
   User, Mail, BookOpen, Film, Tv, Activity, Calendar, LogOut, Trash2, Save, Check,
 } from 'lucide-react';
 import { UserAvatar } from '@/components/media/user-avatar';
-import ConnectionsCard from '@/components/profile/connections-card';
 import { useAuth } from '@/lib/auth-context';
-import { userService } from '@/lib/api/services';
+import { userService, authService } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { UserProfile, YearlyStats, FeedPrivacy } from '@/lib/types';
@@ -89,6 +88,7 @@ export default function ProfileClient({
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleteRequested, setDeleteRequested] = useState(false);
 
   const memberSince = new Date(profile.createdAt).toLocaleDateString(locale, {
     month: 'long',
@@ -104,8 +104,8 @@ export default function ProfileClient({
     try {
       await userService.updateProfile(profile.id, { username, email, avatarUrl, privacy });
       setSaveMsg({ ok: true, text: t('profile.saved') });
-    } catch (err) {
-      setSaveMsg({ ok: false, text: err instanceof Error ? err.message : t('profile.saveError') });
+    } catch {
+      setSaveMsg({ ok: false, text: t('profile.saveError') });
     } finally {
       setSaving(false);
     }
@@ -122,11 +122,10 @@ export default function ProfileClient({
       return;
     }
     try {
-      await userService.deleteAccount(profile.id);
-      logout();
-      window.location.assign('/');
-    } catch (err) {
-      alert(err instanceof Error ? err.message : t('profile.deleteError'));
+      await authService.requestAccountDeletion(locale);
+      setDeleteRequested(true);
+    } catch {
+      alert(t('profile.deleteError'));
     }
   };
 
@@ -294,11 +293,6 @@ export default function ProfileClient({
         </button>
       </form>
 
-      {/* Connections / active sessions */}
-      <div className="mt-6">
-        <ConnectionsCard />
-      </div>
-
       {/* Account actions */}
       <div className="tt-card mt-6 p-6">
         <h3 className="mb-5 font-heading text-lg font-semibold">{t('profile.account')}</h3>
@@ -312,25 +306,33 @@ export default function ProfileClient({
 
         <div className="mt-3 border-t border-border pt-3">
           <p className="mb-3 text-xs text-muted-foreground/60">{t('profile.danger')}</p>
-          <button
-            onClick={handleDelete}
-            className={cn(
-              'flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-colors',
-              deleteConfirm
-                ? 'border-destructive/30 bg-destructive/20 text-destructive hover:bg-destructive/30'
-                : 'border-destructive/20 bg-secondary/30 text-destructive hover:border-destructive/30 hover:bg-destructive/10',
-            )}
-          >
-            <Trash2 className="size-4" />
-            {deleteConfirm ? t('profile.deleteConfirm') : t('profile.delete')}
-          </button>
-          {deleteConfirm && (
-            <button
-              onClick={() => setDeleteConfirm(false)}
-              className="mt-2 text-xs text-muted-foreground hover:text-foreground"
-            >
-              {t('profile.cancel')}
-            </button>
+          {deleteRequested ? (
+            <p className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-foreground">
+              {t('profile.deleteEmailSent')}
+            </p>
+          ) : (
+            <>
+              <button
+                onClick={handleDelete}
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-colors',
+                  deleteConfirm
+                    ? 'border-destructive/30 bg-destructive/20 text-destructive hover:bg-destructive/30'
+                    : 'border-destructive/20 bg-secondary/30 text-destructive hover:border-destructive/30 hover:bg-destructive/10',
+                )}
+              >
+                <Trash2 className="size-4" />
+                {deleteConfirm ? t('profile.deleteConfirm') : t('profile.delete')}
+              </button>
+              {deleteConfirm && (
+                <button
+                  onClick={() => setDeleteConfirm(false)}
+                  className="mt-2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  {t('profile.cancel')}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

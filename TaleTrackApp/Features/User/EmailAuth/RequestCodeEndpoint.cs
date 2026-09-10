@@ -6,9 +6,13 @@ namespace TaleTrackApp.Features.User.EmailAuth;
 
 public class RequestCodeRequest
 {
-    [Required(ErrorMessage = "Email es requerido")]
-    [EmailAddress(ErrorMessage = "Email debe ser válido")]
+    [Required(ErrorMessage = "Email is required")]
+    [EmailAddress(ErrorMessage = "Email must be valid")]
     public required string Email { get; set; }
+
+    /// <summary>Requester UI locale ("es"/"en"); the verification email is sent in it.</summary>
+    [StringLength(10)]
+    public string? Locale { get; set; }
 }
 
 public static class RequestCodeEndpoint
@@ -30,21 +34,21 @@ public static class RequestCodeEndpoint
     {
         var user = await userService.GetByEmailAsync(request.Email);
         if (user == null)
-            return Results.Ok(new { success = true, message = "Si el email existe, recibirás un código" });
+            return Results.Ok(new { success = true, message = "If the email exists, a verification code has been sent" });
 
         var code = Random.Shared.Next(100000, 999999).ToString();
         await userService.SetEmailCodeAsync(user.Id, code);
 
         try
         {
-            await emailService.SendVerificationCodeAsync(user.Email, code);
+            await emailService.SendVerificationCodeAsync(user.Email, code, request.Locale);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to send verification email to {Email}", user.Email);
-            return Results.Problem("Error al enviar el email");
+            return Results.Problem("Failed to send the email");
         }
 
-        return Results.Ok(new { success = true, message = "Si el email existe, recibirás un código" });
+        return Results.Ok(new { success = true, message = "If the email exists, a verification code has been sent" });
     }
 }

@@ -61,7 +61,7 @@ public static class TrackSeriesEndpoint
                 });
             }
 
-            return Results.Ok(new { success = true, message = "Tracking event agregado exitosamente" });
+            return Results.Ok(new { success = true, message = "Tracking event added successfully" });
         }
         catch (Exception ex)
         {

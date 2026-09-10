@@ -21,7 +21,7 @@ public static class AddMediaEndpoint
             var media = await mediaService.CreateAsync(request.Title, request.Type, request.Length);
 
             logger.LogInformation($"Media '{media.Title}' added successfully");
-            return Results.Ok(new { success = true, message = "Media agregado exitosamente" });
+            return Results.Ok(new { success = true, message = "Media added successfully" });
         }
         catch (Exception ex)
         {

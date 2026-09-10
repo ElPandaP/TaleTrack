@@ -4,18 +4,18 @@ using System.ComponentModel.DataAnnotations;
 
 public class GetLibraryRequest
 {
-    [RegularExpression(@"^(Movie|Series|Book)?$", ErrorMessage = "Type debe ser 'Movie', 'Series', 'Book' o vacío")]
+    [RegularExpression(@"^(Movie|Series|Book)?$", ErrorMessage = "Type must be 'Movie', 'Series', 'Book' or empty")]
     public string? Type { get; set; }
 
-    [RegularExpression(@"^(in_progress|finished)?$", ErrorMessage = "Status debe ser 'in_progress', 'finished' o vacío")]
+    [RegularExpression(@"^(in_progress|finished)?$", ErrorMessage = "Status must be 'in_progress', 'finished' or empty")]
     public string? Status { get; set; }
 
-    [RegularExpression(@"^(recent|rating)?$", ErrorMessage = "Sort debe ser 'recent', 'rating' o vacío")]
+    [RegularExpression(@"^(recent|rating)?$", ErrorMessage = "Sort must be 'recent', 'rating' or empty")]
     public string? Sort { get; set; }
 
-    [Range(2000, 3000, ErrorMessage = "Year debe estar entre 2000 y 3000")]
+    [Range(2000, 3000, ErrorMessage = "Year must be between 2000 and 3000")]
     public int? Year { get; set; }
 
-    [Range(1, 200, ErrorMessage = "Limit debe estar entre 1 y 200")]
+    [Range(1, 200, ErrorMessage = "Limit must be between 1 and 200")]
     public int? Limit { get; set; }
 }

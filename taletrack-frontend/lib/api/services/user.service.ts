@@ -18,7 +18,4 @@ export const userService = {
     return apiClient.put(`/user/${id}`, patch, true, true);
   },
 
-  async deleteAccount(id: number): Promise<{ success: boolean }> {
-    return apiClient.delete(`/user/${id}`, true, true);
-  },
 };

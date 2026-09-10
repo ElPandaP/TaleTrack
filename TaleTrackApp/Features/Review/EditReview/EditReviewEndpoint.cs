@@ -37,7 +37,7 @@ public static class EditReviewEndpoint
             
             if (review == null)
             {
-                return Results.NotFound(new { success = false, message = "Reseña no encontrada" });
+                return Results.NotFound(new { success = false, message = "Review not found" });
             }
 
             // Only the review's owner may edit it
@@ -53,7 +53,7 @@ public static class EditReviewEndpoint
             return Results.Ok(new 
             { 
                 success = true, 
-                message = "Reseña actualizada exitosamente",
+                message = "Review updated successfully",
                 data = new
                 {
                     id = updatedReview!.Id,

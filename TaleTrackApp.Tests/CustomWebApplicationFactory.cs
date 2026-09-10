@@ -5,6 +5,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
+using TaleTrackApp.Auth;
 using TaleTrackApp.Data;
 using TaleTrackApp.Features.Media;
 using Xunit;
@@ -77,7 +78,20 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                     opts.HttpMessageHandlerBuilderActions.Add(b =>
                         b.PrimaryHandler = new StubHttpMessageHandler());
                 });
+
+            // Never hit Resend from tests — pretend every send succeeds.
+            services.AddHttpClient<EmailService>()
+                .ConfigurePrimaryHttpMessageHandler(() =>
+                    new StubHttpMessageHandler(System.Net.HttpStatusCode.OK));
         });
+    }
+
+    /// <summary>A scoped <see cref="AppDbContext"/> for tests to seed or assert against.</summary>
+    public IServiceScope NewDbScope(out AppDbContext db)
+    {
+        var scope = Services.CreateScope();
+        db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return scope;
     }
 
     protected override void Dispose(bool disposing)
@@ -86,10 +100,11 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         if (disposing) KeepAlive.Dispose();
     }
 
-    private sealed class StubHttpMessageHandler : HttpMessageHandler
+    private sealed class StubHttpMessageHandler(
+        System.Net.HttpStatusCode status = System.Net.HttpStatusCode.NotFound) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+            Task.FromResult(new HttpResponseMessage(status));
     }
 }

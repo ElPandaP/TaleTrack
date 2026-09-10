@@ -38,7 +38,7 @@ public static class AddReviewEndpoint
             return Results.Ok(new 
             { 
                 success = true, 
-                message = "Reseña agregada exitosamente",
+                message = "Review added successfully",
                 data = new
                 {
                     id = review.Id,

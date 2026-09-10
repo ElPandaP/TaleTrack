@@ -11,6 +11,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<TrackingEvent> TrackingEvents { get; set; }
     public DbSet<Friendship> Friendships { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<AuthActionToken> AuthActionTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,6 +36,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
 
             rt.HasIndex(x => x.TokenHash).IsUnique();
+        });
+
+        modelBuilder.Entity<AuthActionToken>(at =>
+        {
+            at.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            at.HasIndex(x => x.TokenHash).IsUnique();
         });
 
         modelBuilder.Entity<Friendship>(f =>

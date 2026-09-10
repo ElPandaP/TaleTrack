@@ -11,8 +11,11 @@ using TaleTrackApp.Features.Auth.Refresh;
 using TaleTrackApp.Features.Auth.Logout;
 using TaleTrackApp.Features.Auth.ExtensionGrant;
 using TaleTrackApp.Features.Auth.Sessions;
+using TaleTrackApp.Features.Auth.PasswordReset;
+using TaleTrackApp.Features.Auth.ConfirmDelete;
+using TaleTrackApp.Features.Auth.RevokeSignup;
 using TaleTrackApp.Features.User.EditUser;
-using TaleTrackApp.Features.User.DeleteUser;
+using TaleTrackApp.Features.User.RequestDeletion;
 using TaleTrackApp.Features.User.GetMe;
 using TaleTrackApp.Features.User.SearchUsers;
 using TaleTrackApp.Features.User.GetUserProfile;
@@ -130,6 +133,7 @@ void configureAuth()
     builder.Services.AddScoped<JwtService>();
     builder.Services.AddMemoryCache();
     builder.Services.AddScoped<RefreshTokenService>();
+    builder.Services.AddScoped<AuthActionTokenService>();
 
     var resendApiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY")!;
     builder.Services.AddHttpClient<EmailService>(client =>
@@ -221,6 +225,10 @@ void configurePipeline()
     VerifyCodeEndpoint.Map(apiGroup);
     RefreshEndpoint.Map(apiGroup);
     LogoutEndpoint.Map(apiGroup);
+    RequestPasswordResetEndpoint.Map(apiGroup);
+    ResetPasswordEndpoint.Map(apiGroup);
+    ConfirmDeleteEndpoint.Map(apiGroup);
+    RevokeSignupEndpoint.Map(apiGroup);
 
     // Session / token management (JWT)
     ExtensionGrantEndpoint.Map(apiGroup);
@@ -258,7 +266,7 @@ void configurePipeline()
     
     // User management endpoints (JWT + API Key)
     EditUserEndpoint.Map(apiGroup);
-    DeleteUserEndpoint.Map(apiGroup);
+    RequestAccountDeletionEndpoint.Map(apiGroup);
     
     // Review endpoints (JWT + API Key)
     AddReviewEndpoint.Map(apiGroup);

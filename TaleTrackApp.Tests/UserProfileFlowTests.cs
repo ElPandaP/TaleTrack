@@ -56,27 +56,14 @@ public class UserProfileFlowTests(CustomWebApplicationFactory factory)
         Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);
     }
 
+    // Account deletion now goes through an emailed confirmation link — see AccountDeletionFlowTests.
     [Fact]
-    public async Task DeleteUser_RemovesOwnAccount_SubsequentLoginFails()
+    public async Task RequestAccountDeletion_ForSelf_Succeeds()
     {
-        var (client, id) = await AuthedClientAsync("profile-delete@test.com", "profiledelete");
+        var (client, _) = await AuthedClientAsync("profile-delete@test.com", "profiledelete");
 
-        var res = await client.DeleteAsync($"/api/user/{id}");
+        var res = await client.PostAsJsonAsync("/api/auth/request-account-deletion", new { Locale = "en" });
         Assert.True(res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
-
-        var loginAfter = await client.PostAsJsonAsync("/api/login",
-            new { Email = "profile-delete@test.com", Password = "Password1!" });
-        Assert.False(loginAfter.IsSuccessStatusCode);
-    }
-
-    [Fact]
-    public async Task DeleteUser_AnotherUsersAccount_Returns403()
-    {
-        var (a, _) = await AuthedClientAsync("profile-del-a@test.com", "profiledela");
-        var (_, bId) = await AuthedClientAsync("profile-del-b@test.com", "profiledelb");
-
-        var res = await a.DeleteAsync($"/api/user/{bId}");
-        Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);
     }
 
     [Fact]

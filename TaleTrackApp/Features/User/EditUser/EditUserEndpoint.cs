@@ -50,14 +50,14 @@ public static class EditUserEndpoint
             
             if (updatedUser == null)
             {
-                return Results.NotFound(new { success = false, message = "Usuario no encontrado." });
+                return Results.NotFound(new { success = false, message = "User not found." });
             }
 
             logger.LogInformation($"User {id} updated successfully");
             return Results.Ok(new 
             { 
                 success = true,
-                message = "Usuario actualizado exitosamente.",
+                message = "User updated successfully.",
                 data = new
                 {
                     id = updatedUser.Id,

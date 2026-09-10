@@ -21,6 +21,7 @@ public static class GoogleLoginEndpoint
         UserService userService,
         JwtService jwtService,
         RefreshTokenService refreshTokens,
+        IServiceScopeFactory scopeFactory,
         ILogger<GoogleLoginRequest> logger)
     {
         var clientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
@@ -52,9 +53,14 @@ public static class GoogleLoginEndpoint
         {
             user = await userService.GetByEmailAsync(email);
             if (user != null)
+            {
                 await userService.LinkGoogleIdAsync(user.Id, googleId);
+            }
             else
+            {
                 user = await userService.CreateGoogleUserAsync(email, name, googleId);
+                WelcomeEmail.SendInBackground(scopeFactory, user.Id, user.Email, request.Locale);
+            }
         }
 
         var token = jwtService.GenerateToken(user.Id, user.Email, user.Username);
@@ -64,7 +70,7 @@ public static class GoogleLoginEndpoint
         return Results.Ok(new
         {
             success = true,
-            message = "Login exitoso",
+            message = "Login successful",
             token,
             refreshToken,
             expiresIn = jwtService.ExpirationMinutes * 60,
