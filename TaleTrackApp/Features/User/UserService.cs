@@ -1,8 +1,8 @@
 using TaleTrackApp.Data;
 using TaleTrackApp.Model;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
-using System.Text;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 
 namespace TaleTrackApp.Features.User;
 
@@ -14,6 +14,11 @@ public record FeedPrivacy(
 
 public class UserService
 {
+    // PBKDF2 (HMAC-SHA512) with a per-hash random salt, via ASP.NET Core Identity's hasher.
+    // Iteration count set to the OWASP Password Storage recommendation for PBKDF2-HMAC-SHA512.
+    private static readonly PasswordHasher<Model.User> PasswordHasher =
+        new(Options.Create(new PasswordHasherOptions { IterationCount = 210_000 }));
+
     private readonly AppDbContext _context;
     private readonly ILogger<UserService> _logger;
 
@@ -50,8 +55,8 @@ public class UserService
         {
             Email = email,
             Username = username,
-            PasswordHash = HashPassword(password)
         };
+        user.PasswordHash = HashPassword(user, password);
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
@@ -86,7 +91,7 @@ public class UserService
 
         if (!string.IsNullOrEmpty(password))
         {
-            user.PasswordHash = HashPassword(password);
+            user.PasswordHash = HashPassword(user, password);
         }
 
         // Empty string clears the avatar; null leaves it unchanged.
@@ -193,17 +198,14 @@ public class UserService
         await _context.SaveChangesAsync();
     }
 
-    public bool VerifyPassword(string password, string? hash)
+    public bool VerifyPassword(string password, Model.User user)
     {
-        if (hash == null) return false;
-        return HashPassword(password) == hash;
+        if (string.IsNullOrEmpty(user.PasswordHash)) return false;
+        var result = PasswordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
+        return result != PasswordVerificationResult.Failed;
     }
 
-    private string HashPassword(string password)
-    {
-        using var sha256 = SHA256.Create();
-        var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(hashedBytes);
-    }
+    private static string HashPassword(Model.User user, string password)
+        => PasswordHasher.HashPassword(user, password);
 }
 

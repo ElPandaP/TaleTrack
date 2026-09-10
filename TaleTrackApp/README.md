@@ -112,8 +112,12 @@ Expira a los 60 min; el frontend/extensión lo renuevan con el refresh token sin
 **Registro**: `POST /api/register` → **solo con API key interna** (el frontend la inyecta desde
 `NEXT_PUBLIC_INTERNAL_API_KEY`). No hace auto-login; el frontend llama a `/login` después.
 
+**Hash de contraseñas**: PBKDF2-HMAC-SHA512 con sal por hash y 210 000 iteraciones, vía
+`PasswordHasher<User>` de ASP.NET Core Identity (`UserService`). La migración
+`ClearLegacyPasswordHashes` anuló los hashes SHA-256 sin sal anteriores; esos usuarios
+entran con código por email y se ponen contraseña nueva desde el perfil.
+
 ⚠️ **Gotchas de seguridad** (relevante para el TFG):
-- El hash de password es **SHA-256 sin sal** (`UserService.HashPassword`). No es bcrypt/argon2.
 - Swagger UI queda expuesto siempre, también en producción.
 
 ---

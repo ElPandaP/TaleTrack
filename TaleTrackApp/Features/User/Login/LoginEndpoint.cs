@@ -24,7 +24,7 @@ public static class LoginEndpoint
     {
         var user = await userService.GetByEmailAsync(request.Email);
 
-        if (user == null || !userService.VerifyPassword(request.Password, user.PasswordHash))
+        if (user == null || !userService.VerifyPassword(request.Password, user))
         {
             logger.LogWarning($"Failed login attempt for email: {request.Email}");
             return Results.Json(new { message = "Email o contraseña incorrectos." }, statusCode: 401);
