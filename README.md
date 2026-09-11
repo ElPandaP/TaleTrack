@@ -63,14 +63,12 @@ Ver `.env.example` para la lista completa. Las importantes para que todo se habl
 
 ## Desplegar en una VM
 
-`docker compose up` sin más solo levanta la app (postgres, backend, frontend) — igual que en local,
-pero con `NEXT_PUBLIC_API_URL` apuntando a la IP/dominio real en vez de `localhost`. `dozzle` y
-`caddy` son servicios opcionales, marcados con `profiles` en `docker-compose.yml`, así que no arrancan
-solos: hace falta pedirlos explícitamente con `--profile`.
+`docker compose up` levanta todo: postgres, backend, frontend, dozzle (visor de logs) y caddy (proxy
+con HTTPS).
 
-`caddy` (perfil `proxy`) es un proxy único con [Caddy](https://caddyserver.com/): sirve el frontend en
-`/` y reenvía `/api` al backend, con HTTPS automático (pide y renueva el certificado de Let's Encrypt
-él solo, sin pasos manuales).
+`caddy` es un proxy único con [Caddy](https://caddyserver.com/): sirve el frontend en `/` y reenvía
+`/api` al backend, con HTTPS automático (pide y renueva el certificado de Let's Encrypt él solo, sin
+pasos manuales).
 
 > Nota: `Caddyfile` tiene el dominio (`taletrack.app` / `www.taletrack.app`) escrito a fuego — si
 > despliegas con otro dominio, cámbialo ahí.
@@ -91,16 +89,16 @@ CORS_ALLOWED_ORIGINS=https://<tu-dominio>
 APP_BASE_URL=https://<tu-dominio>
 ```
 
-Levanta todo (app + proxy con HTTPS):
+Levanta todo:
 
 ```bash
-docker compose --profile proxy up -d --build
+docker compose up -d --build
 ```
 
 No hace falta ningún paso manual extra — Caddy pide el certificado solo en cuanto arranca y el
 dominio responde en el puerto 80.
 
-Para actualizar solo la app (sin tocar el proxy):
+Para actualizar solo la app en deploys posteriores (backend/frontend cambian mucho más que caddy):
 
 ```bash
 docker compose up -d --build backend frontend
