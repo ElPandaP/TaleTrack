@@ -63,19 +63,30 @@ Ver `.env.example` para la lista completa. Las importantes para que todo se habl
 
 ## Desplegar en una VM
 
-Para que el navegador (fuera de la red de Docker) pueda llamar al backend, hace falta una URL pública
-en vez de `backend:8080`:
+`docker-compose.yml` incluye un servicio `nginx` que hace de proxy único: sirve el frontend en `/` y
+reenvía `/api` al backend, todo por el puerto 80. Así el navegador solo necesita conocer una URL
+(la IP o dominio de la VM) y no hay problemas de CORS entre orígenes distintos.
 
 ```bash
-NEXT_PUBLIC_API_URL=http://<ip-o-dominio>:8080/api
+cp .env.example .env   # NEXT_PUBLIC_API_URL=/api ya viene por defecto, no hace falta tocarlo
+```
+
+Ajusta solo estas dos variables al dominio/IP real de la VM:
+
+```bash
 CORS_ALLOWED_ORIGINS=http://<ip-o-dominio>
+APP_BASE_URL=http://<ip-o-dominio>
 ```
 
-Y reconstruir el frontend después de cambiar `.env`:
+Y levanta todo:
 
 ```bash
-docker compose up -d --build frontend backend
+docker compose up -d --build
 ```
+
+Backend y frontend ya no exponen sus puertos (8080/8090) directamente al host — solo nginx, en el 80.
+Para HTTPS, pon un certificado (p. ej. Let's Encrypt/certbot) delante de `nginx/nginx.conf` o añade un
+proxy TLS adicional; de momento el servicio nginx solo sirve HTTP en el 80.
 
 La extensión de Netflix y el plugin de KOReader también apuntan a una URL fija de servidor por
 defecto (ver sus respectivos READMEs para cambiarla en desarrollo local).
