@@ -45,6 +45,10 @@ export interface LibraryItem {
   lastEventDate: string;
   myRating?: number | null;
   myReviewId?: number | null;
+  /** Series only — the furthest episode reached, and the episode count per season (index 0 = season 1). */
+  season?: number | null;
+  episode?: number | null;
+  seasonEpisodeCounts?: number[] | null;
 }
 
 export interface GetLibraryResponse {

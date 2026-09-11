@@ -3,6 +3,7 @@ using TaleTrackApp.Features.Media;
 using TaleTrackApp.Features.Review;
 using TaleTrackApp.Features.TrackingEvent;
 using TaleTrackApp.Auth;
+using TrackingEventModel = TaleTrackApp.Model.TrackingEvent;
 
 namespace TaleTrackApp.Features.Media.GetMediaById;
 
@@ -37,7 +38,13 @@ public static class GetMediaByIdEndpoint
                 return Results.NotFound(new { success = false, message = "Media not found" });
 
             var reviews = await reviewService.GetByMediaIdAsync(id);
-            var myTracking = await trackingEventService.GetLatestForMediaAsync(userId, id);
+            var isSeries = media.Type == "Series";
+            TrackingEventModel? myTracking = isSeries
+                ? await trackingEventService.GetFurthestEpisodeAsync(userId, id)
+                : await trackingEventService.GetLatestForMediaAsync(userId, id);
+            var myProgress = isSeries
+                ? SeriesProgress.Calculate(media.SeasonEpisodeCounts, myTracking?.Season, myTracking?.Episode) ?? myTracking?.Progress
+                : myTracking?.Progress;
             var myReview = reviews.FirstOrDefault(r => r.UserId == userId);
 
             var response = new
@@ -55,8 +62,11 @@ public static class GetMediaByIdEndpoint
                     description = media.Description,
                     avgRating = reviews.Count > 0 ? Math.Round(reviews.Average(r => r.Rating), 1) : (double?)null,
                     reviewCount = reviews.Count,
-                    myProgress = myTracking?.Progress,
+                    myProgress,
                     myLastEventDate = myTracking?.EventDate,
+                    mySeason = isSeries ? myTracking?.Season : null,
+                    myEpisode = isSeries ? myTracking?.Episode : null,
+                    seasonEpisodeCounts = isSeries ? media.SeasonEpisodeCounts : null,
                     myReviewId = myReview?.Id,
                     myRating = myReview?.Rating,
                     myComment = myReview?.Comment,

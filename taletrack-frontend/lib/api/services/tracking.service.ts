@@ -17,4 +17,17 @@ export const trackingService = {
       true,
     );
   },
+
+  /** Series only — logs the furthest episode reached; earlier episodes are assumed watched. */
+  async editSeriesEpisode(
+    mediaId: number,
+    season: number,
+    episode: number,
+  ): Promise<{ success: boolean; message: string; data: { progress: number } }> {
+    return apiClient.put<{ success: boolean; message: string; data: { progress: number } }>(
+      `/tracking/${mediaId}`,
+      { season, episode },
+      true,
+    );
+  },
 };

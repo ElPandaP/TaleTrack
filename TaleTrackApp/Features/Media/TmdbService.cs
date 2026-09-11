@@ -9,6 +9,8 @@ public class TmdbResult
     public int? RuntimeMinutes { get; set; }
     /// <summary>The title in the other language (en↔es), when TMDB has that translation.</summary>
     public string? AltTitle { get; set; }
+    /// <summary>Episode count per season (index 0 = season 1). Series only.</summary>
+    public int[]? SeasonEpisodeCounts { get; set; }
 }
 
 /// <summary>
@@ -73,6 +75,15 @@ public class TmdbService(HttpClient http, ILogger<TmdbService> logger, IConfigur
 
             var runtime = isMovie ? detail.Runtime : detail.EpisodeRunTime?.FirstOrDefault(r => r > 0);
 
+            // Numbered seasons only (season 0 is "specials"), in order — index 0 = season 1.
+            var seasonEpisodeCounts = !isMovie
+                ? detail.Seasons?
+                    .Where(s => s.SeasonNumber >= 1)
+                    .OrderBy(s => s.SeasonNumber)
+                    .Select(s => s.EpisodeCount)
+                    .ToArray()
+                : null;
+
             logger.LogInformation("TMDB: matched '{Found}' ({Score:P0}) for '{Query}'",
                 isMovie ? detail.Title : detail.Name, bestScore, title);
 
@@ -81,6 +92,7 @@ public class TmdbService(HttpClient http, ILogger<TmdbService> logger, IConfigur
                 PosterUrl = posterUrl,
                 RuntimeMinutes = runtime is > 0 ? runtime : null,
                 AltTitle = string.IsNullOrWhiteSpace(altTitle) ? null : altTitle,
+                SeasonEpisodeCounts = seasonEpisodeCounts is { Length: > 0 } ? seasonEpisodeCounts : null,
             };
         }
         catch (Exception ex)
@@ -111,6 +123,13 @@ public class TmdbService(HttpClient http, ILogger<TmdbService> logger, IConfigur
         [JsonPropertyName("runtime")] public int? Runtime { get; set; }                    // movies, minutes
         [JsonPropertyName("episode_run_time")] public int[]? EpisodeRunTime { get; set; }  // tv, minutes
         [JsonPropertyName("translations")] public TmdbTranslations? Translations { get; set; }
+        [JsonPropertyName("seasons")] public TmdbSeason[]? Seasons { get; set; }           // tv only
+    }
+
+    private class TmdbSeason
+    {
+        [JsonPropertyName("season_number")] public int SeasonNumber { get; set; }
+        [JsonPropertyName("episode_count")] public int EpisodeCount { get; set; }
     }
 
     private class TmdbTranslations

@@ -118,6 +118,8 @@ public class MediaService
             media.Length = minutes;
         if (!string.IsNullOrWhiteSpace(result.AltTitle) && string.IsNullOrWhiteSpace(media.AltTitle))
             media.AltTitle = result.AltTitle;
+        if (result.SeasonEpisodeCounts is { Length: > 0 } && media.SeasonEpisodeCounts == null)
+            media.SeasonEpisodeCounts = result.SeasonEpisodeCounts;
 
         media.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();

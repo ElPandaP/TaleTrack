@@ -70,6 +70,19 @@ public class TrackingEventService
             .FirstOrDefaultAsync();
     }
 
+    /// <summary>
+    /// The furthest (season, episode) reached for a series — not necessarily the most recently
+    /// touched row, so rewatching an earlier episode never moves progress backward.
+    /// </summary>
+    public async Task<Model.TrackingEvent?> GetFurthestEpisodeAsync(int userId, int mediaId)
+    {
+        return await _context.TrackingEvents
+            .Where(te => te.UserId == userId && te.MediaId == mediaId)
+            .OrderByDescending(te => te.Season)
+            .ThenByDescending(te => te.Episode)
+            .FirstOrDefaultAsync();
+    }
+
     /// <summary>Removes every tracking event for (user, media) — takes the media out of their library.</summary>
     public async Task<bool> DeleteAllForMediaAsync(int userId, int mediaId)
     {

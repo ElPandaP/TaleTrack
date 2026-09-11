@@ -1,4 +1,5 @@
 using TaleTrackApp.Data;
+using TaleTrackApp.Features.TrackingEvent;
 using Microsoft.EntityFrameworkCore;
 
 namespace TaleTrackApp.Features.Library;
@@ -15,7 +16,10 @@ public record LibraryItem(
     int? Progress,
     DateTime LastEventDate,
     int? MyRating,
-    int? MyReviewId);
+    int? MyReviewId,
+    int? Season = null,
+    int? Episode = null,
+    int[]? SeasonEpisodeCounts = null);
 
 public class LibraryService
 {
@@ -57,8 +61,20 @@ public class LibraryService
             .GroupBy(te => te.MediaId)
             .Select(g =>
             {
-                var latest = g.OrderByDescending(x => x.EventDate).First();
-                var media = latest.Media!;
+                var media = g.First().Media!;
+                var isSeries = media.Type == "Series";
+
+                // For series, the furthest (season, episode) reached — not just the most
+                // recently-touched row — decides progress, so a rewatch of an earlier
+                // episode never moves it backward.
+                var latest = isSeries
+                    ? g.OrderByDescending(x => x.Season ?? 0).ThenByDescending(x => x.Episode ?? 0).First()
+                    : g.OrderByDescending(x => x.EventDate).First();
+
+                var progress = isSeries
+                    ? SeriesProgress.Calculate(media.SeasonEpisodeCounts, latest.Season, latest.Episode) ?? latest.Progress
+                    : latest.Progress;
+
                 reviewByMedia.TryGetValue(g.Key, out var review);
                 return new LibraryItem(
                     MediaId: media.Id,
@@ -68,10 +84,13 @@ public class LibraryService
                     PosterUrl: media.PosterUrl,
                     Length: media.Length,
                     Isbn: media.Isbn,
-                    Progress: latest.Progress,
+                    Progress: progress,
                     LastEventDate: latest.EventDate,
                     MyRating: review?.Rating,
-                    MyReviewId: review?.Id);
+                    MyReviewId: review?.Id,
+                    Season: isSeries ? latest.Season : null,
+                    Episode: isSeries ? latest.Episode : null,
+                    SeasonEpisodeCounts: isSeries ? media.SeasonEpisodeCounts : null);
             })
             .AsEnumerable();
 

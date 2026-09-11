@@ -195,6 +195,9 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
       type: it.type,
       posterUrl: it.posterUrl,
       progress: it.progress,
+      season: it.season,
+      episode: it.episode,
+      seasonEpisodeCounts: it.seasonEpisodeCounts,
     });
     setProgressModalOpen(true);
   };

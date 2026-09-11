@@ -37,6 +37,9 @@ public class Media
     [StringLength(13)]
     public string? Isbn { get; set; }
 
+    /// <summary>Episode count per season (index 0 = season 1), from TMDB. Series only, null until enriched.</summary>
+    public int[]? SeasonEpisodeCounts { get; set; }
+
     [Required]
     public DateTime FirstTrackedAt { get; set; } = DateTime.UtcNow;
     
