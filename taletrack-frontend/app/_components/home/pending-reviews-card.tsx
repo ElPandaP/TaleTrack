@@ -57,7 +57,6 @@ export function PendingReviewsCard({
                     title={item.title}
                     type={item.type}
                     posterUrl={item.posterUrl}
-                    sizes="64px"
                     className="rounded-md"
                   />
                 </button>

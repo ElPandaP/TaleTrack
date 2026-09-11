@@ -61,7 +61,6 @@ export default function MediaDetailClient({ detail }: { detail: MediaDetail }) {
           type={detail.type}
           posterUrl={detail.posterUrl}
           className="w-40 shrink-0 self-center sm:self-start"
-          sizes="160px"
         />
 
         <div className="min-w-0 flex-1">

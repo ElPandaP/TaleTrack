@@ -43,7 +43,6 @@ export function InProgressCard({ items }: { items: LibraryItem[] }) {
                     type={item.type}
                     posterUrl={item.posterUrl}
                     className="w-10 shrink-0 rounded-md"
-                    sizes="40px"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-medium text-foreground group-hover:text-primary">

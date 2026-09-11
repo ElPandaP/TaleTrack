@@ -322,7 +322,6 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
                       title={it.title}
                       type={it.type}
                       posterUrl={it.posterUrl}
-                      sizes="160px"
                       className="transition group-hover:shadow-md group-hover:brightness-[1.03]"
                     />
                     <p className="mt-1.5 line-clamp-2 text-xs leading-tight text-foreground group-hover:text-primary">

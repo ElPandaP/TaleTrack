@@ -112,7 +112,6 @@ export function TypeCarousel({
                     title={item.title}
                     type={item.type}
                     posterUrl={item.posterUrl}
-                    sizes="128px"
                     className="transition group-hover:shadow-md group-hover:brightness-[1.03]"
                   />
                   <figcaption className="mt-1.5">

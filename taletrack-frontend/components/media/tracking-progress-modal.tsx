@@ -83,7 +83,6 @@ export function TrackingProgressModal({
               type={target.type}
               posterUrl={target.posterUrl}
               className="w-20 shrink-0 self-start"
-              sizes="80px"
             />
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               <div className="flex items-center justify-between">

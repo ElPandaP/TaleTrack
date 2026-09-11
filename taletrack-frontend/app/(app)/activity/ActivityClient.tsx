@@ -118,7 +118,6 @@ export default function ActivityClient({ items }: { items: ActivityItem[] }) {
                     type={it.mediaType}
                     posterUrl={it.mediaPosterUrl}
                     className="w-10 rounded-md"
-                    sizes="40px"
                   />
                 </Link>
               </li>

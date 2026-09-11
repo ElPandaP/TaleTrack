@@ -102,7 +102,6 @@ export function ReviewModal({
               type={target.type}
               posterUrl={target.posterUrl}
               className="w-28 shrink-0 self-start"
-              sizes="112px"
             />
             <div className="flex min-w-0 flex-1 flex-col gap-3">
               <div>

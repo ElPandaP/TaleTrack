@@ -64,7 +64,6 @@ export default function ReviewsClient({ reviews }: { reviews: ReviewItem[] }) {
                   type={r.media.type}
                   posterUrl={r.media.posterUrl}
                   className="w-14 shrink-0"
-                  sizes="56px"
                 />
               )}
               <div className="min-w-0 flex-1">

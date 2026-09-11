@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { BookOpen, Film, Tv } from 'lucide-react';
 import type { LibraryType } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -23,13 +22,11 @@ export function Cover({
   type,
   posterUrl,
   className,
-  sizes = '120px',
 }: {
   title: string;
   type: LibraryType;
   posterUrl?: string | null;
   className?: string;
-  sizes?: string;
 }) {
   const meta = typeMeta[type];
   const { Icon } = meta;
@@ -44,12 +41,15 @@ export function Cover({
       )}
     >
       {posterUrl ? (
-        <Image
+        // Plain <img>, not next/image: its server-side optimizer proxy gets rejected
+        // by some cover sources (e.g. OpenLibrary/archive.org) — see user-avatar.tsx
+        // for the same fix applied to avatars.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
           src={posterUrl}
           alt={`${title} cover`}
-          fill
-          sizes={sizes}
-          className="object-cover"
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover"
         />
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 p-2 text-center">
