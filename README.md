@@ -63,30 +63,59 @@ Ver `.env.example` para la lista completa. Las importantes para que todo se habl
 
 ## Desplegar en una VM
 
-`docker-compose.yml` incluye un servicio `nginx` que hace de proxy único: sirve el frontend en `/` y
-reenvía `/api` al backend, todo por el puerto 80. Así el navegador solo necesita conocer una URL
-(la IP o dominio de la VM) y no hay problemas de CORS entre orígenes distintos.
+`docker-compose.yml` es solo la app (postgres, backend, frontend, dozzle) — igual que en local, pero
+con `NEXT_PUBLIC_API_URL` apuntando a la IP/dominio real en vez de `localhost`. Con eso sola ya puedes
+levantarla y ponerle delante lo que quieras (nginx, Caddy, Traefik, nada...).
+
+`docker-compose.proxy.yml` es opcional y añade un proxy único con nginx: sirve el frontend en `/` y
+reenvía `/api` al backend, con HTTPS vía Let's Encrypt (certbot en su propio contenedor). Al estar
+separado del compose de la app, puedes actualizar/reiniciar backend+frontend sin tocar nginx ni
+disparar renovaciones de certificado de más.
+
+> Nota: `nginx/nginx.conf` tiene el dominio (`taletrack.app` / `www.taletrack.app`) escrito a fuego —
+> si despliegas con otro dominio, cámbialo ahí y en `scripts/init-letsencrypt.sh`.
 
 ```bash
-cp .env.example .env   # NEXT_PUBLIC_API_URL=/api ya viene por defecto, no hace falta tocarlo
+cp .env.example .env
 ```
 
-Ajusta solo estas dos variables al dominio/IP real de la VM:
+Ajusta estas variables al dominio real de la VM (tiene que ser un dominio que ya resuelva a la IP del
+servidor — Let's Encrypt no emite certificados para IPs sueltas):
 
 ```bash
-CORS_ALLOWED_ORIGINS=http://<ip-o-dominio>
-APP_BASE_URL=http://<ip-o-dominio>
+NEXT_PUBLIC_API_URL=/api            # solo si usas el proxy; si no, pon la URL absoluta del backend
+CORS_ALLOWED_ORIGINS=https://<tu-dominio>
+APP_BASE_URL=https://<tu-dominio>
 ```
 
-Y levanta todo:
+Levanta la app:
 
 ```bash
 docker compose up -d --build
 ```
 
-Backend y frontend ya no exponen sus puertos (8080/8090) directamente al host — solo nginx, en el 80.
-Para HTTPS, pon un certificado (p. ej. Let's Encrypt/certbot) delante de `nginx/nginx.conf` o añade un
-proxy TLS adicional; de momento el servicio nginx solo sirve HTTP en el 80.
+Si quieres HTTPS con el proxy, la primera vez pide el certificado (solo hace falta una vez por
+servidor — necesita el puerto 80 abierto y el dominio ya apuntando aquí):
+
+```bash
+chmod +x scripts/init-letsencrypt.sh
+./scripts/init-letsencrypt.sh
+```
+
+Esto deja nginx sirviendo HTTPS en el 443 (y redirigiendo el 80 a HTTPS) y un contenedor `certbot`
+corriendo en segundo plano que renueva el certificado automáticamente cada 12h si toca.
+
+A partir de ahí, para actualizar solo la app (sin tocar nginx/certbot):
+
+```bash
+docker compose up -d --build backend frontend
+```
+
+Y si quieres tirar y recrear el proxy (raro, solo si cambias `nginx.conf` o el dominio):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d --build nginx
+```
 
 La extensión de Netflix y el plugin de KOReader también apuntan a una URL fija de servidor por
 defecto (ver sus respectivos READMEs para cambiarla en desarrollo local).

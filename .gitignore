@@ -6,6 +6,9 @@
 # Docker overrides
 docker-compose.override.yml
 
+# Let's Encrypt certs/keys (generated on the server, never commit)
+certbot/
+
 # OS
 .DS_Store
 Thumbs.db
