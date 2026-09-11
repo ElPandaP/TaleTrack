@@ -24,30 +24,50 @@
 # Requires: curl, jq (sudo apt install -y jq if missing)
 # Usage:    ./scripts/seed-demo-prod.sh [https://taletrack.app/api]
 
-set -e
+set -euo pipefail
 
 API_BASE="${1:-https://taletrack.app/api}"
 PASSWORD="demo1234"
 
 echo "-> Using API: $API_BASE"
 
+CURL_OPTS=(--http1.1 -s --max-time 20)
+
+# Retries a curl invocation up to 3 times. Each attempt's output is captured in its own
+# command substitution (a fresh subshell), so a failed attempt's partial body can never
+# leak into / concatenate with a later attempt's — unlike curl's own --retry, which writes
+# every attempt straight to the same stdout and can glue two JSON responses together.
+curl_retry() {
+  local attempt out rc
+  for attempt in 1 2 3; do
+    out=$(curl "$@") && rc=0 || rc=$?
+    if [ "$rc" -eq 0 ]; then
+      echo "$out"
+      return 0
+    fi
+    [ "$attempt" -lt 3 ] && sleep 2
+  done
+  echo "$out"
+  return "$rc"
+}
+
 json_post() {
   local url=$1 body=$2 auth=$3
   if [ -n "$auth" ]; then
-    curl -s -X POST "$url" -H "Content-Type: application/json" -H "Authorization: Bearer $auth" -d "$body"
+    curl_retry "${CURL_OPTS[@]}" -X POST "$url" -H "Content-Type: application/json" -H "Authorization: Bearer $auth" -d "$body"
   else
-    curl -s -X POST "$url" -H "Content-Type: application/json" -d "$body"
+    curl_retry "${CURL_OPTS[@]}" -X POST "$url" -H "Content-Type: application/json" -d "$body"
   fi
 }
 
 json_put() {
   local url=$1 body=$2 auth=$3
-  curl -s -X PUT "$url" -H "Content-Type: application/json" -H "Authorization: Bearer $auth" -d "$body"
+  curl_retry "${CURL_OPTS[@]}" -X PUT "$url" -H "Content-Type: application/json" -H "Authorization: Bearer $auth" -d "$body"
 }
 
 json_get() {
   local url=$1 auth=$2
-  curl -s "$url" -H "Authorization: Bearer $auth"
+  curl_retry "${CURL_OPTS[@]}" "$url" -H "Authorization: Bearer $auth"
 }
 
 register() {
@@ -60,9 +80,17 @@ register() {
 
 login() {
   local email=$1
-  local body
+  local body response
   body=$(jq -n --arg email "$email" --arg password "$PASSWORD" '{email:$email, password:$password}')
-  json_post "$API_BASE/login" "$body" "" | jq -r '.token'
+  response=$(json_post "$API_BASE/login" "$body" "")
+  local token
+  token=$(echo "$response" | jq -r '.token // empty')
+  if [ -z "$token" ]; then
+    echo "Login failed for $email. Raw API response:" >&2
+    echo "$response" >&2
+    exit 1
+  fi
+  echo "$token"
 }
 
 # type: Book | Movie | Series
@@ -82,9 +110,10 @@ add_tracking() {
     Movie)
       local body
       body=$(jq -n --arg title "$title" --argjson progress "$progress" --argjson length "${length:-0}" '
-        {title:$title, progress:$progress}
+        {title:$title, progress:$progress, language:"en"}
         + (if $length > 0 then {minutes:$length} else {} end)')
       json_post "$API_BASE/tracking/movies" "$body" "$auth" > /dev/null
+      sleep 0.3
       ;;
     Series)
       local total_eps=8
@@ -97,9 +126,10 @@ add_tracking() {
       for ((ep=1; ep<=watched; ep++)); do
         local body
         body=$(jq -n --arg title "$title" --argjson season 1 --argjson episode "$ep" '
-          {title:$title, season:$season, episode:$episode, minutes:45, progress:100}')
+          {title:$title, season:$season, episode:$episode, minutes:45, progress:100, language:"en"}')
         json_post "$API_BASE/tracking/series" "$body" "$auth" > /dev/null
       done
+      sleep 0.3
       ;;
   esac
 }
@@ -109,10 +139,6 @@ register "demo@taletrack.dev" "demo"
 
 echo "-> Logging in ..."
 DEMO_TOKEN=$(login "demo@taletrack.dev")
-if [ -z "$DEMO_TOKEN" ] || [ "$DEMO_TOKEN" = "null" ]; then
-  echo "Login failed for demo@taletrack.dev — check the API is reachable at $API_BASE" >&2
-  exit 1
-fi
 
 # type;title;length;progress;author;isbn
 items=(
@@ -201,7 +227,7 @@ for line in "${book_catalog[@]}"; do
     *) progress=100 ;;
   esac
   items+=("Book;$title;$length;$progress;$author;")
-  ((i++))
+  i=$((i + 1))
 done
 
 echo "-> Adding ${#items[@]} tracking events ..."
@@ -209,6 +235,9 @@ for item in "${items[@]}"; do
   IFS=';' read -r type title length progress author isbn <<< "$item"
   add_tracking "$DEMO_TOKEN" "$type" "$title" "$progress" "$length" "$author" "$isbn"
   printf "   + %-38s %-7s %s%%\n" "$title" "$type" "$progress"
+  # Small gap so the book cover lookups this triggers in the background (OpenLibrary,
+  # a free public API) don't pile up into a burst it can't answer within its timeout.
+  [ "$type" = "Book" ] && sleep 0.3
 done
 
 echo ""
@@ -240,14 +269,14 @@ new_seed_user() {
     local length=300
     [ "$type" = "Series" ] && length=8
     add_tracking "$token" "$type" "$title" "$progress" "$length" "" ""
-    ((tracked++))
+    tracked=$((tracked + 1))
   done
 
   local rated=0
   local lib
   lib=$(json_get "$API_BASE/library?status=finished&limit=50" "$token")
   local media_ids
-  media_ids=$(echo "$lib" | jq -r '.data[].mediaId' | head -3)
+  media_ids=$(echo "$lib" | jq -r '.data[0:3][].mediaId')
   local ratings=(6 7 8 9 10)
   while IFS= read -r media_id; do
     [ -z "$media_id" ] && continue
@@ -256,10 +285,10 @@ new_seed_user() {
     rbody=$(jq -n --arg mediaId "$media_id" --argjson rating "$rating" --arg comment "Loved this one." \
       '{mediaId:$mediaId, rating:$rating, comment:$comment}')
     json_post "$API_BASE/review" "$rbody" "$token" > /dev/null
-    ((rated++))
+    rated=$((rated + 1))
   done <<< "$media_ids"
 
-  echo "   + @$name  ($tracked tracked, $rated reviewed)"
+  echo "   + @$name  ($tracked tracked, $rated reviewed)" >&2
   echo "$token"
 }
 
@@ -290,7 +319,7 @@ accept_friend_req() {
   local as_token=$1 from_username=$2
   local f req_id
   f=$(json_get "$API_BASE/friends" "$as_token")
-  req_id=$(echo "$f" | jq -r --arg u "$from_username" '.incoming[] | select(.username == $u) | .requestId' | head -1)
+  req_id=$(echo "$f" | jq -r --arg u "$from_username" '[.incoming[] | select(.username == $u)][0].requestId // empty')
   [ -z "$req_id" ] && return 0
   json_post "$API_BASE/friends/requests/$req_id" '{"accept":true}' "$as_token" > /dev/null
 }

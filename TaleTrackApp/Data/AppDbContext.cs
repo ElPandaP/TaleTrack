@@ -18,11 +18,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         base.OnModelCreating(modelBuilder);
 
-        // Cascade delete para limpiar datos relacionados
-        modelBuilder.Entity<Review>()
-            .HasOne(r => r.User)
-            .WithMany(u => u.Reviews)
-            .OnDelete(DeleteBehavior.Cascade);
+        // Cascade delete to clean up related data
+        modelBuilder.Entity<Review>(r =>
+        {
+            r.HasOne(x => x.User)
+                .WithMany(u => u.Reviews)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // One review per (user, media).
+            r.HasIndex(x => new { x.UserId, x.MediaId }).IsUnique();
+        });
 
         modelBuilder.Entity<TrackingEvent>()
             .HasOne(te => te.User)

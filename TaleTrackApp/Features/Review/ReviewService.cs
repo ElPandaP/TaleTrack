@@ -39,8 +39,26 @@ public class ReviewService
             .ToListAsync();
     }
 
+    /// <summary>
+    /// One review per (user, media) — a repeat call updates the existing review in place
+    /// instead of creating a duplicate (mirrors TrackingEventService.UpsertAsync).
+    /// </summary>
     public async Task<Model.Review> CreateAsync(int userId, int mediaId, int rating, string? comment = null)
     {
+        var existing = await _context.Reviews
+            .FirstOrDefaultAsync(r => r.UserId == userId && r.MediaId == mediaId);
+
+        if (existing != null)
+        {
+            existing.Rating = rating;
+            existing.Comment = comment;
+            existing.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation($"Review updated (via create) for User {userId}, Media {mediaId}");
+            return existing;
+        }
+
         var review = new Model.Review
         {
             UserId = userId,
