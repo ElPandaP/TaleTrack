@@ -63,17 +63,20 @@ Ver `.env.example` para la lista completa. Las importantes para que todo se habl
 
 ## Desplegar en una VM
 
-`docker-compose.yml` es solo la app (postgres, backend, frontend, dozzle) — igual que en local, pero
-con `NEXT_PUBLIC_API_URL` apuntando a la IP/dominio real en vez de `localhost`. Con eso sola ya puedes
-levantarla y ponerle delante lo que quieras (nginx, Caddy, Traefik, nada...).
+`docker compose up` sin más solo levanta la app (postgres, backend, frontend) — igual que en local,
+pero con `NEXT_PUBLIC_API_URL` apuntando a la IP/dominio real en vez de `localhost`. `dozzle` y
+`caddy` son servicios opcionales, marcados con `profiles` en `docker-compose.yml`, así que no arrancan
+solos: hace falta pedirlos explícitamente con `--profile`.
 
-`docker-compose.proxy.yml` es opcional y añade un proxy único con nginx: sirve el frontend en `/` y
-reenvía `/api` al backend, con HTTPS vía Let's Encrypt (certbot en su propio contenedor). Al estar
-separado del compose de la app, puedes actualizar/reiniciar backend+frontend sin tocar nginx ni
-disparar renovaciones de certificado de más.
+`caddy` (perfil `proxy`) es un proxy único con [Caddy](https://caddyserver.com/): sirve el frontend en
+`/` y reenvía `/api` al backend, con HTTPS automático (pide y renueva el certificado de Let's Encrypt
+él solo, sin pasos manuales).
 
-> Nota: `nginx/nginx.conf` tiene el dominio (`taletrack.app` / `www.taletrack.app`) escrito a fuego —
-> si despliegas con otro dominio, cámbialo ahí y en `scripts/init-letsencrypt.sh`.
+> Nota: `Caddyfile` tiene el dominio (`taletrack.app` / `www.taletrack.app`) escrito a fuego — si
+> despliegas con otro dominio, cámbialo ahí.
+
+> Necesitas los puertos 80 y 443 abiertos hacia fuera (Security Group / firewall de tu proveedor) —
+> Caddy los usa para servir la web y para que Let's Encrypt valide el dominio.
 
 ```bash
 cp .env.example .env
@@ -83,38 +86,24 @@ Ajusta estas variables al dominio real de la VM (tiene que ser un dominio que ya
 servidor — Let's Encrypt no emite certificados para IPs sueltas):
 
 ```bash
-NEXT_PUBLIC_API_URL=/api            # solo si usas el proxy; si no, pon la URL absoluta del backend
+NEXT_PUBLIC_API_URL=/api            # solo si usas caddy; si no, pon la URL absoluta del backend
 CORS_ALLOWED_ORIGINS=https://<tu-dominio>
 APP_BASE_URL=https://<tu-dominio>
 ```
 
-Levanta la app:
+Levanta todo (app + proxy con HTTPS):
 
 ```bash
-docker compose up -d --build
+docker compose --profile proxy up -d --build
 ```
 
-Si quieres HTTPS con el proxy, la primera vez pide el certificado (solo hace falta una vez por
-servidor — necesita el puerto 80 abierto y el dominio ya apuntando aquí):
+No hace falta ningún paso manual extra — Caddy pide el certificado solo en cuanto arranca y el
+dominio responde en el puerto 80.
 
-```bash
-chmod +x scripts/init-letsencrypt.sh
-./scripts/init-letsencrypt.sh
-```
-
-Esto deja nginx sirviendo HTTPS en el 443 (y redirigiendo el 80 a HTTPS) y un contenedor `certbot`
-corriendo en segundo plano que renueva el certificado automáticamente cada 12h si toca.
-
-A partir de ahí, para actualizar solo la app (sin tocar nginx/certbot):
+Para actualizar solo la app (sin tocar el proxy):
 
 ```bash
 docker compose up -d --build backend frontend
-```
-
-Y si quieres tirar y recrear el proxy (raro, solo si cambias `nginx.conf` o el dominio):
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d --build nginx
 ```
 
 La extensión de Netflix y el plugin de KOReader también apuntan a una URL fija de servidor por
