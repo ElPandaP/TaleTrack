@@ -1,24 +1,25 @@
+'use client';
+
 import Link from 'next/link';
 import { Puzzle, BookOpen, ArrowRight } from 'lucide-react';
-import { getServerDict } from '@/lib/i18n-server';
+import { useT } from '@/lib/i18n';
 import ConnectionsCard from '@/components/connections/connections-card';
 
-export default async function ConnectionsPage() {
-  const dict = await getServerDict();
-  const t = (key: string) => dict[key] ?? key;
+export default function ConnectionsPage() {
+  const t = useT();
 
   const integrations = [
     {
       Icon: Puzzle,
       name: t('connections.netflix.name'),
       blurb: t('connections.netflix.blurb'),
-      href: '/connections/guide#netflix',
+      href: '/connections/guide/netflix',
     },
     {
       Icon: BookOpen,
       name: t('connections.koreader.name'),
       blurb: t('connections.koreader.blurb'),
-      href: '/connections/guide#koreader',
+      href: '/connections/guide/koreader',
     },
   ];
 

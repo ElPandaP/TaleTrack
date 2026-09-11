@@ -58,7 +58,7 @@ bun install
 bun build.ts
 ```
 
-Por defecto apunta al servidor de producción (`http://143.47.54.63`, hardcodeado en `build.ts` y
+Por defecto apunta al servidor de producción (`https://taletrack.app`, hardcodeado en `build.ts` y
 `src/config.ts` como fallback). Para desarrollo local:
 
 ```bash

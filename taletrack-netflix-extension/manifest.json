@@ -12,7 +12,7 @@
   ],
   "host_permissions": [
     "https://www.netflix.com/*",
-    "http://143.47.54.63/*",
+    "https://taletrack.app/*",
     "http://localhost:8080/*",
     "http://localhost:8090/*"
   ],

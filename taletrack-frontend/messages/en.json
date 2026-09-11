@@ -197,7 +197,6 @@
   "connections.netflix.blurb": "A browser extension that records every film and series you watch on Netflix, tracking your progress in real time.",
   "connections.koreader.name": "KOReader plugin",
   "connections.koreader.blurb": "A lightweight plugin for the KOReader e-reader app that records a book to your library when you mark it as finished.",
-  "connections.guide.title": "How to connect",
   "connections.guide.back": "Back to Connections",
   "connections.guide.downloadPending": "download link coming soon",
   "connections.guide.netflix.download": "Download the extension",

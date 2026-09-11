@@ -10,8 +10,8 @@ mkdirSync("./dist", { recursive: true });
 
 // Server URLs baked in at build time. Override for local dev, e.g.
 //   TT_BACKEND_URL=http://localhost:8080 TT_FRONTEND_URL=http://localhost:8090 bun build.ts
-const BACKEND_URL = process.env.TT_BACKEND_URL ?? "http://143.47.54.63";
-const FRONTEND_URL = process.env.TT_FRONTEND_URL ?? "http://143.47.54.63";
+const BACKEND_URL = process.env.TT_BACKEND_URL ?? "https://taletrack.app";
+const FRONTEND_URL = process.env.TT_FRONTEND_URL ?? "https://taletrack.app";
 console.log(`Backend:  ${BACKEND_URL}`);
 console.log(`Frontend: ${FRONTEND_URL}`);
 

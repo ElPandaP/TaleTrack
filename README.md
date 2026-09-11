@@ -68,7 +68,9 @@ con HTTPS).
 
 `caddy` es un proxy único con [Caddy](https://caddyserver.com/): sirve el frontend en `/` y reenvía
 `/api` al backend, con HTTPS automático (pide y renueva el certificado de Let's Encrypt él solo, sin
-pasos manuales).
+pasos manuales). Backend y frontend no publican puertos al host — solo son alcanzables a través de
+Caddy, en el 80/443. Es la única puerta de entrada, tanto para el navegador como para clientes
+externos (la extensión de Netflix, el plugin de KOReader, o cualquier otro cliente de la API).
 
 > Nota: `Caddyfile` tiene el dominio (`taletrack.app` / `www.taletrack.app`) escrito a fuego — si
 > despliegas con otro dominio, cámbialo ahí.
@@ -84,10 +86,12 @@ Ajusta estas variables al dominio real de la VM (tiene que ser un dominio que ya
 servidor — Let's Encrypt no emite certificados para IPs sueltas):
 
 ```bash
-NEXT_PUBLIC_API_URL=/api            # solo si usas caddy; si no, pon la URL absoluta del backend
 CORS_ALLOWED_ORIGINS=https://<tu-dominio>
 APP_BASE_URL=https://<tu-dominio>
 ```
+
+(`NEXT_PUBLIC_API_URL` ya viene por defecto a `/api` — no hace falta tocarlo, siempre se sirve a
+través de Caddy.)
 
 Levanta todo:
 

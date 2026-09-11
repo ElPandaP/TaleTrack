@@ -197,7 +197,6 @@
   "connections.netflix.blurb": "Una extensión de navegador que registra cada película y serie que ves en Netflix, siguiendo tu progreso en tiempo real.",
   "connections.koreader.name": "Plugin de KOReader",
   "connections.koreader.blurb": "Un plugin ligero para la app de lectura KOReader que registra un libro en tu biblioteca cuando lo marcas como terminado.",
-  "connections.guide.title": "Cómo conectar",
   "connections.guide.back": "Volver a Conexiones",
   "connections.guide.downloadPending": "enlace de descarga pendiente",
   "connections.guide.netflix.download": "Descargar la extensión",

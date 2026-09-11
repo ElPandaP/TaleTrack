@@ -3,7 +3,7 @@ declare const __TT_BACKEND_URL__: string;
 declare const __TT_FRONTEND_URL__: string;
 
 export const BACKEND_URL: string =
-  typeof __TT_BACKEND_URL__ !== 'undefined' ? __TT_BACKEND_URL__ : 'http://143.47.54.63';
+  typeof __TT_BACKEND_URL__ !== 'undefined' ? __TT_BACKEND_URL__ : 'https://taletrack.app';
 
 export const FRONTEND_URL: string =
-  typeof __TT_FRONTEND_URL__ !== 'undefined' ? __TT_FRONTEND_URL__ : 'http://143.47.54.63';
+  typeof __TT_FRONTEND_URL__ !== 'undefined' ? __TT_FRONTEND_URL__ : 'https://taletrack.app';

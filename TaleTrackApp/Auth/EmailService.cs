@@ -11,7 +11,7 @@ public class EmailService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<EmailService> _logger;
-    private const string FromAddress = "noreply@taletrack.app";
+    private const string FromAddress = "TaleTrack <noreply@taletrack.app>";
 
     public EmailService(HttpClient httpClient, ILogger<EmailService> logger)
     {
@@ -80,8 +80,7 @@ public class EmailService
         $"<div style=\"font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;max-width:480px;margin:0 auto;color:#2b2b2b;line-height:1.5\">{inner}</div>";
 
     private static string Button(string href, string label) =>
-        $"<p style=\"margin:24px 0\"><a href=\"{href}\" style=\"background:#3f6212;color:#ffffff;padding:11px 20px;border-radius:8px;text-decoration:none;display:inline-block;font-weight:600\">{label}</a></p>"
-        + $"<p style=\"font-size:12px;color:#888;word-break:break-all\">{href}</p>";
+        $"<p style=\"margin:24px 0\"><a href=\"{href}\" style=\"background:#3f6212;color:#ffffff;padding:11px 20px;border-radius:8px;text-decoration:none;display:inline-block;font-weight:600\">{label}</a></p>";
 
     private async Task SendAsync(string toEmail, string subject, string html)
     {

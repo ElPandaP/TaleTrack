@@ -312,4 +312,4 @@ Para meter un usuario de prueba con datos: `../scripts/seed-demo.ps1` (registra 
 | `taletrack-netflix-extension` | detecta reproducción en Netflix, extrae título/temporada/episodio/progreso/idioma y postea a `/api/tracking/movies` o `/api/tracking/series` cada ~15s (con throttle por % de avance) vía el service worker |
 
 > El koplugin y la extensión apuntan por defecto al servidor de producción hardcodeado
-> (`http://143.47.54.63`); para desarrollo local se sobreescribe (ver el README de cada uno).
+> (`https://taletrack.app`); para desarrollo local se sobreescribe (ver el README de cada uno).
