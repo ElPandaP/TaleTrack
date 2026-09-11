@@ -1,5 +1,11 @@
 import { apiClient } from '../client';
-import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from '../../types';
+import type {
+  LoginRequest,
+  LoginResponse,
+  GoogleNeedsUsernameResponse,
+  RegisterRequest,
+  RegisterResponse,
+} from '../../types';
 
 export const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
@@ -27,11 +33,33 @@ export const authService = {
     );
   },
 
-  async googleLogin(idToken: string, locale: string): Promise<LoginResponse> {
-    const response = await apiClient.post<LoginResponse>(
+  async googleLogin(
+    idToken: string,
+    locale: string,
+  ): Promise<LoginResponse | GoogleNeedsUsernameResponse> {
+    const response = await apiClient.post<LoginResponse | GoogleNeedsUsernameResponse>(
       '/auth/google',
       { idToken, locale },
     );
+
+    if ('token' in response && response.success && response.token) {
+      apiClient.setToken(response.token, response.refreshToken);
+    }
+
+    return response;
+  },
+
+  /** Finishes a Google sign-up once the user has picked a username. */
+  async completeGoogleSignup(
+    pendingToken: string,
+    username: string,
+    locale: string,
+  ): Promise<LoginResponse> {
+    const response = await apiClient.post<LoginResponse>('/auth/google/complete', {
+      pendingToken,
+      username,
+      locale,
+    });
 
     if (response.success && response.token) {
       apiClient.setToken(response.token, response.refreshToken);

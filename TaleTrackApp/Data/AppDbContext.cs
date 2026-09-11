@@ -18,6 +18,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Username)
+            .IsUnique();
+
         // Cascade delete to clean up related data
         modelBuilder.Entity<Review>(r =>
         {

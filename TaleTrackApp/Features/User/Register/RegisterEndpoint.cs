@@ -27,6 +27,12 @@ public static class RegisterEndpoint
             return Results.BadRequest(new { code = "email_taken", message = "Email already registered" });
         }
 
+        if (await userService.UsernameExistsAsync(request.Username))
+        {
+            logger.LogWarning($"Registration attempt with existing username: {request.Username}");
+            return Results.BadRequest(new { code = "username_taken", message = "Username already taken" });
+        }
+
         var user = await userService.CreateUserAsync(request.Email, request.Username, request.Password);
         WelcomeEmail.SendInBackground(scopeFactory, user.Id, user.Email, request.Locale);
 

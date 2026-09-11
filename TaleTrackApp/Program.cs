@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using TaleTrackApp.Features.User.Login;
 using TaleTrackApp.Features.User.Register;
 using TaleTrackApp.Features.User.GoogleLogin;
+using TaleTrackApp.Features.User.GoogleSignupComplete;
 using TaleTrackApp.Features.User.EmailAuth;
 using TaleTrackApp.Features.Auth;
 using TaleTrackApp.Features.Auth.Refresh;
@@ -124,6 +125,7 @@ void configureAuth()
     builder.Services.AddMemoryCache();
     builder.Services.AddScoped<RefreshTokenService>();
     builder.Services.AddScoped<AuthActionTokenService>();
+    builder.Services.AddScoped<GoogleSignupTokenService>();
 
     var resendApiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY")!;
     builder.Services.AddHttpClient<EmailService>(client =>
@@ -212,6 +214,7 @@ void configurePipeline()
     // Public endpoints
     LoginEndpoint.Map(apiGroup);
     GoogleLoginEndpoint.Map(apiGroup);
+    GoogleSignupCompleteEndpoint.Map(apiGroup);
     RequestCodeEndpoint.Map(apiGroup);
     VerifyCodeEndpoint.Map(apiGroup);
     RefreshEndpoint.Map(apiGroup);

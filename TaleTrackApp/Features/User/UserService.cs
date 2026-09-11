@@ -49,6 +49,12 @@ public class UserService
         return await _context.Users.AnyAsync(u => u.Email == email);
     }
 
+    public async Task<bool> UsernameExistsAsync(string username)
+    {
+        var u = username.Trim().ToLower();
+        return await _context.Users.AnyAsync(x => x.Username.ToLower() == u);
+    }
+
     public async Task<Model.User> CreateUserAsync(string email, string username, string password)
     {
         var user = new Model.User

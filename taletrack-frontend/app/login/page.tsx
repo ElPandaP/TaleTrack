@@ -14,9 +14,11 @@ import { GoogleLogin } from '@react-oauth/google';
 import { Leaf, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { authService } from '@/lib/api/services';
 import { ApiError } from '@/lib/api/client';
-import { useAuth, parseJwt } from '@/lib/auth-context';
+import { useAuth, parseJwt, type AuthUser } from '@/lib/auth-context';
 import { useI18n } from '@/lib/i18n';
 import LocaleToggle from '@/components/layout/locale-toggle';
+import { ChooseUsernameScreen } from '@/components/auth/choose-username-screen';
+import { LinkedAccountNotice } from '@/components/auth/linked-account-notice';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,6 +30,12 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [googlePending, setGooglePending] = useState<{
+    pendingToken: string;
+    suggestedUsername: string;
+    email: string;
+  } | null>(null);
+  const [linkedUser, setLinkedUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
     if (!loading && isAuthenticated) router.replace(safeNext());
@@ -72,14 +80,27 @@ export default function LoginPage() {
     setError(null);
     try {
       const res = await authService.googleLogin(credential, locale);
+      if ('needsUsername' in res) {
+        setGooglePending({
+          pendingToken: res.pendingToken,
+          suggestedUsername: res.suggestedUsername,
+          email: res.email,
+        });
+        return;
+      }
       if (res.success && res.token) {
         const decoded = parseJwt(res.token);
-        login({
+        const authUser: AuthUser = {
           id: parseInt(decoded?.sub ?? '0'),
           username: decoded?.unique_name ?? 'User',
           email: decoded?.email ?? '',
-        });
-        goHome();
+        };
+        if (res.linkedExistingAccount) {
+          setLinkedUser(authUser);
+        } else {
+          login(authUser);
+          goHome();
+        }
       }
     } catch {
       setError(t('auth.googleSignInFailed'));
@@ -105,6 +126,31 @@ export default function LoginPage() {
           <span className="font-heading font-semibold text-lg tracking-tight">TaleTrack</span>
         </div>
 
+        {googlePending ? (
+          <ChooseUsernameScreen
+            pendingToken={googlePending.pendingToken}
+            suggestedUsername={googlePending.suggestedUsername}
+            email={googlePending.email}
+            locale={locale}
+            onDone={(authUser) => {
+              login(authUser);
+              goHome();
+            }}
+            onExpired={() => {
+              setGooglePending(null);
+              setError(t('auth.googleSignInFailed'));
+            }}
+          />
+        ) : linkedUser ? (
+          <LinkedAccountNotice
+            username={linkedUser.username}
+            onContinue={() => {
+              login(linkedUser);
+              goHome();
+            }}
+          />
+        ) : (
+        <>
         <div className="tt-card p-8">
           <h1 className="font-heading text-2xl font-semibold mb-1">{t('auth.login.title')}</h1>
           <p className="text-muted-foreground text-sm mb-8">{t('auth.login.subtitle')}</p>
@@ -220,6 +266,8 @@ export default function LoginPage() {
             {t('auth.login.createOne')}
           </Link>
         </p>
+        </>
+        )}
       </div>
     </div>
   );

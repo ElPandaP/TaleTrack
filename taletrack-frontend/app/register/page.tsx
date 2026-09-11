@@ -7,9 +7,11 @@ import { GoogleLogin } from '@react-oauth/google';
 import { Leaf, Mail, Lock, User, ArrowRight, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { authService } from '@/lib/api/services';
 import { ApiError } from '@/lib/api/client';
-import { useAuth, parseJwt } from '@/lib/auth-context';
+import { useAuth, parseJwt, type AuthUser } from '@/lib/auth-context';
 import { useT, useI18n } from '@/lib/i18n';
 import LocaleToggle from '@/components/layout/locale-toggle';
+import { ChooseUsernameScreen } from '@/components/auth/choose-username-screen';
+import { LinkedAccountNotice } from '@/components/auth/linked-account-notice';
 
 function PasswordStrength({ password }: { password: string }) {
   const t = useT();
@@ -46,6 +48,12 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [googlePending, setGooglePending] = useState<{
+    pendingToken: string;
+    suggestedUsername: string;
+    email: string;
+  } | null>(null);
+  const [linkedUser, setLinkedUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
     if (!loading && isAuthenticated) router.replace('/');
@@ -86,7 +94,13 @@ export default function RegisterPage() {
       }
     } catch (err) {
       const code = err instanceof ApiError ? err.code : undefined;
-      setError(t(code === 'email_taken' ? 'auth.register.emailTaken' : 'auth.register.failed'));
+      const key =
+        code === 'email_taken'
+          ? 'auth.register.emailTaken'
+          : code === 'username_taken'
+            ? 'auth.register.usernameTaken'
+            : 'auth.register.failed';
+      setError(t(key));
     } finally {
       setSubmitting(false);
     }
@@ -97,14 +111,27 @@ export default function RegisterPage() {
     setError(null);
     try {
       const res = await authService.googleLogin(credential, locale);
+      if ('needsUsername' in res) {
+        setGooglePending({
+          pendingToken: res.pendingToken,
+          suggestedUsername: res.suggestedUsername,
+          email: res.email,
+        });
+        return;
+      }
       if (res.success && res.token) {
         const decoded = parseJwt(res.token);
-        login({
+        const authUser: AuthUser = {
           id: parseInt(decoded?.sub ?? '0'),
           username: decoded?.unique_name ?? 'User',
           email: decoded?.email ?? '',
-        });
-        goHome();
+        };
+        if (res.linkedExistingAccount) {
+          setLinkedUser(authUser);
+        } else {
+          login(authUser);
+          goHome();
+        }
       }
     } catch {
       setError(t('auth.googleSignUpFailed'));
@@ -130,6 +157,31 @@ export default function RegisterPage() {
           <span className="font-heading font-semibold text-lg tracking-tight">TaleTrack</span>
         </div>
 
+        {googlePending ? (
+          <ChooseUsernameScreen
+            pendingToken={googlePending.pendingToken}
+            suggestedUsername={googlePending.suggestedUsername}
+            email={googlePending.email}
+            locale={locale}
+            onDone={(authUser) => {
+              login(authUser);
+              goHome();
+            }}
+            onExpired={() => {
+              setGooglePending(null);
+              setError(t('auth.googleSignUpFailed'));
+            }}
+          />
+        ) : linkedUser ? (
+          <LinkedAccountNotice
+            username={linkedUser.username}
+            onContinue={() => {
+              login(linkedUser);
+              goHome();
+            }}
+          />
+        ) : (
+        <>
         <div className="tt-card p-8">
           <h1 className="font-heading text-2xl font-semibold mb-1">{t('auth.register.title')}</h1>
           <p className="text-muted-foreground text-sm mb-8">{t('auth.register.subtitle')}</p>
@@ -277,6 +329,8 @@ export default function RegisterPage() {
             {t('auth.register.signIn')}
           </Link>
         </p>
+        </>
+        )}
       </div>
     </div>
   );

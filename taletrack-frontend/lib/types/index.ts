@@ -10,6 +10,18 @@ export interface LoginResponse {
   token: string;
   refreshToken?: string;
   expiresIn?: number;
+  /** Google login only — an existing email/password account was just linked to this Google identity. */
+  linkedExistingAccount?: boolean;
+}
+
+/** Returned by /auth/google instead of LoginResponse when signing up for the first time —
+ * no account exists yet, the user must pick a username before one is created. */
+export interface GoogleNeedsUsernameResponse {
+  success: true;
+  needsUsername: true;
+  pendingToken: string;
+  email: string;
+  suggestedUsername: string;
 }
 
 export interface RegisterRequest {

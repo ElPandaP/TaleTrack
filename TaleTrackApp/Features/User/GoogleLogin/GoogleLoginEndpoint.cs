@@ -21,6 +21,7 @@ public static class GoogleLoginEndpoint
         UserService userService,
         JwtService jwtService,
         RefreshTokenService refreshTokens,
+        GoogleSignupTokenService signupTokens,
         IServiceScopeFactory scopeFactory,
         ILogger<GoogleLoginRequest> logger)
     {
@@ -48,19 +49,34 @@ public static class GoogleLoginEndpoint
         var name = !string.IsNullOrEmpty(payload.Name) ? payload.Name : email.Split('@')[0];
 
         var user = await userService.GetByGoogleIdAsync(googleId);
+        var linkedExistingAccount = false;
 
         if (user == null)
         {
             user = await userService.GetByEmailAsync(email);
             if (user != null)
             {
+                // An account with this email already exists (signed up normally) — link
+                // Google to it. Safe to do silently: Google already verified this person
+                // controls that email address. The frontend surfaces this to the user.
                 await userService.LinkGoogleIdAsync(user.Id, googleId);
+                linkedExistingAccount = true;
             }
-            else
+        }
+
+        if (user == null)
+        {
+            // Brand new signup — don't create the account yet, the user needs to pick a
+            // username first. Nothing is persisted until /auth/google/complete.
+            var pendingToken = signupTokens.Issue(googleId, email, name);
+            return Results.Ok(new
             {
-                user = await userService.CreateGoogleUserAsync(email, name, googleId);
-                WelcomeEmail.SendInBackground(scopeFactory, user.Id, user.Email, request.Locale);
-            }
+                success = true,
+                needsUsername = true,
+                pendingToken,
+                email,
+                suggestedUsername = name,
+            });
         }
 
         var token = jwtService.GenerateToken(user.Id, user.Email, user.Username);
@@ -74,6 +90,7 @@ public static class GoogleLoginEndpoint
             token,
             refreshToken,
             expiresIn = jwtService.ExpirationMinutes * 60,
+            linkedExistingAccount,
         });
     }
 }
