@@ -61,7 +61,7 @@ function Segmented<T extends string>({
                 <motion.span
                   layoutId={layoutId}
                   aria-hidden="true"
-                  className="absolute inset-0 rounded-md bg-card shadow-sm"
+                  className="absolute inset-0 rounded-md bg-card shadow-sm dark:bg-foreground/15 dark:shadow-none"
                   transition={
                     reduceMotion
                       ? { duration: 0 }

@@ -44,7 +44,7 @@ function isExpired(decoded: { exp?: number } | null): boolean {
 
 const authListeners = new Set<() => void>();
 
-function notifyAuthChange() {
+export function notifyAuthChange() {
   authListeners.forEach((fn) => fn());
 }
 

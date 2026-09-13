@@ -44,10 +44,10 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} flex min-h-dvh flex-col antialiased`}>
         <Providers locale={locale}>
           <TopNav authed={authed} avatarUrl={avatarUrl} />
-          {children}
+          <div className="flex flex-1 flex-col">{children}</div>
         </Providers>
       </body>
     </html>

@@ -31,12 +31,12 @@ export function PendingReviewsCard({
       <div className="flex items-baseline justify-between">
         <Link
           href="/library?reviews=todo"
-          className="text-[10px] font-semibold tracking-widest text-muted-foreground/70 uppercase transition-colors hover:text-foreground"
+          className="text-xs font-semibold tracking-widest text-muted-foreground/70 uppercase transition-colors hover:text-foreground"
         >
           {t('home.toReview')}
         </Link>
         {items.length > 0 && (
-          <span className="text-[10px] text-muted-foreground/70">{items.length}</span>
+          <span className="text-xs text-muted-foreground/70">{items.length}</span>
         )}
       </div>
 

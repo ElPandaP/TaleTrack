@@ -24,7 +24,7 @@ export default function ConnectionsPage() {
   ];
 
   return (
-    <div className="max-w-2xl">
+    <div>
       <h1 className="mb-1 font-heading text-2xl font-semibold">{t('connections.title')}</h1>
       <p className="mb-6 text-sm text-muted-foreground">{t('connections.subtitle')}</p>
 

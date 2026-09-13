@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 import { Check, X, UserPlus, UserMinus, Search, Clock } from 'lucide-react';
 import { UserAvatar } from '@/components/media/user-avatar';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
 import { friendService } from '@/lib/api/services';
 import { sendErrorKey } from '@/lib/api/friend-errors';
 import { useT } from '@/lib/i18n';
@@ -55,6 +58,7 @@ export default function FriendsClient({
   const [busy, setBusy] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState<SearchState>(emptySearch);
+  const [removeTarget, setRemoveTarget] = useState<Friend | null>(null);
 
   const respond = async (requestId: number, accept: boolean) => {
     setBusy(requestId);
@@ -66,14 +70,16 @@ export default function FriendsClient({
     }
   };
 
-  const remove = async (f: Friend) => {
-    if (!confirm(t('friends.removeConfirm', { name: `@${f.username}` }))) return;
+  const confirmRemove = async () => {
+    const f = removeTarget;
+    if (!f) return;
     setBusy(f.userId);
     try {
       await friendService.remove(f.userId);
       router.refresh();
     } finally {
       setBusy(null);
+      setRemoveTarget(null);
     }
   };
 
@@ -219,7 +225,7 @@ export default function FriendsClient({
                 <PersonLink userId={f.userId} username={f.username} avatarUrl={f.avatarUrl} />
                 <button
                   type="button"
-                  onClick={() => remove(f)}
+                  onClick={() => setRemoveTarget(f)}
                   disabled={busy === f.userId}
                   aria-label={t('friends.remove')}
                   title={t('friends.remove')}
@@ -254,6 +260,36 @@ export default function FriendsClient({
           </div>
         )}
       </section>
+
+      <Dialog open={removeTarget != null} onOpenChange={(open) => !open && setRemoveTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('friends.removeConfirmTitle')}</DialogTitle>
+            {removeTarget && (
+              <DialogDescription>
+                {t('friends.removeConfirm', { name: `@${removeTarget.username}` })}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setRemoveTarget(null)}
+              className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+            >
+              {t('friends.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={confirmRemove}
+              disabled={busy === removeTarget?.userId}
+              className="rounded-xl bg-destructive px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
+            >
+              {t('friends.remove')}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

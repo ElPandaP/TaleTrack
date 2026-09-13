@@ -60,7 +60,7 @@ export default async function RootPage() {
 
   return (
     <>
-      <main className="mx-auto max-w-6xl px-4 py-6 lg:px-6 lg:py-8">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 lg:px-6 lg:py-8">
         <HomeView data={data} />
       </main>
       <Footer />

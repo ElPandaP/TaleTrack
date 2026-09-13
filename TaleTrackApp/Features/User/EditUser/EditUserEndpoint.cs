@@ -19,6 +19,7 @@ public static class EditUserEndpoint
         int id,
         EditUserRequest request,
         UserService userService,
+        JwtService jwtService,
         ClaimsPrincipal user,
         ILogger<EditUserRequest> logger)
     {
@@ -53,10 +54,16 @@ public static class EditUserEndpoint
             }
 
             logger.LogInformation($"User {id} updated successfully");
-            return Results.Ok(new 
-            { 
+
+            // The access token carries username/email as claims — reissue it so the client's
+            // cached auth state doesn't keep showing stale values until it naturally expires.
+            var token = jwtService.GenerateToken(updatedUser.Id, updatedUser.Email, updatedUser.Username);
+
+            return Results.Ok(new
+            {
                 success = true,
                 message = "User updated successfully.",
+                token,
                 data = new
                 {
                     id = updatedUser.Id,

@@ -95,7 +95,7 @@ export default function ActivityClient({ items }: { items: ActivityItem[] }) {
                       <Link href={`/u/${it.userId}`} className="font-medium hover:text-primary">
                         @{it.username}
                       </Link>{' '}
-                      {t(`activity.${it.kind}`)}{' '}
+                      <span className="font-semibold">{t(`activity.${it.kind}`)}</span>{' '}
                       <Link
                         href={`/media/${it.mediaId}`}
                         className="font-medium text-primary hover:underline"

@@ -7,7 +7,11 @@ import {
 } from 'lucide-react';
 import { UserAvatar } from '@/components/media/user-avatar';
 import AvatarUpload from '@/components/profile/avatar-upload';
-import { useAuth } from '@/lib/auth-context';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
+import { useAuth, notifyAuthChange } from '@/lib/auth-context';
+import { apiClient } from '@/lib/api/client';
 import { userService, authService } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -86,7 +90,8 @@ export default function ProfileClient({
 
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [deleteRequested, setDeleteRequested] = useState(false);
 
   const memberSince = new Date(profile.createdAt).toLocaleDateString(locale, {
@@ -96,13 +101,25 @@ export default function ProfileClient({
 
   const setFlag = (k: keyof FeedPrivacy, v: boolean) => setPrivacy((p) => ({ ...p, [k]: v }));
 
+  const isDirty =
+    username !== profile.username ||
+    email !== profile.email ||
+    JSON.stringify(privacy) !== JSON.stringify(profile.privacy);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setSaveMsg(null);
     try {
-      await userService.updateProfile(profile.id, { username, email, privacy });
+      const res = await userService.updateProfile(profile.id, { username, email, privacy });
+      // The access token carries username/email as claims — swap it in so the header/menu
+      // and everything else driven by useAuth() stops showing the pre-edit values.
+      if (res.token) {
+        apiClient.setToken(res.token);
+        notifyAuthChange();
+      }
       setSaveMsg({ ok: true, text: t('profile.saved') });
+      router.refresh();
     } catch {
       setSaveMsg({ ok: false, text: t('profile.saveError') });
     } finally {
@@ -116,15 +133,15 @@ export default function ProfileClient({
   };
 
   const handleDelete = async () => {
-    if (!deleteConfirm) {
-      setDeleteConfirm(true);
-      return;
-    }
+    setDeleting(true);
     try {
       await authService.requestAccountDeletion(locale);
       setDeleteRequested(true);
+      setDeleteDialogOpen(false);
     } catch {
       alert(t('profile.deleteError'));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -243,14 +260,16 @@ export default function ProfileClient({
         {saveMsg && (
           <p className={cn('text-sm', saveMsg.ok ? 'text-primary' : 'text-destructive')}>{saveMsg.text}</p>
         )}
-        <button
-          type="submit"
-          disabled={saving}
-          className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-        >
-          <Save className="size-4" />
-          {saving ? t('profile.saving') : t('profile.save')}
-        </button>
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={saving || !isDirty}
+            className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Save className="size-4" />
+            {saving ? t('profile.saving') : t('profile.save')}
+          </button>
+        </div>
       </form>
 
       {/* Account actions */}
@@ -271,31 +290,42 @@ export default function ProfileClient({
               {t('profile.deleteEmailSent')}
             </p>
           ) : (
-            <>
-              <button
-                onClick={handleDelete}
-                className={cn(
-                  'flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-colors',
-                  deleteConfirm
-                    ? 'border-destructive/30 bg-destructive/20 text-destructive hover:bg-destructive/30'
-                    : 'border-destructive/20 bg-secondary/30 text-destructive hover:border-destructive/30 hover:bg-destructive/10',
-                )}
-              >
-                <Trash2 className="size-4" />
-                {deleteConfirm ? t('profile.deleteConfirm') : t('profile.delete')}
-              </button>
-              {deleteConfirm && (
-                <button
-                  onClick={() => setDeleteConfirm(false)}
-                  className="mt-2 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  {t('profile.cancel')}
-                </button>
-              )}
-            </>
+            <button
+              onClick={() => setDeleteDialogOpen(true)}
+              className="flex w-full items-center gap-3 rounded-xl border border-destructive/20 bg-secondary/30 px-4 py-3 text-sm font-medium text-destructive transition-colors hover:border-destructive/30 hover:bg-destructive/10"
+            >
+              <Trash2 className="size-4" />
+              {t('profile.delete')}
+            </button>
           )}
         </div>
       </div>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('profile.deleteConfirmTitle')}</DialogTitle>
+            <DialogDescription>{t('profile.deleteConfirmBody')}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setDeleteDialogOpen(false)}
+              className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+            >
+              {t('profile.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="rounded-xl bg-destructive px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
+            >
+              {t('profile.deleteConfirmAction')}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
