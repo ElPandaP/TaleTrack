@@ -17,12 +17,12 @@ export function InProgressCard({ items }: { items: LibraryItem[] }) {
       <div className="flex items-baseline justify-between">
         <Link
           href="/library?status=reading"
-          className="text-xs font-semibold tracking-widest text-muted-foreground/70 uppercase transition-colors hover:text-foreground"
+          className="text-[10px] font-semibold tracking-widest text-muted-foreground/70 uppercase transition-colors hover:text-foreground"
         >
           {t('home.inProgress')}
         </Link>
         {items.length > 0 && (
-          <span className="text-xs text-muted-foreground/70">{items.length}</span>
+          <span className="text-xs font-semibold text-muted-foreground/70">{items.length}</span>
         )}
       </div>
 

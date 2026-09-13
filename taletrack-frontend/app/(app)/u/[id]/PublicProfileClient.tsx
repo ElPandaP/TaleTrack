@@ -3,11 +3,16 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { UserPlus, UserMinus, Clock, BookOpen, Film, Tv, ChevronLeft, ChevronRight } from 'lucide-react';
+import { UserPlus, UserMinus, Clock, BookOpen, Film, Tv } from 'lucide-react';
 import { UserAvatar } from '@/components/media/user-avatar';
 import { Cover } from '@/components/media/cover';
 import { StarRating, toStars } from '@/components/media/star-rating';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Pagination } from '@/components/ui/pagination';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
 import { friendService } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n';
 import { sendErrorKey } from '@/lib/api/friend-errors';
@@ -43,6 +48,7 @@ export default function PublicProfileClient({
   const [rel_, setRel] = useState(profile.relationship);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
 
   const memberSince = new Date(profile.createdAt).toLocaleDateString(locale, {
     month: 'long',
@@ -67,12 +73,13 @@ export default function PublicProfileClient({
     }
   };
 
-  const remove = async () => {
+  const confirmRemove = async () => {
     setBusy(true);
     setError(null);
     try {
       await friendService.remove(profile.id);
       setRel('none');
+      setRemoveDialogOpen(false);
       router.refresh();
     } catch {
       setError(t('publicProfile.actionError'));
@@ -112,7 +119,7 @@ export default function PublicProfileClient({
               <Link href="/profile">{t('publicProfile.editYours')}</Link>
             </Button>
           ) : rel_ === 'friends' ? (
-            <Button variant="outline" size="sm" onClick={remove} disabled={busy}>
+            <Button variant="outline" size="sm" onClick={() => setRemoveDialogOpen(true)} disabled={busy}>
               <UserMinus aria-hidden="true" className="size-4" />
               {t('publicProfile.removeFriend')}
             </Button>
@@ -141,9 +148,7 @@ export default function PublicProfileClient({
       </h2>
 
       {activity.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
-          {t('publicProfile.activityPrivate')}
-        </p>
+        <EmptyState className="py-12">{t('publicProfile.activityPrivate')}</EmptyState>
       ) : (
         <>
           <ul className="flex flex-col gap-3">
@@ -176,34 +181,33 @@ export default function PublicProfileClient({
             ))}
           </ul>
 
-          {totalPages > 1 && (
-            <nav className="mt-6 flex items-center justify-center gap-2" aria-label="Pagination">
-              <button
-                type="button"
-                onClick={() => setPage(currentPage - 1)}
-                disabled={currentPage === 1}
-                aria-label={t('a11y.previousPage')}
-                className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
-              >
-                <ChevronLeft aria-hidden="true" className="size-4" />
-              </button>
-              <span className="px-2 text-sm text-muted-foreground">
-                {t('pagination.pageLabel')} <span className="font-medium text-foreground">{currentPage}</span>{' '}
-                {t('pagination.of')} {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                aria-label={t('a11y.nextPage')}
-                className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
-              >
-                <ChevronRight aria-hidden="true" className="size-4" />
-              </button>
-            </nav>
-          )}
+          <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} className="mt-6" />
         </>
       )}
+
+      <Dialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('friends.removeConfirmTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('friends.removeConfirm', { name: `@${profile.username}` })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveDialogOpen(false)}>
+              {t('friends.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmRemove}
+              disabled={busy}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {t('friends.remove')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

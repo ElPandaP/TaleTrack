@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { authService } from '@/lib/api/services';
 import { ApiError } from '@/lib/api/client';
 import { useI18n } from '@/lib/i18n';
@@ -96,14 +97,14 @@ function ResetPasswordForm() {
           {mismatch && <span className="text-xs text-destructive">{t('auth.register.passwordsMismatch')}</span>}
         </label>
 
-        <button
+        <Button
           type="submit"
           disabled={submitting || password.length < 6 || password !== confirm}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          className="h-auto w-full py-3"
         >
           {submitting ? t('auth.reset.saving') : t('auth.reset.submit')}
           {!submitting && <ArrowRight className="size-4" />}
-        </button>
+        </Button>
       </form>
     </>
   );

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Pencil, Trash2 } from 'lucide-react';
 import { Cover } from '@/components/media/cover';
 import { StarRating, toStars } from '@/components/media/star-rating';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { ReviewModal, type ReviewTarget } from '@/components/media/review-modal';
 import { reviewService } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n';
@@ -51,9 +53,7 @@ export default function ReviewsClient({ reviews }: { reviews: ReviewItem[] }) {
       <p className="mb-6 text-sm text-muted-foreground">{tp('common.reviews', reviews.length)}</p>
 
       {reviews.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border px-4 py-16 text-center text-sm text-muted-foreground">
-          {t('reviews.empty')}
-        </p>
+        <EmptyState>{t('reviews.empty')}</EmptyState>
       ) : (
         <ul className="flex flex-col gap-4">
           {reviews.map((r) => (
@@ -77,23 +77,27 @@ export default function ReviewsClient({ reviews }: { reviews: ReviewItem[] }) {
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-1">
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => edit(r)}
                       aria-label={t('reviews.edit')}
-                      className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                      className="text-muted-foreground"
                     >
                       <Pencil aria-hidden="true" className="size-4" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => remove(r.id)}
                       disabled={deleting === r.id}
                       aria-label={t('reviews.delete')}
-                      className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash2 aria-hidden="true" className="size-4" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 <StarRating stars={toStars(r.rating)} className="mt-1.5" />

@@ -1,11 +1,10 @@
-'use client';
-
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, Download, ExternalLink } from 'lucide-react';
-import { useT } from '@/lib/i18n';
+import { getServerDict } from '@/lib/i18n-server';
 
-export default function KoreaderGuidePage() {
-  const t = useT();
+export default async function KoreaderGuidePage() {
+  const dict = await getServerDict();
+  const t = (key: string) => dict[key] ?? key;
   const steps = [1, 2, 3, 4].map((n) => t(`connections.guide.koreader.step${n}`));
 
   return (

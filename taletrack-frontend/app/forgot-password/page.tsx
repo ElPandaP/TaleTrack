@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Mail, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { authService } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n';
 import AuthShell from '@/app/_components/auth-shell';
@@ -64,14 +65,10 @@ export default function ForgotPasswordPage() {
           </div>
         </label>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={submitting} className="h-auto w-full py-3">
           {submitting ? t('auth.forgot.sending') : t('auth.forgot.submit')}
           {!submitting && <ArrowRight className="size-4" />}
-        </button>
+        </Button>
       </form>
 
       <Link href="/login" className="mt-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">

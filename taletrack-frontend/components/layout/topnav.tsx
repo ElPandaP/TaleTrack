@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/media/user-avatar';
+import { Button } from '@/components/ui/button';
 import ThemeToggle from './theme-toggle';
 import LocaleToggle from './locale-toggle';
 
@@ -181,14 +182,6 @@ export default function TopNav({
                 </div>
                 <div className="my-1 h-px bg-border" />
                 <Link
-                  href="/friends"
-                  onClick={() => menuRef.current?.removeAttribute('open')}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                >
-                  <Users aria-hidden="true" className="size-4" />
-                  {t('nav.friends')}
-                </Link>
-                <Link
                   href="/profile"
                   onClick={() => menuRef.current?.removeAttribute('open')}
                   className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
@@ -196,14 +189,23 @@ export default function TopNav({
                   <User aria-hidden="true" className="size-4" />
                   {t('nav.viewProfile')}
                 </Link>
-                <button
+                <Link
+                  href="/friends"
+                  onClick={() => menuRef.current?.removeAttribute('open')}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  <Users aria-hidden="true" className="size-4" />
+                  {t('nav.friends')}
+                </Link>
+                <Button
                   type="button"
+                  variant="ghost"
                   onClick={handleLogout}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  className="h-auto w-full justify-start gap-2 px-3 py-2 font-normal text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 >
                   <LogOut aria-hidden="true" className="size-4" />
                   {t('nav.logout')}
-                </button>
+                </Button>
               </div>
             </details>
           )}

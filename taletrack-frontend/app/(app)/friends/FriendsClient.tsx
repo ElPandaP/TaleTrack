@@ -189,24 +189,28 @@ export default function FriendsClient({
             {incoming.map((r) => (
               <li key={r.requestId} className="tt-card flex items-center gap-3 p-3">
                 <PersonLink userId={r.userId} username={r.username} avatarUrl={r.avatarUrl} />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => respond(r.requestId, true)}
                   disabled={busy === r.requestId}
                   aria-label={t('friends.accept')}
-                  className="rounded-lg bg-[oklch(0.55_0.15_150)]/15 p-1.5 text-[oklch(0.5_0.16_150)] transition-colors hover:bg-[oklch(0.55_0.15_150)]/25 disabled:opacity-50 dark:text-[oklch(0.7_0.17_150)]"
+                  className="bg-[oklch(0.55_0.15_150)]/15 text-[oklch(0.5_0.16_150)] hover:bg-[oklch(0.55_0.15_150)]/25 dark:text-[oklch(0.7_0.17_150)]"
                 >
                   <Check aria-hidden="true" className="size-4" />
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => respond(r.requestId, false)}
                   disabled={busy === r.requestId}
                   aria-label={t('friends.decline')}
-                  className="rounded-lg bg-destructive/10 p-1.5 text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-50"
+                  className="bg-destructive/10 text-destructive hover:bg-destructive/20"
                 >
                   <X aria-hidden="true" className="size-4" />
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -223,16 +227,18 @@ export default function FriendsClient({
             {friends.map((f) => (
               <li key={f.userId} className="tt-card flex items-center gap-3 p-3">
                 <PersonLink userId={f.userId} username={f.username} avatarUrl={f.avatarUrl} />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => setRemoveTarget(f)}
                   disabled={busy === f.userId}
                   aria-label={t('friends.remove')}
                   title={t('friends.remove')}
-                  className="rounded-lg p-1.5 text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                  className="text-muted-foreground/60 hover:bg-destructive/10 hover:text-destructive"
                 >
                   <UserMinus aria-hidden="true" className="size-4" />
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -272,21 +278,17 @@ export default function FriendsClient({
             )}
           </DialogHeader>
           <DialogFooter>
-            <button
-              type="button"
-              onClick={() => setRemoveTarget(null)}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-            >
+            <Button variant="outline" onClick={() => setRemoveTarget(null)}>
               {t('friends.cancel')}
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="destructive"
               onClick={confirmRemove}
               disabled={busy === removeTarget?.userId}
-              className="rounded-xl bg-destructive px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
+              className="bg-destructive text-white hover:bg-destructive/90"
             >
               {t('friends.remove')}
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

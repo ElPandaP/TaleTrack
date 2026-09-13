@@ -6,6 +6,8 @@ import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Cover } from '@/components/media/cover';
 import { StarRating, toStars } from '@/components/media/star-rating';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useT } from '@/lib/i18n';
 import type { LibraryItem, LibraryType } from '@/lib/types';
 
@@ -71,32 +73,34 @@ export function TypeCarousel({
             {t('home.carousel.seeAllCount', { count })}
           </Link>
           <div className="flex gap-1">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="icon-sm"
               onClick={() => emblaApi?.scrollPrev()}
               disabled={!canPrev}
               aria-label={t('home.carousel.prev', { items: plural })}
-              className="flex size-7 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
+              className="rounded-full disabled:opacity-30"
             >
               <ChevronLeft aria-hidden="true" className="size-4" />
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
+              size="icon-sm"
               onClick={() => emblaApi?.scrollNext()}
               disabled={!canNext}
               aria-label={t('home.carousel.next', { items: plural })}
-              className="flex size-7 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
+              className="rounded-full disabled:opacity-30"
             >
               <ChevronRight aria-hidden="true" className="size-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       {items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
-          {t('home.carousel.empty', { items: plural.toLowerCase() })}
-        </p>
+        <EmptyState className="py-6">{t('home.carousel.empty', { items: plural.toLowerCase() })}</EmptyState>
       ) : (
         <div
           className="cursor-grab overflow-hidden active:cursor-grabbing"

@@ -1,11 +1,10 @@
-'use client';
-
 import Link from 'next/link';
 import { ArrowLeft, Puzzle, Download } from 'lucide-react';
-import { useT } from '@/lib/i18n';
+import { getServerDict } from '@/lib/i18n-server';
 
-export default function NetflixGuidePage() {
-  const t = useT();
+export default async function NetflixGuidePage() {
+  const dict = await getServerDict();
+  const t = (key: string) => dict[key] ?? key;
   const steps = [1, 2, 3, 4].map((n) => t(`connections.guide.netflix.step${n}`));
 
   return (

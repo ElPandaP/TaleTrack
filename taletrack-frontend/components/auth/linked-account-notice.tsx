@@ -1,6 +1,7 @@
 'use client';
 
 import { CheckCircle, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useT } from '@/lib/i18n';
 
 /** Shown when a Google login just got silently linked to an existing email/password account. */
@@ -22,13 +23,9 @@ export function LinkedAccountNotice({
       <p className="text-muted-foreground text-sm mb-6">
         {t('auth.linkedAccount.subtitle', { username })}
       </p>
-      <button
-        type="button"
-        onClick={onContinue}
-        className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors cursor-pointer"
-      >
+      <Button type="button" onClick={onContinue} className="h-auto w-full py-3">
         {t('auth.linkedAccount.continue')} <ArrowRight className="w-4 h-4" />
-      </button>
+      </Button>
     </div>
   );
 }

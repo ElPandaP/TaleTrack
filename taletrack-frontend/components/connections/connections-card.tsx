@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { Monitor, Puzzle, BookOpen, Smartphone, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { sessionsService, type Session } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
 
 function deviceIcon(device: string) {
   const d = device.toLowerCase();
@@ -86,22 +86,19 @@ export default function ConnectionsCard() {
                     {t('connections.sessions.lastUsed', { date: fmt(s.lastUsedAt) })}
                   </p>
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="xs"
                   onClick={() => handleRevoke(s.id)}
                   disabled={revoking === s.id}
-                  className={cn(
-                    'flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5',
-                    'text-xs font-medium text-muted-foreground transition-colors',
-                    'hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive',
-                    'disabled:opacity-50',
-                  )}
+                  className="shrink-0 text-muted-foreground hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
                 >
                   <X className="size-3.5" />
                   {revoking === s.id
                     ? t('connections.sessions.revoking')
                     : t('connections.sessions.revoke')}
-                </button>
+                </Button>
               </li>
             );
           })}

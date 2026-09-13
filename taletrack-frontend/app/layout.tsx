@@ -45,6 +45,14 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} flex min-h-dvh flex-col antialiased`}>
+        {/* Applies the saved theme before React hydrates, so there's no flash of the
+            wrong theme and the client's first render matches the server's (always
+            light) — ThemeProvider itself picks up the real value post-mount. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem('tt-theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}`,
+          }}
+        />
         <Providers locale={locale}>
           <TopNav authed={authed} avatarUrl={avatarUrl} />
           <div className="flex flex-1 flex-col">{children}</div>

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Leaf, Check, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { sessionsService } from '@/lib/api/services';
 import { useAuth } from '@/lib/auth-context';
 import { useT } from '@/lib/i18n';
@@ -118,20 +120,15 @@ export default function ExtensionAuthPage() {
         <p className="mb-4 text-sm text-destructive">{t('extAuth.error')}</p>
       )}
 
-      <button
-        type="button"
-        onClick={authorize}
-        disabled={phase === 'working'}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-      >
+      <Button type="button" onClick={authorize} disabled={phase === 'working'} className="h-auto w-full py-3">
         {phase === 'working' ? (
-          <div className="size-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
+          <Spinner />
         ) : (
           <>
             {t('extAuth.authorize')} <ArrowRight className="size-4" />
           </>
         )}
-      </button>
+      </Button>
     </Shell>
   );
 }

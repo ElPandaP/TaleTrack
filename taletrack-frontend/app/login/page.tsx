@@ -12,6 +12,8 @@ function safeNext(): string {
 }
 import { GoogleLogin } from '@react-oauth/google';
 import { Leaf, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { authService } from '@/lib/api/services';
 import { ApiError } from '@/lib/api/client';
 import { useAuth, parseJwt, type AuthUser } from '@/lib/auth-context';
@@ -220,19 +222,15 @@ export default function LoginPage() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
+            <Button type="submit" disabled={submitting} className="h-auto w-full py-3">
               {submitting ? (
-                <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                <Spinner />
               ) : (
                 <>
                   {t('auth.login.submit')} <ArrowRight className="w-4 h-4" />
                 </>
               )}
-            </button>
+            </Button>
           </form>
 
           <div className="relative my-6">

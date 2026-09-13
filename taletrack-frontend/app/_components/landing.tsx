@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import {
-  Leaf, BookOpen, Film, Tv, BookMarked,
+  Leaf, BookOpen, Film, Tv,
   ArrowRight, Zap, Shield, Star, Activity,
 } from 'lucide-react';
 import ThemeToggle from '@/components/layout/theme-toggle';
@@ -82,7 +82,6 @@ function DashboardMockup() {
     { label: t('landing.mock.books'), value: '24', Icon: BookOpen, color: 'text-[oklch(0.65_0.13_65)]', bg: 'bg-[oklch(0.65_0.13_65)]/10' },
     { label: t('landing.mock.films'), value: '87', Icon: Film, color: 'text-[oklch(0.55_0.09_5)]', bg: 'bg-[oklch(0.55_0.09_5)]/10' },
     { label: t('landing.mock.series'), value: '12', Icon: Tv, color: 'text-[oklch(0.52_0.09_152)]', bg: 'bg-[oklch(0.52_0.09_152)]/10' },
-    { label: t('landing.mock.comics'), value: '6', Icon: BookMarked, color: 'text-[oklch(0.52_0.10_295)]', bg: 'bg-[oklch(0.52_0.10_295)]/10' },
   ];
 
   return (
@@ -101,7 +100,7 @@ function DashboardMockup() {
           <span className="text-[10px] text-muted-foreground">{t('landing.mock.greeting')}</span>
         </div>
 
-        <div className="grid grid-cols-4 gap-2 mb-3.5">
+        <div className="grid grid-cols-3 gap-2 mb-3.5">
           {stats.map(({ label, value, Icon, color, bg }) => (
             <div key={label} className={`${bg} border border-border/50 rounded-xl p-2.5 text-center`}>
               <Icon className={`w-3.5 h-3.5 ${color} mx-auto mb-1`} />

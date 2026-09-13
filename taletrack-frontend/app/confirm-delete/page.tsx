@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Check, TriangleAlert } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { authService } from '@/lib/api/services';
 import { ApiError } from '@/lib/api/client';
 import { useI18n } from '@/lib/i18n';
@@ -52,14 +53,15 @@ function ConfirmDeleteInner() {
       </div>
       <p className="mb-6 text-sm text-muted-foreground">{t('auth.confirmDelete.body')}</p>
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      <button
+      <Button
         type="button"
+        variant="destructive"
         onClick={run}
         disabled={phase === 'working'}
-        className="w-full rounded-xl bg-destructive py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        className="h-auto w-full bg-destructive py-3 text-white hover:bg-destructive/90"
       >
         {phase === 'working' ? t('auth.confirmDelete.working') : t('auth.confirmDelete.confirm')}
-      </button>
+      </Button>
       <Link href="/" className="mt-4 inline-block text-sm text-muted-foreground hover:text-foreground">
         {t('auth.confirmDelete.cancel')}
       </Link>

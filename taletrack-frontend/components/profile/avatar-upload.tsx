@@ -1,74 +1,39 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Upload, Loader2, Trash2 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Upload, Trash2 } from 'lucide-react';
 import { UserAvatar } from '@/components/media/user-avatar';
-import { userService } from '@/lib/api/services';
+import { Button } from '@/components/ui/button';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
-const MAX_BYTES = 5 * 1024 * 1024;
+export const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 
+/**
+ * Pure staging UI: picking or dropping a file (or removing the photo) only reports
+ * the intent up via `onSelectFile`/`onRemove` — the actual upload/removal request is
+ * deferred until the parent's own "save changes" runs.
+ */
 export default function AvatarUpload({
-  currentUrl,
+  displayUrl,
   username,
-  onChange,
+  pending,
+  disabled,
+  error,
+  onSelectFile,
+  onRemove,
 }: {
-  currentUrl: string;
+  displayUrl: string | null;
   username: string;
-  onChange: (url: string | null) => void;
+  pending: boolean;
+  disabled?: boolean;
+  error: string | null;
+  onSelectFile: (file: File) => void;
+  onRemove: () => void;
 }) {
   const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-
-  useEffect(() => () => {
-    if (preview) URL.revokeObjectURL(preview);
-  }, [preview]);
-
-  const handleFile = async (file: File) => {
-    setError(null);
-    if (!file.type.startsWith('image/')) {
-      setError(t('profile.avatar.invalidType'));
-      return;
-    }
-    if (file.size > MAX_BYTES) {
-      setError(t('profile.avatar.tooLarge'));
-      return;
-    }
-
-    const localPreview = URL.createObjectURL(file);
-    setPreview(localPreview);
-    setBusy(true);
-    try {
-      const res = await userService.uploadAvatar(file);
-      onChange(res.avatarUrl);
-    } catch {
-      setError(t('profile.avatar.uploadError'));
-    } finally {
-      setBusy(false);
-      setPreview(null); // fall back to the saved URL
-      URL.revokeObjectURL(localPreview);
-    }
-  };
-
-  const handleRemove = async () => {
-    setError(null);
-    setBusy(true);
-    try {
-      await userService.removeAvatar();
-      onChange(null);
-    } catch {
-      setError(t('profile.avatar.uploadError'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const shown = preview ?? (currentUrl || null);
 
   return (
     <div className="tt-card p-6">
@@ -76,51 +41,43 @@ export default function AvatarUpload({
       <p className="mt-1 mb-4 text-xs text-muted-foreground">{t('profile.avatar.hint')}</p>
 
       <div
-        onDragEnter={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragEnter={(e) => { e.preventDefault(); if (!disabled) setDragging(true); }}
         onDragOver={(e) => e.preventDefault()}
         onDragLeave={(e) => { e.preventDefault(); setDragging(false); }}
         onDrop={(e) => {
           e.preventDefault();
           setDragging(false);
+          if (disabled) return;
           const file = e.dataTransfer.files?.[0];
-          if (file) void handleFile(file);
+          if (file) onSelectFile(file);
         }}
         className={cn(
           'flex flex-col items-center gap-3 rounded-xl border-2 border-dashed p-6 text-center transition-colors sm:flex-row sm:text-left',
           dragging ? 'border-primary bg-primary/5' : 'border-border',
         )}
       >
-        <div className="relative">
-          <UserAvatar username={username} avatarUrl={shown} size="xl" />
-          {busy && (
-            <span className="absolute inset-0 flex items-center justify-center rounded-2xl bg-background/60">
-              <Loader2 className="size-5 animate-spin text-primary" />
-            </span>
-          )}
-        </div>
+        <UserAvatar username={username} avatarUrl={displayUrl} size="xl" />
 
         <div className="min-w-0 flex-1">
           <p className="text-sm text-muted-foreground">{t('profile.avatar.dropHere')}</p>
+          {pending && <p className="mt-1 text-xs text-primary">{t('profile.avatar.pending')}</p>}
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => inputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-            >
+            <Button type="button" size="sm" disabled={disabled} onClick={() => inputRef.current?.click()}>
               <Upload className="size-4" />
               {t('profile.avatar.browse')}
-            </button>
-            {currentUrl && (
-              <button
+            </Button>
+            {displayUrl && (
+              <Button
                 type="button"
-                disabled={busy}
-                onClick={handleRemove}
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
+                variant="ghost"
+                size="sm"
+                disabled={disabled}
+                onClick={onRemove}
+                className="text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
               >
                 <Trash2 className="size-3.5" />
                 {t('profile.avatar.remove')}
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -135,7 +92,7 @@ export default function AvatarUpload({
         hidden
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) void handleFile(file);
+          if (file) onSelectFile(file);
           e.target.value = '';
         }}
       />

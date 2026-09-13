@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { UserAvatar } from '@/components/media/user-avatar';
 import { Cover } from '@/components/media/cover';
 import { StarRating, toStars } from '@/components/media/star-rating';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Pagination } from '@/components/ui/pagination';
 import { useAuth } from '@/lib/auth-context';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -78,9 +79,7 @@ export default function ActivityClient({ items }: { items: ActivityItem[] }) {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border px-4 py-16 text-center text-sm text-muted-foreground">
-          {t(scope === 'mine' ? 'activity.empty.mine' : 'activity.empty')}
-        </p>
+        <EmptyState>{t(scope === 'mine' ? 'activity.empty.mine' : 'activity.empty')}</EmptyState>
       ) : (
         <>
           <ul className="flex flex-col gap-3">
@@ -124,32 +123,7 @@ export default function ActivityClient({ items }: { items: ActivityItem[] }) {
             ))}
           </ul>
 
-          {totalPages > 1 && (
-            <nav className="mt-8 flex items-center justify-center gap-2" aria-label="Pagination">
-              <button
-                type="button"
-                onClick={() => setPage(current - 1)}
-                disabled={current === 1}
-                aria-label={t('a11y.previousPage')}
-                className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
-              >
-                <ChevronLeft aria-hidden="true" className="size-4" />
-              </button>
-              <span className="px-2 text-sm text-muted-foreground">
-                {t('pagination.pageLabel')} <span className="font-medium text-foreground">{current}</span>{' '}
-                {t('pagination.of')} {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPage(current + 1)}
-                disabled={current === totalPages}
-                aria-label={t('a11y.nextPage')}
-                className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
-              >
-                <ChevronRight aria-hidden="true" className="size-4" />
-              </button>
-            </nav>
-          )}
+          <Pagination page={current} totalPages={totalPages} onChange={setPage} className="mt-8" />
         </>
       )}
     </div>

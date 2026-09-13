@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   User, Mail, BookOpen, Film, Tv, Activity, Calendar, LogOut, Trash2, Save,
 } from 'lucide-react';
 import { UserAvatar } from '@/components/media/user-avatar';
-import AvatarUpload from '@/components/profile/avatar-upload';
+import AvatarUpload, { AVATAR_MAX_BYTES } from '@/components/profile/avatar-upload';
+import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
@@ -85,8 +86,48 @@ export default function ProfileClient({
 
   const [username, setUsername] = useState(profile.username);
   const [email, setEmail] = useState(profile.email);
-  const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl ?? '');
   const [privacy, setPrivacy] = useState<FeedPrivacy>(profile.privacy);
+
+  // Avatar changes are staged locally and only sent to the server on "Save changes".
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+  const [avatarRemoved, setAvatarRemoved] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+
+  useEffect(() => () => {
+    if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+  }, [avatarPreviewUrl]);
+
+  const displayAvatarUrl = avatarFile
+    ? avatarPreviewUrl
+    : avatarRemoved
+      ? null
+      : (profile.avatarUrl ?? null);
+  const avatarDirty = avatarFile != null || avatarRemoved;
+
+  const handleAvatarSelect = (file: File) => {
+    setAvatarError(null);
+    if (!file.type.startsWith('image/')) {
+      setAvatarError(t('profile.avatar.invalidType'));
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      setAvatarError(t('profile.avatar.tooLarge'));
+      return;
+    }
+    if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+    setAvatarPreviewUrl(URL.createObjectURL(file));
+    setAvatarFile(file);
+    setAvatarRemoved(false);
+  };
+
+  const handleAvatarRemove = () => {
+    setAvatarError(null);
+    if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+    setAvatarPreviewUrl(null);
+    setAvatarFile(null);
+    setAvatarRemoved(true);
+  };
 
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -104,13 +145,20 @@ export default function ProfileClient({
   const isDirty =
     username !== profile.username ||
     email !== profile.email ||
-    JSON.stringify(privacy) !== JSON.stringify(profile.privacy);
+    JSON.stringify(privacy) !== JSON.stringify(profile.privacy) ||
+    avatarDirty;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setSaveMsg(null);
     try {
+      if (avatarFile) {
+        await userService.uploadAvatar(avatarFile);
+      } else if (avatarRemoved) {
+        await userService.removeAvatar();
+      }
+
       const res = await userService.updateProfile(profile.id, { username, email, privacy });
       // The access token carries username/email as claims — swap it in so the header/menu
       // and everything else driven by useAuth() stops showing the pre-edit values.
@@ -118,6 +166,12 @@ export default function ProfileClient({
         apiClient.setToken(res.token);
         notifyAuthChange();
       }
+
+      if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+      setAvatarFile(null);
+      setAvatarPreviewUrl(null);
+      setAvatarRemoved(false);
+
       setSaveMsg({ ok: true, text: t('profile.saved') });
       router.refresh();
     } catch {
@@ -154,7 +208,7 @@ export default function ProfileClient({
 
       {/* Identity */}
       <div className="tt-card mb-6 flex items-start gap-5 p-6">
-        <UserAvatar username={username} avatarUrl={avatarUrl} size="xl" />
+        <UserAvatar username={username} avatarUrl={displayAvatarUrl} size="xl" />
         <div className="min-w-0 flex-1">
           <h2 className="font-heading text-xl font-semibold">@{username}</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">{email}</p>
@@ -182,12 +236,13 @@ export default function ProfileClient({
 
       <div className="mb-6">
         <AvatarUpload
-          currentUrl={avatarUrl}
+          displayUrl={displayAvatarUrl}
           username={username}
-          onChange={(url) => {
-            setAvatarUrl(url ?? '');
-            router.refresh();
-          }}
+          pending={avatarDirty}
+          disabled={saving}
+          error={avatarError}
+          onSelectFile={handleAvatarSelect}
+          onRemove={handleAvatarRemove}
         />
       </div>
 
@@ -261,27 +316,24 @@ export default function ProfileClient({
           <p className={cn('text-sm', saveMsg.ok ? 'text-primary' : 'text-destructive')}>{saveMsg.text}</p>
         )}
         <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={saving || !isDirty}
-            className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <Button type="submit" disabled={saving || !isDirty} className="h-auto px-5 py-2.5">
             <Save className="size-4" />
             {saving ? t('profile.saving') : t('profile.save')}
-          </button>
+          </Button>
         </div>
       </form>
 
       {/* Account actions */}
       <div className="tt-card mt-6 p-6">
         <h3 className="mb-5 font-heading text-lg font-semibold">{t('profile.account')}</h3>
-        <button
+        <Button
+          variant="secondary"
           onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-xl border border-border bg-secondary/50 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+          className="h-auto w-full justify-start gap-3 px-4 py-3"
         >
           <LogOut className="size-4" />
           {t('profile.signOut')}
-        </button>
+        </Button>
 
         <div className="mt-3 border-t border-border pt-3">
           <p className="mb-3 text-xs text-muted-foreground/60">{t('profile.danger')}</p>
@@ -290,13 +342,14 @@ export default function ProfileClient({
               {t('profile.deleteEmailSent')}
             </p>
           ) : (
-            <button
+            <Button
+              variant="destructive"
               onClick={() => setDeleteDialogOpen(true)}
-              className="flex w-full items-center gap-3 rounded-xl border border-destructive/20 bg-secondary/30 px-4 py-3 text-sm font-medium text-destructive transition-colors hover:border-destructive/30 hover:bg-destructive/10"
+              className="h-auto w-full justify-start gap-3 border-destructive/20 bg-secondary/30 px-4 py-3 hover:border-destructive/30"
             >
               <Trash2 className="size-4" />
               {t('profile.delete')}
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -308,21 +361,17 @@ export default function ProfileClient({
             <DialogDescription>{t('profile.deleteConfirmBody')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <button
-              type="button"
-              onClick={() => setDeleteDialogOpen(false)}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-            >
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               {t('profile.cancel')}
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="destructive"
               onClick={handleDelete}
               disabled={deleting}
-              className="rounded-xl bg-destructive px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
+              className="bg-destructive text-white hover:bg-destructive/90"
             >
               {t('profile.deleteConfirmAction')}
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

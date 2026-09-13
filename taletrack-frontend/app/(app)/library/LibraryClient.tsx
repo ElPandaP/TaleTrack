@@ -4,11 +4,14 @@ import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Pencil, Search, Trash2 } from 'lucide-react';
+import { Pencil, Search, Trash2 } from 'lucide-react';
 import { Cover } from '@/components/media/cover';
 import { StarRating, toStars } from '@/components/media/star-rating';
 import { ReviewModal, type ReviewTarget } from '@/components/media/review-modal';
 import { TrackingProgressModal, type TrackingProgressTarget } from '@/components/media/tracking-progress-modal';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Pagination } from '@/components/ui/pagination';
 import { trackingService } from '@/lib/api/services';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -306,9 +309,7 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
       )}
 
       {visible.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border px-4 py-16 text-center text-sm text-muted-foreground">
-          {t('library.empty')}
-        </p>
+        <EmptyState>{t('library.empty')}</EmptyState>
       ) : (
         <>
           <ul
@@ -332,23 +333,27 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
                     </p>
                   </Link>
                   <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 transition-opacity group-hover/item:opacity-100 focus-within:opacity-100">
-                    <button
+                    <Button
                       type="button"
+                      variant="secondary"
+                      size="icon-xs"
                       onClick={() => openEditProgress(it)}
                       aria-label={t('library.editProgressOf', { title: it.title })}
-                      className="flex size-6 cursor-pointer items-center justify-center rounded-md bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-background hover:text-foreground"
+                      className="bg-background/90 text-muted-foreground shadow-sm backdrop-blur hover:bg-background hover:text-foreground"
                     >
                       <Pencil aria-hidden="true" className="size-3.5" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="secondary"
+                      size="icon-xs"
                       onClick={() => removeTracking(it)}
                       disabled={deleting === it.mediaId}
                       aria-label={t('library.removeFromLibrary', { title: it.title })}
-                      className="flex size-6 cursor-pointer items-center justify-center rounded-md bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                      className="bg-background/90 text-muted-foreground shadow-sm backdrop-blur hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash2 aria-hidden="true" className="size-3.5" />
-                    </button>
+                    </Button>
                   </div>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">{t(`type.${it.type}`)}</p>
                   {rated ? (
@@ -361,13 +366,14 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
                       <StarRating stars={toStars(it.myRating)} />
                     </button>
                   ) : finished ? (
-                    <button
+                    <Button
                       type="button"
+                      variant="link"
                       onClick={() => openReview(it)}
-                      className="mt-1 cursor-pointer self-start text-[11px] font-medium text-primary hover:underline"
+                      className="mt-1 h-auto self-start p-0 text-[11px] font-medium"
                     >
                       {t('library.review')}
-                    </button>
+                    </Button>
                   ) : it.progress != null ? (
                     <span className="mt-1 text-[11px] text-muted-foreground">{it.progress}%</span>
                   ) : null}
@@ -376,33 +382,7 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
             })}
           </ul>
 
-          {totalPages > 1 && (
-            <nav className="mt-8 flex items-center justify-center gap-2" aria-label="Pagination">
-              <button
-                type="button"
-                onClick={() => goTo(currentPage - 1)}
-                disabled={currentPage === 1}
-                aria-label={t('a11y.previousPage')}
-                className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
-              >
-                <ChevronLeft aria-hidden="true" className="size-4" />
-              </button>
-              <span className="px-2 text-sm text-muted-foreground">
-                {t('pagination.pageLabel')}{' '}
-                <span className="font-medium text-foreground">{currentPage}</span> {t('pagination.of')}{' '}
-                {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => goTo(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                aria-label={t('a11y.nextPage')}
-                className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
-              >
-                <ChevronRight aria-hidden="true" className="size-4" />
-              </button>
-            </nav>
-          )}
+          <Pagination page={currentPage} totalPages={totalPages} onChange={goTo} className="mt-8" />
         </>
       )}
 

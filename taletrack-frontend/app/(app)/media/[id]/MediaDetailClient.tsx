@@ -7,6 +7,7 @@ import { Cover, typeMeta } from '@/components/media/cover';
 import { StarRating, toStars } from '@/components/media/star-rating';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { ReviewModal, type ReviewTarget } from '@/components/media/review-modal';
 import { useI18n } from '@/lib/i18n';
 import type { MediaDetail } from '@/lib/types';
@@ -132,9 +133,7 @@ export default function MediaDetailClient({ detail }: { detail: MediaDetail }) {
       </h2>
 
       {detail.reviews.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-          {t('media.reviewsEmpty')}
-        </p>
+        <EmptyState className="py-10">{t('media.reviewsEmpty')}</EmptyState>
       ) : (
         <ul className="flex flex-col gap-3">
           {detail.reviews.map((r) => (

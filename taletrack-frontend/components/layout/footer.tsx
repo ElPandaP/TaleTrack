@@ -1,10 +1,9 @@
-'use client';
-
 import Link from 'next/link';
-import { useT } from '@/lib/i18n';
+import { getServerDict } from '@/lib/i18n-server';
 
-export default function Footer() {
-  const t = useT();
+export default async function Footer() {
+  const dict = await getServerDict();
+  const t = (key: string) => dict[key] ?? key;
 
   return (
     <footer className="mt-10 border-t border-border py-6">
