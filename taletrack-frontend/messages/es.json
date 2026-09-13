@@ -92,6 +92,8 @@
   "media.reviewsEmpty": "Aún no hay reseñas. Sé el primero.",
   "media.you": "(tú)",
   "media.avgRatings": "{avg} · {reviews}",
+  "media.seasonsTotal": "{seasons} temporadas · {episodes} episodios en total",
+  "media.currentEpisode": "Temporada {season} · Episodio {episode}",
   "reviewModal.titleNew": "Tu reseña",
   "reviewModal.titleEdit": "Editar reseña",
   "reviewModal.subtitle": "{type} · {title}",

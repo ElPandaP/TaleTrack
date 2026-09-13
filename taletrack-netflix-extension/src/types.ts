@@ -13,7 +13,6 @@ export interface NetflixMedia {
   // Extra fields for series
   season?: number;
   episode?: number;
-  episodeTitle?: string;
 
   // Live playback state (only available while watching, on a /watch/ page)
   progressPercent?: number;   // 0–100, how far into the video you are

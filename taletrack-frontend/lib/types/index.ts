@@ -133,6 +133,10 @@ export interface MediaDetail {
   reviewCount: number;
   myProgress?: number | null;
   myLastEventDate?: string | null;
+  /** Series only — the furthest episode reached, and the episode count per season (index 0 = season 1). */
+  mySeason?: number | null;
+  myEpisode?: number | null;
+  seasonEpisodeCounts?: number[] | null;
   myReviewId?: number | null;
   myRating?: number | null;
   myComment?: string | null;

@@ -14,13 +14,9 @@ const ThemeContext = createContext<ThemeContextType>({
   toggleTheme: () => {},
 });
 
-// --- External store (mirrors lib/auth-context.tsx's pattern) ---
-// localStorage is a client-only source of truth, so reading it during the render
-// that produces the SSR/hydration output would make that render disagree with the
-// server's (always 'light') and trigger a hydration mismatch. useSyncExternalStore
-// is built exactly for this: it returns `light` (via getServerSnapshot) for the
-// server render and the hydrating client render, then swaps to the real value
-// right after, with no manual effect/setState needed.
+// External store (same pattern as lib/auth-context.tsx): getServerSnapshot keeps
+// the hydration render at 'light' so it matches the server, then useSyncExternalStore
+// swaps in the real localStorage value right after — no hydration mismatch.
 
 const themeListeners = new Set<() => void>();
 

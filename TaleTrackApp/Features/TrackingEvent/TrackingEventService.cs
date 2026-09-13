@@ -22,7 +22,7 @@ public class TrackingEventService
     /// </summary>
     public async Task<Model.TrackingEvent> UpsertAsync(
         int userId, int mediaId, int? progress,
-        int? season = null, int? episode = null, string? episodeTitle = null)
+        int? season = null, int? episode = null)
     {
         var existing = await _context.TrackingEvents
             .Where(te => te.UserId == userId && te.MediaId == mediaId
@@ -34,8 +34,6 @@ public class TrackingEventService
         {
             if (progress.HasValue)
                 existing.Progress = Math.Max(existing.Progress ?? 0, progress.Value);
-            if (!string.IsNullOrWhiteSpace(episodeTitle))
-                existing.EpisodeTitle = episodeTitle;
             existing.EventDate = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             _logger.LogInformation("TrackingEvent updated for User {UserId}, Media {MediaId} (S{Season}E{Episode})",
@@ -50,7 +48,6 @@ public class TrackingEventService
             Progress = progress,
             Season = season,
             Episode = episode,
-            EpisodeTitle = episodeTitle,
             EventDate = DateTime.UtcNow
         };
 

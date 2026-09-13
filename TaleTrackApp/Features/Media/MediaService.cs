@@ -114,7 +114,9 @@ public class MediaService
 
         if (!string.IsNullOrWhiteSpace(result.PosterUrl) && string.IsNullOrWhiteSpace(media.PosterUrl))
             media.PosterUrl = result.PosterUrl;
-        if (result.RuntimeMinutes is int minutes && minutes > 0 && media.Length <= 0)
+        // Length is a movie-only concept here — a series' episodes vary in length, so
+        // there's no single "length" worth recording for one (see SeasonEpisodeCounts).
+        if (media.Type == "Movie" && result.RuntimeMinutes is int minutes && minutes > 0 && media.Length <= 0)
             media.Length = minutes;
         if (!string.IsNullOrWhiteSpace(result.AltTitle) && string.IsNullOrWhiteSpace(media.AltTitle))
             media.AltTitle = result.AltTitle;

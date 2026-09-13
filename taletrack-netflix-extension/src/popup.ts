@@ -192,12 +192,6 @@ function displayData(data: NetflixMedia) {
           <span class="info-value">${data.episode}</span>
         </div>
       ` : ''}
-      ${isSeries && data.episodeTitle ? `
-        <div class="info-row">
-          <span class="info-label">Nombre del episodio</span>
-          <span class="info-value">${data.episodeTitle}</span>
-        </div>
-      ` : ''}
       ${progressValue ? `
         <div class="info-row">
           <span class="info-label">Progreso</span>

@@ -7,3 +7,6 @@ export const BACKEND_URL: string =
 
 export const FRONTEND_URL: string =
   typeof __TT_FRONTEND_URL__ !== 'undefined' ? __TT_FRONTEND_URL__ : 'https://taletrack.app';
+
+/** How often content.ts's auto-tracker re-checks progress/resolves the title. */
+export const AUTO_POLL_MS = 15000;

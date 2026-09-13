@@ -29,10 +29,12 @@ public static class TrackSeriesEndpoint
 
         try
         {
-            var media = await mediaService.FindOrCreateAsync(request.Title, "Series", request.Minutes ?? 0);
+            // Length is a movie/book-only concept (a single runtime/page-count); a series'
+            // episodes vary in length, so there's no meaningful single "length" to record.
+            var media = await mediaService.FindOrCreateAsync(request.Title, "Series", length: 0);
             await trackingEventService.UpsertAsync(
                 userId, media.Id, request.Progress,
-                request.Season, request.Episode, request.EpisodeTitle);
+                request.Season, request.Episode);
 
             logger.LogInformation("Series tracking for user {UserId}, '{Title}' S{Season}E{Episode}",
                 userId, media.Title, request.Season, request.Episode);

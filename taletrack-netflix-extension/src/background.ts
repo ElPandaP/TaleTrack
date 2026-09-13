@@ -6,7 +6,7 @@ import type { BgMessage, ExtAuthMessage, TrackPayload, TrackResult } from './typ
 
 const FRONTEND_ORIGIN = new URL(FRONTEND_URL).origin;
 
-const PROGRESS_STEP = 5;          // only report every 5% of movement
+const PROGRESS_STEP = 2;          // only report every 2% of movement
 const NEARLY_DONE = 95;           // ...but always report crossing this
 const SENT_PREFIX = 'sent:';      // chrome.storage.session key per videoId
 
@@ -52,12 +52,9 @@ chrome.runtime.onMessage.addListener((message: BgMessage, _sender, sendResponse)
   return true; // async response
 });
 
-// Auth bridge: the /extension-auth page (opened by signIn()) hands us a fresh token
-// pair this way instead of the chrome.identity flow — see externally_connectable in
-// manifest.json, which is what actually restricts *who* can reach this listener at
-// all (built from TT_FRONTEND_URL at build time; never a wildcard). We still
-// re-validate the origin and the message shape ourselves rather than trusting that
-// restriction alone, and never write anything from a message that doesn't match it.
+// Auth bridge: /extension-auth posts the token pair here. externally_connectable
+// in manifest.json (built from TT_FRONTEND_URL, never a wildcard) restricts who
+// can reach this listener at all, but re-check origin and message shape anyway.
 chrome.runtime.onMessageExternal.addListener((message: unknown, sender, sendResponse) => {
   if (sender.origin !== FRONTEND_ORIGIN) {
     sendResponse({ ok: false, reason: 'untrusted-origin' });
@@ -129,7 +126,6 @@ async function track(payload: TrackPayload): Promise<TrackResult> {
       Title: media.title,
       Season: media.season,
       Episode: media.episode,
-      EpisodeTitle: media.episodeTitle,
       Minutes: minutes,
       Progress: progressPercent,
       Language: media.language,
@@ -138,6 +134,8 @@ async function track(payload: TrackPayload): Promise<TrackResult> {
     path = '/api/tracking/movies';
     body = { Title: media.title, Minutes: minutes, Progress: progressPercent, Language: media.language };
   }
+
+  console.log(`[TaleTrack] Sending tracking event → ${path}`, body);
 
   const res = await apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
   if (!res) return { ok: false, reason: 'unauthenticated' };

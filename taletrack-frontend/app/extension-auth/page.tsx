@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { Leaf, Check, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -50,11 +50,21 @@ export default function ExtensionAuthPage() {
 
   const [phase, setPhase] = useState<'idle' | 'working' | 'done' | 'error' | 'no-extension'>('idle');
 
+  // useAuth() can't read localStorage during SSR, so its first client render
+  // reports {isAuthenticated: false} to match the server, regardless of the
+  // real session — an effect gating on "not authenticated" must not act on
+  // that placeholder render.
+  const hasHydrated = useSyncExternalStore(
+    () => () => {}, // never changes after mount, so no need to subscribe to anything
+    () => true, // real client render
+    () => false, // server / hydration-matching render
+  );
+
   // Bounce anonymous visitors through login, then straight back here.
   useEffect(() => {
-    if (loading || isAuthenticated) return;
+    if (!hasHydrated || loading || isAuthenticated) return;
     router.replace(`/login?next=${encodeURIComponent('/extension-auth')}`);
-  }, [loading, isAuthenticated, router]);
+  }, [hasHydrated, loading, isAuthenticated, router]);
 
   const authorize = async () => {
     const runtime = getExtensionRuntime();

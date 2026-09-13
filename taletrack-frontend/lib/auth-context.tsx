@@ -109,15 +109,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshing = useRef(false);
 
   // Access token expired but a refresh token is present: exchange it once.
-  // Any failure (rejected or unreachable) drops to logged-out rather than spin.
+  // apiClient.refresh() clears tokens itself on a real rejection but leaves them
+  // on a network error, so a flaky connection doesn't log you out — don't clear
+  // them again here just because the call returned false.
   useEffect(() => {
     if (!state.loading || refreshing.current) return;
     refreshing.current = true;
     apiClient
       .refresh()
-      .then((ok) => {
-        if (!ok) apiClient.clearToken();
-      })
       .finally(() => {
         refreshing.current = false;
         notifyAuthChange();

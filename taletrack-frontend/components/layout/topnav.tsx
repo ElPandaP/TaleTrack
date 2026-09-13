@@ -23,12 +23,8 @@ const navItems = [
 
 type PillRect = { left: number; top: number; width: number; height: number };
 
-/**
- * Nav links with a single, always-mounted "pill" that animates its position and
- * width to sit under the active link. We measure the active <Link> and drive the
- * pill's `x`/`width` — this survives Next's segment swaps and Suspense (a shared
- * `layoutId` does not), so the pill slides instead of jumping.
- */
+/** Active-link pill measures the current <Link> and animates x/width directly —
+ *  a shared `layoutId` doesn't survive Next's segment swaps, so it'd jump instead of sliding. */
 function NavItems({ className, compact = false }: { className?: string; compact?: boolean }) {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
@@ -110,13 +106,8 @@ function NavItems({ className, compact = false }: { className?: string; compact?
 // Routes that render their own full-screen layout, without the app nav.
 const bareRoutes = new Set(['/login', '/register', '/extension-auth']);
 
-/**
- * The top navigation bar. Mounted once in the root layout so it survives every
- * client navigation (that persistence is what lets the active-item pill slide).
- * It hides itself on the auth screens and for logged-out visitors — `authed`
- * comes from the server cookie so there's no first-paint flash; login/logout do
- * a full document load, which refreshes it.
- */
+/** Mounted once in the root layout so it survives client navigations (needed for the
+ *  pill animation). `authed` comes from the server cookie to avoid a first-paint flash. */
 export default function TopNav({
   authed,
   avatarUrl,

@@ -16,9 +16,6 @@ public class TrackSeriesRequest
     [Range(0, int.MaxValue)]
     public int? Episode { get; set; }
 
-    [StringLength(255)]
-    public string? EpisodeTitle { get; set; }
-
     /// <summary>Episode runtime in minutes.</summary>
     [Range(1, int.MaxValue)]
     public int? Minutes { get; set; }

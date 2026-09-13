@@ -16,12 +16,8 @@ export default function MediaDetailClient({ detail }: { detail: MediaDetail }) {
   const { t, tp, locale } = useI18n();
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
-  // Next.js exposes the client-side history depth as history.state.idx — only
-  // > 0 once the user has navigated within the app, so `back()` is safe to use
-  // (it returns to wherever they came from: home, library, a friend's profile…).
-  // A direct load / refresh / external link has no such history, so we fall
-  // back to the library instead of leaving the app. Not used in the render
-  // output, so computing it lazily on mount (client-only) needs no effect.
+  // history.state.idx is only > 0 once you've navigated within the app, so
+  // back() is safe; a direct load/refresh has no history to go back to.
   const [hasAppHistory] = useState(
     () => typeof window !== 'undefined' && (window.history.state?.idx ?? 0) > 0,
   );
@@ -41,9 +37,11 @@ export default function MediaDetailClient({ detail }: { detail: MediaDetail }) {
     comment: detail.myComment,
   };
 
-  const unitKey =
-    detail.type === 'Book' ? 'media.unit.pages' : detail.type === 'Series' ? 'media.unit.episodes' : 'media.unit.min';
+  // For series, `length` is one episode's runtime (episodes vary in length across a
+  // show), not an episode count — minutes is the only thing it can honestly label.
+  const unitKey = detail.type === 'Book' ? 'media.unit.pages' : 'media.unit.min';
   const progress = detail.myProgress ?? 0;
+  const seasonCounts = detail.seasonEpisodeCounts;
 
   return (
     <div>
@@ -75,6 +73,14 @@ export default function MediaDetailClient({ detail }: { detail: MediaDetail }) {
                 {detail.length} {t(unitKey)}
               </span>
             )}
+            {seasonCounts && seasonCounts.length > 0 && (
+              <span>
+                {t('media.seasonsTotal', {
+                  seasons: seasonCounts.length,
+                  episodes: seasonCounts.reduce((sum, n) => sum + n, 0),
+                })}
+              </span>
+            )}
             {detail.avgRating != null && (
               <span className="flex items-center gap-1.5">
                 <StarRating stars={toStars(detail.avgRating)} />
@@ -96,11 +102,18 @@ export default function MediaDetailClient({ detail }: { detail: MediaDetail }) {
               {t('media.yourStatus')}
             </p>
             {detail.myProgress != null ? (
-              <div className="flex items-center gap-3">
-                <Progress value={progress} className="h-1.5" />
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {progress}%{detail.myLastEventDate ? ` · ${fmtDate(detail.myLastEventDate)}` : ''}
-                </span>
+              <div className="flex flex-col gap-1.5">
+                {detail.type === 'Series' && detail.mySeason != null && detail.myEpisode != null && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('media.currentEpisode', { season: detail.mySeason, episode: detail.myEpisode })}
+                  </p>
+                )}
+                <div className="flex items-center gap-3">
+                  <Progress value={progress} className="h-1.5" />
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {progress}%{detail.myLastEventDate ? ` · ${fmtDate(detail.myLastEventDate)}` : ''}
+                  </span>
+                </div>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">{t('media.notTracked')}</p>

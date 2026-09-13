@@ -28,9 +28,6 @@ public class TrackingEvent
     [Range(0, int.MaxValue)]
     public int? Episode { get; set; }
 
-    [StringLength(255)]
-    public string? EpisodeTitle { get; set; }
-
     [Required]
     public DateTime EventDate { get; set; } = DateTime.UtcNow;
     

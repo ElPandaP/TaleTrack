@@ -26,6 +26,8 @@ function getPlayerState(): {
     const duration =
       typeof player.getDuration === 'function' ? player.getDuration() : null;
 
+    // Both come back undefined on current Netflix builds; kept in case a
+    // future/regional build restores them — richer metadata otherwise means scraping the DOM.
     let metadata: any = null;
     try {
       if (typeof player.getMetadata === 'function') {

@@ -3,13 +3,23 @@
 // only deals with when to call it and what to do with the result.
 
 import type { NetflixMedia } from './types';
+import { AUTO_POLL_MS } from './config';
 
 // Data pulled from the page's MAIN world via requestNetflixData().
 let netflixData: any = null;
 
-// extractTitle() only reads Netflix's on-screen title bar, which fades out a
-// few seconds into playback — this is the placeholder used when it's gone.
+// Placeholder title when nothing — metadata, DOM, cache — has one yet.
 export const NO_TITLE = 'Título no encontrado';
+
+// The on-screen title bar is the only real source for the title (Netflix's
+// player API doesn't expose it), and it's only visible for a few seconds.
+// Cache the last one seen per video id so it survives after the bar fades.
+const titleCache = new Map<string, string>();
+
+// Margin before the credits (seconds) that counts as "close enough, call it
+// done". At least one poll interval, so a single check can't miss the window
+// entirely; doubled for slack.
+const CREDITS_MARGIN_SECONDS = (AUTO_POLL_MS / 1000) * 2;
 
 /** Ask the page (MAIN world) for its Netflix player/Falcor data and cache it. */
 export async function requestNetflixData(): Promise<void> {
@@ -86,6 +96,20 @@ function extractPlayback(): { progressPercent?: number; positionSeconds?: number
   if (positionMs !== undefined && durationMs !== undefined && durationMs > 0) {
     result.progressPercent = Math.max(0, Math.min(100, Math.round((positionMs / durationMs) * 100)));
   }
+
+  // Netflix tells us where the credits start (seconds). Once you're within
+  // this margin of them — or already past — assume you'll finish and count
+  // it as done, instead of tracking stalling just under 100%.
+  const creditsOffsetSeconds = netflixData?.creditsOffset;
+  if (
+    result.positionSeconds !== undefined &&
+    typeof creditsOffsetSeconds === 'number' &&
+    creditsOffsetSeconds > 0 &&
+    result.positionSeconds >= creditsOffsetSeconds - CREDITS_MARGIN_SECONDS
+  ) {
+    result.progressPercent = 100;
+  }
+
   return result;
 }
 
@@ -95,7 +119,7 @@ function getMetaVideo(): any {
 }
 
 /** Find season/episode sequence numbers in the Netflix player metadata. */
-function seasonEpisodeFromMetadata(): { season: number | null; episode: number | null; episodeTitle: string | null } | null {
+function seasonEpisodeFromMetadata(): { season: number | null; episode: number | null } | null {
   const video = getMetaVideo();
   if (!video || !Array.isArray(video.seasons)) return null;
 
@@ -108,7 +132,6 @@ function seasonEpisodeFromMetadata(): { season: number | null; episode: number |
       return {
         season: season.seq ?? season.season ?? null,
         episode: ep.seq ?? ep.episode ?? null,
-        episodeTitle: ep.title ?? null,
       };
     }
   }
@@ -196,46 +219,45 @@ function extractSeasonEpisode(rawTitle: string): { season: number | null; episod
   };
 }
 
-function cleanTitle(rawTitle: string): { title: string; episodeTitle: string | null } {
+/** Strips episode-number/subtitle noise off a scraped title, keeping just the show/movie name. */
+function cleanTitle(rawTitle: string): string {
   const pattern1 = /^(.+?)(?:T(\d+):)?E(\d+)(.*)$/i;
   const match1 = rawTitle.match(pattern1);
-
-  if (match1 && match1[1]) {
-    return {
-      title: match1[1].trim(),
-      episodeTitle: match1[4] ? match1[4].trim() : null
-    };
-  }
+  if (match1 && match1[1]) return match1[1].trim();
 
   const pattern2 = /^(.+?):\s*(.+)$/;
   const match2 = rawTitle.match(pattern2);
-
-  if (match2 && match2[1] && match2[2]) {
-    if (!match2[2].match(/^(La |El |Una |Un )/i)) {
-      return {
-        title: match2[1].trim(),
-        episodeTitle: match2[2].trim()
-      };
-    }
+  if (match2 && match2[1] && match2[2] && !match2[2].match(/^(La |El |Una |Un )/i)) {
+    return match2[1].trim();
   }
 
   const pattern3 = /^(.+? )\s*[-–]\s*(.+)$/;
   const match3 = rawTitle.match(pattern3);
+  if (match3 && match3[1] && match3[2]) return match3[1].trim();
 
-  if (match3 && match3[1] && match3[2]) {
-    return {
-      title: match3[1].trim(),
-      episodeTitle: match3[2].trim()
-    };
-  }
-
-  return {
-    title: rawTitle.trim(),
-    episodeTitle: null
-  };
+  return rawTitle.trim();
 }
 
 function extractTitle(): string | null {
+  console.log('[TaleTrack] extractTitle: trying player metadata (getMetaVideo)…');
+  // Most reliable: Netflix's own player metadata / Falcor summary — available for
+  // the whole session, unlike the on-screen title bar (which only the DOM
+  // selectors below can see, and which fades out a few seconds into playback).
+  const metaTitle = getMetaVideo()?.title;
+  if (typeof metaTitle === 'string' && metaTitle.trim()) {
+    console.log('[TaleTrack] extractTitle: found via player metadata ->', metaTitle);
+    return metaTitle.trim();
+  }
+  console.log('[TaleTrack] extractTitle: not in player metadata (value was', metaTitle, ')');
+
+  console.log('[TaleTrack] extractTitle: trying Falcor summary.title…');
+  const summaryTitle = netflixData?.summary?.title;
+  if (typeof summaryTitle === 'string' && summaryTitle.trim()) {
+    console.log('[TaleTrack] extractTitle: found via summary.title ->', summaryTitle);
+    return summaryTitle.trim();
+  }
+  console.log('[TaleTrack] extractTitle: not in summary.title (value was', summaryTitle, ')');
+
   const selectors = [
     '.title-title',
     'h1.title-title',
@@ -246,17 +268,33 @@ function extractTitle(): string | null {
     '.video-title'
   ];
 
+  console.log('[TaleTrack] extractTitle: trying DOM selectors…', selectors);
   for (const selector of selectors) {
     const element = document.querySelector(selector);
     if (element?.textContent?.trim()) {
-      return element.textContent.trim();
+      const found = element.textContent.trim();
+      console.log(`[TaleTrack] extractTitle: found via DOM selector "${selector}" ->`, found);
+      if (netflixData?.videoId) titleCache.set(netflixData.videoId, found);
+      return found;
     }
   }
+  console.log('[TaleTrack] extractTitle: no DOM selector matched (title bar probably faded out)');
+
+  // The bar's gone, but we may have caught it earlier this session for this
+  // exact video (e.g. right when playback started).
+  const cached = netflixData?.videoId ? titleCache.get(netflixData.videoId) : undefined;
+  if (cached) {
+    console.log('[TaleTrack] extractTitle: found in cache for videoId', netflixData?.videoId, '->', cached);
+    return cached;
+  }
+  console.log('[TaleTrack] extractTitle: nothing cached for videoId', netflixData?.videoId);
 
   const pageTitle = document.title;
+  console.log('[TaleTrack] extractTitle: trying document.title ->', pageTitle);
   if (pageTitle && pageTitle !== 'Netflix') {
     const match = pageTitle.match(/^(.+? )\s*[-–|]\s*Netflix/);
     if (match && match[1]) {
+      console.log('[TaleTrack] extractTitle: found via document.title ->', match[1].trim());
       return match[1].trim();
     }
   }
@@ -265,13 +303,20 @@ function extractTitle(): string | null {
   if (jsonLd?.textContent) {
     try {
       const data = JSON.parse(jsonLd.textContent);
-      if (data.name) return data.name;
-      if (data['@graph']?.[0]?.name) return data['@graph'][0].name;
+      if (data.name) {
+        console.log('[TaleTrack] extractTitle: found via JSON-LD ->', data.name);
+        return data.name;
+      }
+      if (data['@graph']?.[0]?.name) {
+        console.log('[TaleTrack] extractTitle: found via JSON-LD @graph ->', data['@graph'][0].name);
+        return data['@graph'][0].name;
+      }
     } catch {
       /* malformed JSON-LD */
     }
   }
 
+  console.log('[TaleTrack] extractTitle: gave up, no source had a title');
   return null;
 }
 
@@ -411,11 +456,12 @@ function extractLanguage(): string | null {
 
 export function extractNetflixData(): NetflixMedia | null {
   try {
+    console.log('[TaleTrack] extractNetflixData: intentando extraer título…');
     const rawTitle = extractTitle() || NO_TITLE;
+    console.log('[TaleTrack] extractNetflixData: rawTitle ->', rawTitle);
     const { season, episode } = extractSeasonEpisode(rawTitle);
     const type = extractType(season, episode);
-    const { title, episodeTitle } = cleanTitle(rawTitle);
-    const metaEpisodeTitle = seasonEpisodeFromMetadata()?.episodeTitle ?? null;
+    const title = cleanTitle(rawTitle);
     const playback = extractPlayback();
     const year = extractYear();
     const genres = extractGenres();
@@ -468,9 +514,6 @@ export function extractNetflixData(): NetflixMedia | null {
       }
       if (episode) {
         media.episode = episode;
-      }
-      if (metaEpisodeTitle || episodeTitle) {
-        media.episodeTitle = metaEpisodeTitle || episodeTitle || undefined;
       }
     }
 
