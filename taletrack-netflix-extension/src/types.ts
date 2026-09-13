@@ -52,6 +52,15 @@ export type BgMessage =
   | { type: 'SIGN_OUT' }
   | { type: 'TRACK_PROGRESS'; payload: TrackPayload };
 
+/** Sent by the taletrack-frontend /extension-auth page (not the extension itself) once
+ *  it has a fresh token pair for this device — see externally_connectable in manifest.json. */
+export interface ExtAuthMessage {
+  type: 'TALETRACK_AUTH';
+  access: string;
+  refresh: string;
+  expiresIn?: number;
+}
+
 export interface TrackResult {
   ok: boolean;
   /** 'unauthenticated' | 'throttled' | 'sent' | 'error' */

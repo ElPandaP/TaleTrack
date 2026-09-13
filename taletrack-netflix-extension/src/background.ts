@@ -1,7 +1,10 @@
 // Service worker: owns auth, refreshes tokens, and forwards watch progress to the backend.
 
-import { apiFetch, getAuthState, getValidAccessToken, signIn, signOut } from './auth';
-import type { BgMessage, TrackPayload, TrackResult } from './types';
+import { apiFetch, getAuthState, getValidAccessToken, handleExternalAuthMessage, signIn, signOut } from './auth';
+import { FRONTEND_URL } from './config';
+import type { BgMessage, ExtAuthMessage, TrackPayload, TrackResult } from './types';
+
+const FRONTEND_ORIGIN = new URL(FRONTEND_URL).origin;
 
 const PROGRESS_STEP = 5;          // only report every 5% of movement
 const NEARLY_DONE = 95;           // ...but always report crossing this
@@ -46,6 +49,38 @@ chrome.runtime.onMessage.addListener((message: BgMessage, _sender, sendResponse)
       sendResponse({ ok: false, reason: 'error' });
     }
   })();
+  return true; // async response
+});
+
+// Auth bridge: the /extension-auth page (opened by signIn()) hands us a fresh token
+// pair this way instead of the chrome.identity flow — see externally_connectable in
+// manifest.json, which is what actually restricts *who* can reach this listener at
+// all (built from TT_FRONTEND_URL at build time; never a wildcard). We still
+// re-validate the origin and the message shape ourselves rather than trusting that
+// restriction alone, and never write anything from a message that doesn't match it.
+chrome.runtime.onMessageExternal.addListener((message: unknown, sender, sendResponse) => {
+  if (sender.origin !== FRONTEND_ORIGIN) {
+    sendResponse({ ok: false, reason: 'untrusted-origin' });
+    return false;
+  }
+
+  const m = message as Partial<ExtAuthMessage> | null;
+  if (
+    !m ||
+    m.type !== 'TALETRACK_AUTH' ||
+    typeof m.access !== 'string' ||
+    !m.access ||
+    typeof m.refresh !== 'string' ||
+    !m.refresh ||
+    (m.expiresIn !== undefined && typeof m.expiresIn !== 'number')
+  ) {
+    sendResponse({ ok: false, reason: 'invalid-message' });
+    return false;
+  }
+
+  handleExternalAuthMessage(m.access, m.refresh, m.expiresIn)
+    .then(() => sendResponse({ ok: true }))
+    .catch(() => sendResponse({ ok: false, reason: 'error' }));
   return true; // async response
 });
 

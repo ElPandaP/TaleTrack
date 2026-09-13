@@ -45,11 +45,20 @@ src/
 
 ## Auth
 
-Al pulsar "Iniciar sesión" en el popup, se abre `FRONTEND_URL/extension-auth` con
-`chrome.identity.launchWebAuthFlow` — esa página del frontend, ya con tu sesión web, te pide
-confirmar y le devuelve a la extensión un par de tokens propio (vía `POST /api/auth/extension-grant`,
-que aparece como la sesión **"Netflix extension"** en tu perfil). Los tokens se guardan en
-`chrome.storage.local` y se refrescan solos.
+Al pulsar "Iniciar sesión" en el popup, se abre una pestaña normal en `FRONTEND_URL/extension-auth`
+(`chrome.tabs.create`, sin `chrome.identity` — esa API queda detrás de un ajuste de "permitir
+inicio de sesión de Google" en Brave que no tiene nada que ver con este flujo, así que se evita
+por completo). Esa página, ya con tu sesión web, te pide confirmar, pide un par de tokens propio
+al backend (`POST /api/auth/extension-grant`, que aparece como la sesión **"Netflix extension"**
+en tu perfil) y se lo pasa a la extensión con `chrome.runtime.sendMessage(EXTENSION_ID, ...)`
+— permitido porque el origen de `FRONTEND_URL` está declarado en `externally_connectable` en
+`manifest.json` (generado en build time a partir de `TT_FRONTEND_URL`, nunca un wildcard).
+`background.ts` vuelve a comprobar el origen del remitente y la forma del mensaje antes de guardar
+nada. Los tokens se guardan en `chrome.storage.local` y se refrescan solos.
+
+El campo `"key"` de `manifest.json` fija el id de la extensión (`kbhjoofgffidokbnlklekelkpdhcllih`)
+para que no cambie entre recargas — el frontend necesita conocerlo de antemano
+(`NEXT_PUBLIC_EXTENSION_ID`, con ese mismo valor por defecto) para poder enviarle el mensaje.
 
 ## Compilar
 

@@ -1,5 +1,5 @@
 /// <reference types="bun" />
-import { copyFileSync, mkdirSync, existsSync, rmSync } from "fs";
+import { copyFileSync, mkdirSync, existsSync, rmSync, readFileSync, writeFileSync } from "fs";
 
 // Clean dist/
 console.log("Cleaning dist/...");
@@ -42,7 +42,14 @@ if (!result.success) {
 
 // Copy static files
 console.log("Copying static files...");
-copyFileSync("./manifest.json", "./dist/manifest.json");
+
+// The auth bridge (background.ts's onMessageExternal) must only ever accept
+// messages from the exact frontend origin this build talks to — never a
+// wildcard — so pages on any other site can't hand the extension bogus tokens.
+const manifest = JSON.parse(readFileSync("./manifest.json", "utf8"));
+manifest.externally_connectable = { matches: [`${new URL(FRONTEND_URL).origin}/*`] };
+writeFileSync("./dist/manifest.json", JSON.stringify(manifest, null, 2));
+
 copyFileSync("./public/popup.html", "./dist/popup.html");
 
 // Copy icons if they exist

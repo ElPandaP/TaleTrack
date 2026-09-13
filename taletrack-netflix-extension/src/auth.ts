@@ -108,23 +108,35 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   return res;
 }
 
-/** Kick off the web-app authorisation flow and store the returned token pair. */
-export async function signIn(): Promise<boolean> {
-  const redirectUri = chrome.identity.getRedirectURL();
-  const authUrl = `${FRONTEND_URL}/extension-auth?redirect_uri=${encodeURIComponent(redirectUri)}`;
+// Resolves the in-flight signIn() promise once the /extension-auth tab messages us
+// back (see handleExternalAuthMessage, wired up from background.ts's
+// onMessageExternal listener — that's the only path that calls this).
+let pendingSignIn: ((ok: boolean) => void) | null = null;
+const SIGN_IN_TIMEOUT_MS = 5 * 60 * 1000;
 
-  const resultUrl = await chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true });
-  if (!resultUrl) return false;
+/** Opens the web app's confirm-and-issue-tokens page and waits for it to message us back. */
+export function signIn(): Promise<boolean> {
+  return new Promise((resolve) => {
+    pendingSignIn?.(false); // a stale attempt (tab closed without finishing) loses the race
+    pendingSignIn = resolve;
 
-  const frag = new URL(resultUrl).hash.replace(/^#/, '');
-  const p = new URLSearchParams(frag);
-  const access = p.get('access_token');
-  const refreshToken = p.get('refresh_token');
-  const expiresIn = Number(p.get('expires_in') ?? '3600');
-  if (!access || !refreshToken) return false;
+    chrome.tabs.create({ url: `${FRONTEND_URL}/extension-auth` });
 
-  await writeTokens({ access, refresh: refreshToken, expiresAt: Date.now() + expiresIn * 1000 });
-  return true;
+    setTimeout(() => {
+      if (pendingSignIn === resolve) {
+        pendingSignIn = null;
+        resolve(false);
+      }
+    }, SIGN_IN_TIMEOUT_MS);
+  });
+}
+
+/** Called only from background.ts after it has verified the sender's origin and the
+ *  message shape — never trust token values from anywhere else. */
+export async function handleExternalAuthMessage(access: string, refresh: string, expiresIn = 3600): Promise<void> {
+  await writeTokens({ access, refresh, expiresAt: Date.now() + expiresIn * 1000 });
+  pendingSignIn?.(true);
+  pendingSignIn = null;
 }
 
 /** Revoke this device's session server-side (best effort), then drop local tokens. */

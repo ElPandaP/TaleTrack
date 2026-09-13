@@ -225,7 +225,7 @@
   "extAuth.authorize": "Autorizar y continuar",
   "extAuth.authorizing": "Autorizando…",
   "extAuth.error": "Algo salió mal. Inténtalo de nuevo.",
-  "extAuth.invalidRequest": "Este enlace de autorización no es válido.",
+  "extAuth.extensionNotFound": "No se pudo contactar con la extensión de TaleTrack. Asegúrate de tenerla instalada e inténtalo de nuevo.",
   "extAuth.done": "Listo — puedes cerrar esta pestaña.",
   "publicProfile.memberSince": "Miembro desde {date}",
   "publicProfile.addFriend": "Añadir amigo",

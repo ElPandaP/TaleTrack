@@ -225,7 +225,7 @@
   "extAuth.authorize": "Authorise & continue",
   "extAuth.authorizing": "Authorising…",
   "extAuth.error": "Something went wrong. Try again.",
-  "extAuth.invalidRequest": "This authorisation link is invalid.",
+  "extAuth.extensionNotFound": "Couldn't reach the TaleTrack extension. Make sure it's installed, then try again.",
   "extAuth.done": "Done — you can close this tab.",
   "publicProfile.memberSince": "Member since {date}",
   "publicProfile.addFriend": "Add friend",
