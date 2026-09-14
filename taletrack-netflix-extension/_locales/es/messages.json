@@ -1,0 +1,111 @@
+{
+  "extDescription": {
+    "message": "Extrae información de Netflix para tu biblioteca de TaleTrack",
+    "description": "Descripción de la extensión mostrada en la Chrome Web Store y en la página de extensiones"
+  },
+  "manualDetectionTitle": {
+    "message": "Detección manual"
+  },
+  "manualDetectionHint": {
+    "message": "Extrae los datos de la página de Netflix abierta sin enviarlos a tu cuenta."
+  },
+  "extractButton": {
+    "message": "Extraer datos de Netflix"
+  },
+  "authConnectTitle": {
+    "message": "Conecta tu cuenta de TaleTrack"
+  },
+  "authConnectSubtitle": {
+    "message": "Inicia sesión para que la extensión registre automáticamente lo que ves en Netflix."
+  },
+  "signInButton": {
+    "message": "Iniciar sesión"
+  },
+  "signedInFallback": {
+    "message": "Sesión iniciada"
+  },
+  "authActiveTitle": {
+    "message": "TaleTrack activo"
+  },
+  "authSyncingSubtitle": {
+    "message": "Sincronizando tu Netflix — $WHO$",
+    "placeholders": {
+      "who": { "content": "$1", "example": "alice · alice@example.com" }
+    }
+  },
+  "signOutButton": {
+    "message": "Cerrar sesión"
+  },
+  "retryButton": {
+    "message": "Reintentar"
+  },
+  "authContactError": {
+    "message": "No se pudo contactar con la extensión. Recarga la página."
+  },
+  "authSignInError": {
+    "message": "No se pudo completar el inicio de sesión."
+  },
+  "extracting": {
+    "message": "Extrayendo datos…"
+  },
+  "noActiveTab": {
+    "message": "No se pudo obtener la pestaña activa"
+  },
+  "noTabId": {
+    "message": "La pestaña no tiene ID"
+  },
+  "noTabUrl": {
+    "message": "La pestaña no tiene URL"
+  },
+  "openNetflixFirst": {
+    "message": "Abre una página de Netflix primero."
+  },
+  "errorPrefix": {
+    "message": "Error: $MESSAGE$",
+    "placeholders": {
+      "message": { "content": "$1", "example": "Algo salió mal" }
+    }
+  },
+  "unknownError": {
+    "message": "Error desconocido"
+  },
+  "dataExtractedSuccess": {
+    "message": "Datos extraídos correctamente"
+  },
+  "labelTitle": {
+    "message": "Título"
+  },
+  "labelYear": {
+    "message": "Año"
+  },
+  "labelType": {
+    "message": "Tipo"
+  },
+  "typeSeries": {
+    "message": "Serie"
+  },
+  "typeMovie": {
+    "message": "Película"
+  },
+  "labelSeason": {
+    "message": "Temporada"
+  },
+  "labelEpisode": {
+    "message": "Episodio"
+  },
+  "labelProgress": {
+    "message": "Progreso"
+  },
+  "labelTotalDuration": {
+    "message": "Duración total"
+  },
+  "labelGenres": {
+    "message": "Géneros"
+  },
+  "labelDescription": {
+    "message": "Descripción"
+  },
+  "viewJson": {
+    "message": "Ver JSON"
+  }
+}

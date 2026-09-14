@@ -1,5 +1,5 @@
 /// <reference types="bun" />
-import { copyFileSync, mkdirSync, existsSync, rmSync, readFileSync, writeFileSync } from "fs";
+import { copyFileSync, mkdirSync, existsSync, rmSync, readFileSync, writeFileSync, cpSync } from "fs";
 
 // Clean dist/
 console.log("Cleaning dist/...");
@@ -51,6 +51,10 @@ manifest.externally_connectable = { matches: [`${new URL(FRONTEND_URL).origin}/*
 writeFileSync("./dist/manifest.json", JSON.stringify(manifest, null, 2));
 
 copyFileSync("./public/popup.html", "./dist/popup.html");
+
+// Locale message bundles (chrome.i18n) — picked automatically by the browser's
+// UI language, falling back to manifest.json's default_locale ("en").
+cpSync("./_locales", "./dist/_locales", { recursive: true });
 
 // Copy icons if they exist
 const icons = ["icon16.png", "icon48.png", "icon128.png"];

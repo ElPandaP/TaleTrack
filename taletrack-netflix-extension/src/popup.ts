@@ -1,5 +1,17 @@
 import type { ExtractDataMessage, ExtractDataResponse, AuthState, NetflixMedia } from './types';
 
+// chrome.i18n picks the locale automatically from the browser's UI language,
+// falling back to manifest.json's default_locale ("en") — no language picker needed.
+const msg = (key: string, substitutions?: string | string[]) =>
+  chrome.i18n.getMessage(key, substitutions) || key;
+
+document.documentElement.lang = chrome.i18n.getUILanguage().split('-')[0] ?? 'en';
+
+// Static markup translated on load (dynamic markup is built with `msg()` below).
+document.getElementById('manualTitle')!.textContent = msg('manualDetectionTitle');
+document.getElementById('manualHint')!.textContent = msg('manualDetectionHint');
+(document.getElementById('extractBtn') as HTMLButtonElement).textContent = msg('extractButton');
+
 // Auth view.
 const authView = document.getElementById('authView') as HTMLDivElement;
 
@@ -12,32 +24,32 @@ const esc = (s: string) =>
 
 function renderSignedOut() {
   authView.innerHTML = `
-    <p class="auth-title">Conecta tu cuenta de TaleTrack</p>
-    <p class="auth-sub">Inicia sesión para que la extensión registre automáticamente lo que ves en Netflix.</p>
-    <button id="signInBtn">Iniciar sesión</button>
+    <p class="auth-title">${msg('authConnectTitle')}</p>
+    <p class="auth-sub">${msg('authConnectSubtitle')}</p>
+    <button id="signInBtn">${msg('signInButton')}</button>
   `;
   document.getElementById('signInBtn')!.addEventListener('click', doSignIn);
 }
 
 function renderSignedIn(state: AuthState) {
-  const who = state.user ? `${esc(state.user.username)} · ${esc(state.user.email)}` : 'Sesión iniciada';
+  const who = state.user ? `${esc(state.user.username)} · ${esc(state.user.email)}` : msg('signedInFallback');
   authView.innerHTML = `
     <div class="auth-status">
       <span class="dot">${checkIcon}</span>
       <div>
-        <div class="auth-title">TaleTrack activo</div>
-        <div class="auth-sub">Sincronizando tu Netflix — ${who}</div>
+        <div class="auth-title">${msg('authActiveTitle')}</div>
+        <div class="auth-sub">${msg('authSyncingSubtitle', who)}</div>
       </div>
     </div>
-    <button id="signOutBtn" class="secondary">Cerrar sesión</button>
+    <button id="signOutBtn" class="secondary">${msg('signOutButton')}</button>
   `;
   document.getElementById('signOutBtn')!.addEventListener('click', doSignOut);
 }
 
-function renderError(msg: string) {
+function renderError(errMsg: string) {
   authView.innerHTML = `
-    <p class="status error">${esc(msg)}</p>
-    <button id="retryBtn" class="secondary">Reintentar</button>
+    <p class="status error">${esc(errMsg)}</p>
+    <button id="retryBtn" class="secondary">${msg('retryButton')}</button>
   `;
   document.getElementById('retryBtn')!.addEventListener('click', loadAuth);
 }
@@ -49,7 +61,7 @@ async function loadAuth() {
     if (state?.authenticated) renderSignedIn(state);
     else renderSignedOut();
   } catch {
-    renderError('No se pudo contactar con la extensión. Recarga la página.');
+    renderError(msg('authContactError'));
   }
 }
 
@@ -63,7 +75,7 @@ async function doSignIn() {
     if (res?.ok && res.state?.authenticated) renderSignedIn(res.state);
     else renderSignedOut();
   } catch {
-    renderError('No se pudo completar el inicio de sesión.');
+    renderError(msg('authSignInError'));
   }
 }
 
@@ -89,26 +101,26 @@ const statusRow = (kind: 'loading' | 'success' | 'error', text: string): string 
 };
 
 extractBtn.addEventListener('click', async () => {
-  resultDiv.innerHTML = statusRow('loading', 'Extrayendo datos…');
+  resultDiv.innerHTML = statusRow('loading', msg('extracting'));
   extractBtn.disabled = true;
 
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
     if (!tab) {
-      throw new Error('No se pudo obtener la pestaña activa');
+      throw new Error(msg('noActiveTab'));
     }
 
     if (!tab.id) {
-      throw new Error('La pestaña no tiene ID');
+      throw new Error(msg('noTabId'));
     }
 
     if (!tab.url) {
-      throw new Error('La pestaña no tiene URL');
+      throw new Error(msg('noTabUrl'));
     }
 
     if (!tab.url.includes('netflix.com')) {
-      resultDiv.innerHTML = statusRow('error', 'Abre una página de Netflix primero.');
+      resultDiv.innerHTML = statusRow('error', msg('openNetflixFirst'));
       extractBtn.disabled = false;
       return;
     }
@@ -120,7 +132,7 @@ extractBtn.addEventListener('click', async () => {
       message,
       (response: ExtractDataResponse) => {
         if (chrome.runtime.lastError) {
-          resultDiv.innerHTML = statusRow('error', `Error: ${chrome.runtime.lastError.message}`);
+          resultDiv.innerHTML = statusRow('error', msg('errorPrefix', chrome.runtime.lastError.message ?? ''));
           extractBtn.disabled = false;
           return;
         }
@@ -128,7 +140,7 @@ extractBtn.addEventListener('click', async () => {
         if (response.success && response.data) {
           displayData(response.data);
         } else {
-          resultDiv.innerHTML = statusRow('error', response.error || 'Error desconocido');
+          resultDiv.innerHTML = statusRow('error', response.error || msg('unknownError'));
         }
 
         extractBtn.disabled = false;
@@ -136,7 +148,7 @@ extractBtn.addEventListener('click', async () => {
     );
 
   } catch (error) {
-    resultDiv.innerHTML = statusRow('error', `Error: ${(error as Error).message}`);
+    resultDiv.innerHTML = statusRow('error', msg('errorPrefix', (error as Error).message));
     extractBtn.disabled = false;
   }
 });
@@ -164,61 +176,61 @@ function displayData(data: NetflixMedia) {
     data.runtimeSeconds !== undefined ? fmtSecs(data.runtimeSeconds) : data.duration || null;
 
   resultDiv.innerHTML = `
-    ${statusRow('success', 'Datos extraídos correctamente')}
+    ${statusRow('success', msg('dataExtractedSuccess'))}
     <div class="media-info">
       <div class="info-row">
-        <span class="info-label">Título</span>
+        <span class="info-label">${msg('labelTitle')}</span>
         <span class="info-value">${data.title}</span>
       </div>
       ${data.year ? `
         <div class="info-row">
-          <span class="info-label">Año</span>
+          <span class="info-label">${msg('labelYear')}</span>
           <span class="info-value">${data.year}</span>
         </div>
       ` : ''}
       <div class="info-row">
-        <span class="info-label">Tipo</span>
-        <span class="info-value">${isSeries ? 'Serie' : 'Película'}</span>
+        <span class="info-label">${msg('labelType')}</span>
+        <span class="info-value">${isSeries ? msg('typeSeries') : msg('typeMovie')}</span>
       </div>
       ${isSeries && data.season ? `
         <div class="info-row">
-          <span class="info-label">Temporada</span>
+          <span class="info-label">${msg('labelSeason')}</span>
           <span class="info-value">${data.season}</span>
         </div>
       ` : ''}
       ${isSeries && data.episode ? `
         <div class="info-row">
-          <span class="info-label">Episodio</span>
+          <span class="info-label">${msg('labelEpisode')}</span>
           <span class="info-value">${data.episode}</span>
         </div>
       ` : ''}
       ${progressValue ? `
         <div class="info-row">
-          <span class="info-label">Progreso</span>
+          <span class="info-label">${msg('labelProgress')}</span>
           <span class="info-value">${progressValue}</span>
         </div>
       ` : ''}
       ${totalDuration ? `
         <div class="info-row">
-          <span class="info-label">Duración total</span>
+          <span class="info-label">${msg('labelTotalDuration')}</span>
           <span class="info-value">${totalDuration}</span>
         </div>
       ` : ''}
       ${data.genres && data.genres.length > 0 ? `
         <div class="info-row">
-          <span class="info-label">Géneros</span>
+          <span class="info-label">${msg('labelGenres')}</span>
           <span class="info-value">${data.genres.join(', ')}</span>
         </div>
       ` : ''}
       ${data.description ? `
         <div class="info-row">
-          <span class="info-label">Descripción</span>
+          <span class="info-label">${msg('labelDescription')}</span>
           <span class="info-value">${data.description}</span>
         </div>
       ` : ''}
     </div>
     <details>
-      <summary>Ver JSON</summary>
+      <summary>${msg('viewJson')}</summary>
       <pre>${JSON.stringify(data, null, 2)}</pre>
     </details>
   `;
