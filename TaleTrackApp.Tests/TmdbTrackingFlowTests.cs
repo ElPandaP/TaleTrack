@@ -111,7 +111,7 @@ public class TmdbTrackingFlowTests(CustomWebApplicationFactory factory)
         var otherItem = otherLib.GetProperty("data").EnumerateArray()
             .First(i => i.GetProperty("title").GetString() == "Nebula Drift");
 
-        Assert.Equal(ownerItem.GetProperty("mediaId").GetInt32(), otherItem.GetProperty("mediaId").GetInt32());
+        Assert.Equal(ownerItem.GetProperty("mediaId").GetGuid(), otherItem.GetProperty("mediaId").GetGuid());
         Assert.Equal(100, ownerItem.GetProperty("progress").GetInt32());
         Assert.Equal(5, otherItem.GetProperty("progress").GetInt32());
     }
@@ -126,7 +126,7 @@ public class TmdbTrackingFlowTests(CustomWebApplicationFactory factory)
         await client.PostAsJsonAsync("/api/tracking/movies",
             new { Title = "Quiet Static", Minutes = 101, Progress = 15, Language = "en" });
         var firstLib = await LibraryRows(client, "Movie");
-        var mediaId = firstLib.GetProperty("data")[0].GetProperty("mediaId").GetInt32();
+        var mediaId = firstLib.GetProperty("data")[0].GetProperty("mediaId").GetGuid();
 
         var res = await client.PostAsJsonAsync("/api/tracking/movies",
             new { Title = "Quiet Static", Minutes = 101, Progress = 60, Language = "en" });
@@ -135,7 +135,7 @@ public class TmdbTrackingFlowTests(CustomWebApplicationFactory factory)
         var secondLib = await LibraryRows(client, "Movie");
         Assert.Equal(1, secondLib.GetProperty("count").GetInt32()); // no duplicate row
         var item = secondLib.GetProperty("data")[0];
-        Assert.Equal(mediaId, item.GetProperty("mediaId").GetInt32()); // same media
+        Assert.Equal(mediaId, item.GetProperty("mediaId").GetGuid()); // same media
         Assert.Equal(60, item.GetProperty("progress").GetInt32());     // progress updated
 
         Assert.Equal(1, await MediaRowCountAsync("Quiet Static"));
@@ -151,7 +151,7 @@ public class TmdbTrackingFlowTests(CustomWebApplicationFactory factory)
         await client.PostAsJsonAsync("/api/tracking/movies",
             new { Title = "Paper Lanterns", Minutes = 95, Progress = 20 });
         var lib = await LibraryRows(client, "Movie");
-        var mediaId = lib.GetProperty("data")[0].GetProperty("mediaId").GetInt32();
+        var mediaId = lib.GetProperty("data")[0].GetProperty("mediaId").GetGuid();
 
         var res = await client.PutAsJsonAsync($"/api/tracking/{mediaId}", new { Progress = 55 });
         Assert.True(res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
@@ -180,7 +180,7 @@ public class TmdbTrackingFlowTests(CustomWebApplicationFactory factory)
         await owner.PostAsJsonAsync("/api/tracking/series",
             new { Title = "Hollow Signal", Season = 1, Episode = 1, Minutes = 40, Progress = 30 });
         var ownerLib = await LibraryRows(owner, "Series");
-        var mediaId = ownerLib.GetProperty("data")[0].GetProperty("mediaId").GetInt32();
+        var mediaId = ownerLib.GetProperty("data")[0].GetProperty("mediaId").GetGuid();
 
         var stranger = await AuthedClientAsync("tmdb-edit-404-stranger@test.com", "tmdbedit404stranger");
         var res = await stranger.PutAsJsonAsync($"/api/tracking/{mediaId}", new { Progress = 90 });

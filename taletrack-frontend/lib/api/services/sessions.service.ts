@@ -1,7 +1,7 @@
 import { apiClient } from '../client';
 
 export interface Session {
-  id: number;
+  id: string;
   device: string;
   createdAt: string;
   lastUsedAt: string;
@@ -17,7 +17,7 @@ export const sessionsService = {
     return res.data ?? [];
   },
 
-  async revoke(id: number): Promise<void> {
+  async revoke(id: string): Promise<void> {
     await apiClient.delete(`/auth/sessions/${id}`, true);
   },
 

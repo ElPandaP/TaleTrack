@@ -24,14 +24,14 @@ public class AvatarService
         _logger = logger;
     }
 
-    public Task<UserAvatar?> GetAsync(int userId) =>
+    public Task<UserAvatar?> GetAsync(Guid userId) =>
         _context.UserAvatars.AsNoTracking().FirstOrDefaultAsync(a => a.UserId == userId);
 
     /// <summary>
     /// Decodes, centre-crops to a <see cref="Size"/>×<see cref="Size"/> square, re-encodes as
     /// WebP, stores it and points the user's <c>AvatarUrl</c> at it. Returns the new URL.
     /// </summary>
-    public async Task<string> SaveAsync(int userId, Stream imageStream)
+    public async Task<string> SaveAsync(Guid userId, Stream imageStream)
     {
         byte[] webp;
         try
@@ -83,7 +83,7 @@ public class AvatarService
         return user.AvatarUrl;
     }
 
-    public async Task RemoveAsync(int userId)
+    public async Task RemoveAsync(Guid userId)
     {
         var avatar = await _context.UserAvatars.FindAsync(userId);
         if (avatar is not null) _context.UserAvatars.Remove(avatar);

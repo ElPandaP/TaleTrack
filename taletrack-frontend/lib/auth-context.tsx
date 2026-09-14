@@ -5,7 +5,7 @@ import { authService } from '@/lib/api/services';
 import { apiClient } from '@/lib/api/client';
 
 export interface AuthUser {
-  id: number;
+  id: string;
   username: string;
   email: string;
 }
@@ -90,7 +90,7 @@ function getAuthSnapshot(): AuthSnapshot {
     isAuthenticated: true,
     loading: false,
     user: {
-      id: parseInt(decoded?.sub ?? '0'),
+      id: decoded?.sub ?? '',
       username: decoded?.unique_name ?? 'User',
       email: decoded?.email ?? '',
     },

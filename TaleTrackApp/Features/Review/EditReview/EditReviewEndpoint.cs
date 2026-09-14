@@ -8,7 +8,7 @@ public static class EditReviewEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapPut("/review/{id}", HandleAsync)
+        group.MapPut("/review/{id:guid}", HandleAsync)
             .WithName("EditReview")
             .WithDescription("Edits a review")
             .AddEndpointFilter<ValidationFilter>()
@@ -16,15 +16,15 @@ public static class EditReviewEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-        int id,
+        Guid id,
         EditReviewRequest request,
         ReviewService reviewService,
         ClaimsPrincipal user,
         ILogger<EditReviewRequest> logger)
     {
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
         {
             logger.LogWarning("Invalid or missing user ID in JWT token");
             return Results.Unauthorized();

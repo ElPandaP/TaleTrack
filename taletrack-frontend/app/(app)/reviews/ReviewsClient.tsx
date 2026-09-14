@@ -17,7 +17,7 @@ export default function ReviewsClient({ reviews }: { reviews: ReviewItem[] }) {
   const { t, tp, locale } = useI18n();
   const [target, setTarget] = useState<ReviewTarget | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [deleting, setDeleting] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -36,7 +36,7 @@ export default function ReviewsClient({ reviews }: { reviews: ReviewItem[] }) {
     setModalOpen(true);
   };
 
-  const remove = async (id: number) => {
+  const remove = async (id: string) => {
     if (!confirm(t('reviews.deleteConfirm'))) return;
     setDeleting(id);
     try {

@@ -8,19 +8,19 @@ public static class RevokeSessionEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapDelete("/auth/sessions/{id:int}", HandleAsync)
+        group.MapDelete("/auth/sessions/{id:guid}", HandleAsync)
             .WithName("RevokeSession")
             .WithDescription("Revokes one of the authenticated user's sessions")
             .RequireAuthorization(Policies.UserPolicy);
     }
 
     private static async Task<IResult> HandleAsync(
-        int id,
+        Guid id,
         RefreshTokenService refreshTokens,
         ClaimsPrincipal principal)
     {
         var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
             return Results.Unauthorized();
 
         var revoked = await refreshTokens.RevokeAsync(userId, id);

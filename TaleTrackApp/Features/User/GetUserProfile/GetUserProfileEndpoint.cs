@@ -10,14 +10,14 @@ public static class GetUserProfileEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapGet("/users/{id:int}", HandleAsync)
+        group.MapGet("/users/{id:guid}", HandleAsync)
             .WithName("GetUserProfile")
             .WithDescription("A user's public profile (avatar, counts, relationship to the caller)")
             .RequireAuthorization(Policies.UserPolicy);
     }
 
     private static async Task<IResult> HandleAsync(
-        int id,
+        Guid id,
         UserService userService,
         FriendService friendService,
         LibraryService libraryService,
@@ -26,7 +26,7 @@ public static class GetUserProfileEndpoint
     {
         var logger = loggerFactory.CreateLogger(nameof(GetUserProfileEndpoint));
         var meClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(meClaim) || !int.TryParse(meClaim, out int me))
+        if (string.IsNullOrEmpty(meClaim) || !Guid.TryParse(meClaim, out Guid me))
             return Results.Unauthorized();
 
         try

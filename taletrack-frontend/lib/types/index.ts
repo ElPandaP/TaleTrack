@@ -46,7 +46,7 @@ export interface AddReviewResponse {
 export type LibraryType = 'Book' | 'Movie' | 'Series';
 
 export interface LibraryItem {
-  mediaId: number;
+  mediaId: string;
   title: string;
   type: LibraryType;
   author?: string | null;
@@ -56,7 +56,7 @@ export interface LibraryItem {
   progress?: number | null;
   lastEventDate: string;
   myRating?: number | null;
-  myReviewId?: number | null;
+  myReviewId?: string | null;
   /** Series only — the furthest episode reached, and the episode count per season (index 0 = season 1). */
   season?: number | null;
   episode?: number | null;
@@ -85,14 +85,14 @@ export interface GetStatsResponse {
 }
 
 export interface ReviewItem {
-  id: number;
-  mediaId: number;
+  id: string;
+  mediaId: string;
   rating: number;
   comment?: string | null;
   createdAt: string;
   updatedAt?: string | null;
   media?: {
-    id: number;
+    id: string;
     title: string;
     type: LibraryType;
     posterUrl?: string | null;
@@ -112,7 +112,7 @@ export interface EditReviewRequest {
 }
 
 export interface MediaDetailReview {
-  id: number;
+  id: string;
   rating: number;
   comment?: string | null;
   createdAt: string;
@@ -121,7 +121,7 @@ export interface MediaDetailReview {
 }
 
 export interface MediaDetail {
-  id: number;
+  id: string;
   title: string;
   type: LibraryType;
   author?: string | null;
@@ -137,7 +137,7 @@ export interface MediaDetail {
   mySeason?: number | null;
   myEpisode?: number | null;
   seasonEpisodeCounts?: number[] | null;
-  myReviewId?: number | null;
+  myReviewId?: string | null;
   myRating?: number | null;
   myComment?: string | null;
   reviews: MediaDetailReview[];
@@ -150,14 +150,14 @@ export interface GetMediaDetailResponse {
 
 // Friends / Activity / Profile
 export interface Friend {
-  userId: number;
+  userId: string;
   username: string;
   avatarUrl?: string | null;
 }
 
 export interface FriendRequest {
-  requestId: number;
-  userId: number;
+  requestId: string;
+  userId: string;
   username: string;
   avatarUrl?: string | null;
   createdAt: string;
@@ -174,7 +174,7 @@ export type UserRelationship = 'none' | 'self' | 'friends' | 'incoming' | 'outgo
 
 export interface UserSearchResponse {
   success: boolean;
-  user: { userId: number; username: string; avatarUrl?: string | null } | null;
+  user: { userId: string; username: string; avatarUrl?: string | null } | null;
   relationship?: UserRelationship;
 }
 
@@ -182,12 +182,12 @@ export type ActivityKind = 'started' | 'finished' | 'reviewed';
 
 export interface ActivityItem {
   id: string;
-  userId: number;
+  userId: string;
   username: string;
   avatarUrl?: string | null;
   kind: ActivityKind;
   date: string;
-  mediaId: number;
+  mediaId: string;
   mediaTitle: string;
   mediaType: LibraryType;
   mediaPosterUrl?: string | null;
@@ -211,7 +211,7 @@ export interface FeedPrivacy {
 }
 
 export interface UserProfile {
-  id: number;
+  id: string;
   username: string;
   email: string;
   avatarUrl?: string | null;
@@ -225,7 +225,7 @@ export interface UserProfileResponse {
 }
 
 export interface PublicProfile {
-  id: number;
+  id: string;
   username: string;
   avatarUrl?: string | null;
   createdAt: string;

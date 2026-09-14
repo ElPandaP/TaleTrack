@@ -23,7 +23,7 @@ public static class UploadAvatarEndpoint
         ILogger<AvatarService> logger)
     {
         var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
             return Results.Unauthorized();
 
         if (file is null || file.Length == 0)

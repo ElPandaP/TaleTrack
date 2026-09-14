@@ -14,8 +14,7 @@ public class GetActivityRequest
     public int? Limit { get; set; }
 
     /// <summary>When set, returns just that user's activity (public profile).</summary>
-    [Range(1, int.MaxValue)]
-    public int? UserId { get; set; }
+    public Guid? UserId { get; set; }
 }
 
 public static class GetActivityEndpoint
@@ -36,13 +35,13 @@ public static class GetActivityEndpoint
         ILogger<GetActivityRequest> logger)
     {
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
             return Results.Unauthorized();
 
         try
         {
             var limit = request.Limit ?? 200;
-            var feed = request.UserId is int target
+            var feed = request.UserId is Guid target
                 ? await activityService.GetForUserAsync(userId, target, limit)
                 : await activityService.GetFeedAsync(userId, request.Scope ?? "all", limit);
 

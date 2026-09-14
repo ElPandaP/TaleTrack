@@ -21,7 +21,7 @@ public class AccountDeletionFlowTests(CustomWebApplicationFactory factory)
         return client;
     }
 
-    private async Task<(int UserId, string Jwt)> RegisterAndLoginAsync(HttpClient client, string email, string username)
+    private async Task<(Guid UserId, string Jwt)> RegisterAndLoginAsync(HttpClient client, string email, string username)
     {
         var register = await client.PostAsJsonAsync("/api/register",
             new { Email = email, Username = username, Password = "Password1!" });
@@ -36,14 +36,14 @@ public class AccountDeletionFlowTests(CustomWebApplicationFactory factory)
         return (id, jwt);
     }
 
-    private async Task<string> IssueTokenAsync(int userId, string purpose)
+    private async Task<string> IssueTokenAsync(Guid userId, string purpose)
     {
         using var scope = _factory.Services.CreateScope();
         var tokens = scope.ServiceProvider.GetRequiredService<AuthActionTokenService>();
         return await tokens.IssueAsync(userId, purpose);
     }
 
-    private async Task<bool> UserExistsAsync(int userId)
+    private async Task<bool> UserExistsAsync(Guid userId)
     {
         using var scope = _factory.NewDbScope(out var db);
         return await db.Users.AnyAsync(u => u.Id == userId);

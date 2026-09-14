@@ -8,21 +8,21 @@ public static class DeleteReviewEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapDelete("/review/{id}", HandleAsync)
+        group.MapDelete("/review/{id:guid}", HandleAsync)
             .WithName("DeleteReview")
             .WithDescription("Deletes a review")
             .RequireAuthorization(Policies.UserPolicy);
     }
 
     private static async Task<IResult> HandleAsync(
-        int id,
+        Guid id,
         ReviewService reviewService,
         ClaimsPrincipal user,
-        ILogger<int> logger)
+        ILogger<Guid> logger)
     {
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
         {
             logger.LogWarning("Invalid or missing user ID in JWT token");
             return Results.Unauthorized();

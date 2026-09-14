@@ -18,7 +18,7 @@ export default function ConnectionsCard() {
   const { t, locale } = useI18n();
   const [sessions, setSessions] = useState<Session[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [revoking, setRevoking] = useState<number | null>(null);
+  const [revoking, setRevoking] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -36,7 +36,7 @@ export default function ConnectionsCard() {
   const fmt = (iso: string) =>
     new Date(iso).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
 
-  const handleRevoke = async (id: number) => {
+  const handleRevoke = async (id: string) => {
     setRevoking(id);
     setError(null);
     try {

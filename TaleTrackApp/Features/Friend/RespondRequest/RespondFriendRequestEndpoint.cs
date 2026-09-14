@@ -15,7 +15,7 @@ public static class RespondFriendRequestEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapPost("/friends/requests/{id:int}", HandleAsync)
+        group.MapPost("/friends/requests/{id:guid}", HandleAsync)
             .WithName("RespondFriendRequest")
             .WithDescription("Accept or decline an incoming friend request")
             .AddEndpointFilter<ValidationFilter>()
@@ -23,14 +23,14 @@ public static class RespondFriendRequestEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-        int id,
+        Guid id,
         RespondFriendRequestRequest request,
         FriendService friendService,
         ClaimsPrincipal user,
         ILogger<RespondFriendRequestRequest> logger)
     {
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
             return Results.Unauthorized();
 
         var result = await friendService.RespondAsync(userId, id, request.Accept);

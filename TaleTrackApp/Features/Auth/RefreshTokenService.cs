@@ -50,7 +50,7 @@ public class RefreshTokenService
     }
 
     /// <summary>Creates a new refresh token for a device and returns the raw value (shown once).</summary>
-    public async Task<string> IssueAsync(int userId, string device)
+    public async Task<string> IssueAsync(Guid userId, string device)
     {
         var raw = GenerateRawToken();
         _context.RefreshTokens.Add(new RefreshToken
@@ -79,7 +79,7 @@ public class RefreshTokenService
 
         // A token rotated moments ago replays its replacement instead of failing —
         // but only while that replacement is itself still active (not since revoked).
-        if (_cache.TryGetValue(GraceKey(hash), out (int UserId, string NewRaw) grace))
+        if (_cache.TryGetValue(GraceKey(hash), out (Guid UserId, string NewRaw) grace))
         {
             var graceHash = Hash(grace.NewRaw);
             var replacementLive = await _context.RefreshTokens.AnyAsync(rt =>
@@ -124,14 +124,14 @@ public class RefreshTokenService
         return (existing.User, newRaw);
     }
 
-    public async Task<List<RefreshToken>> ListActiveAsync(int userId) =>
+    public async Task<List<RefreshToken>> ListActiveAsync(Guid userId) =>
         await _context.RefreshTokens
             .Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.ExpiresAt > DateTime.UtcNow)
             .OrderByDescending(rt => rt.LastUsedAt)
             .ToListAsync();
 
     /// <summary>Revokes every active session for a user (e.g. after a password reset).</summary>
-    public async Task RevokeAllForUserAsync(int userId)
+    public async Task RevokeAllForUserAsync(Guid userId)
     {
         var active = await _context.RefreshTokens
             .Where(rt => rt.UserId == userId && rt.RevokedAt == null)
@@ -158,7 +158,7 @@ public class RefreshTokenService
     }
 
     /// <summary>Revokes one session by id. Returns false if it does not belong to the user.</summary>
-    public async Task<bool> RevokeAsync(int userId, int id)
+    public async Task<bool> RevokeAsync(Guid userId, Guid id)
     {
         var token = await _context.RefreshTokens
             .FirstOrDefaultAsync(rt => rt.Id == id && rt.UserId == userId);

@@ -21,7 +21,7 @@ public class AvatarFlowTests(CustomWebApplicationFactory factory)
         return client;
     }
 
-    private async Task<(HttpClient Client, int UserId)> AuthedAsync(string email, string username)
+    private async Task<(HttpClient Client, Guid UserId)> AuthedAsync(string email, string username)
     {
         var client = NewClient();
         var reg = await client.PostAsJsonAsync("/api/register",
@@ -33,7 +33,7 @@ public class AvatarFlowTests(CustomWebApplicationFactory factory)
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwt);
 
         var me = await (await client.GetAsync("/api/user/me")).Content.ReadFromJsonAsync<JsonElement>();
-        return (client, me.GetProperty("data").GetProperty("id").GetInt32());
+        return (client, me.GetProperty("data").GetProperty("id").GetGuid());
     }
 
     private static byte[] MakePng(int w, int h)

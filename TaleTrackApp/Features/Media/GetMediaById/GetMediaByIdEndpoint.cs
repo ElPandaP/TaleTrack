@@ -11,14 +11,14 @@ public static class GetMediaByIdEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapGet("/media/{id:int}", HandleAsync)
+        group.MapGet("/media/{id:guid}", HandleAsync)
             .WithName("GetMediaById")
             .WithDescription("A media's detail page: data, the user's progress and review, and every review")
             .RequireAuthorization(Policies.UserPolicy);
     }
 
     private static async Task<IResult> HandleAsync(
-        int id,
+        Guid id,
         MediaService mediaService,
         ReviewService reviewService,
         TrackingEventService trackingEventService,
@@ -28,7 +28,7 @@ public static class GetMediaByIdEndpoint
         var logger = loggerFactory.CreateLogger(nameof(GetMediaByIdEndpoint));
 
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
             return Results.Unauthorized();
 
         try

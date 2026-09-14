@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace TaleTrackApp.Features.Friend;
 
-public record FriendDto(int UserId, string Username, string? AvatarUrl);
-public record FriendRequestDto(int RequestId, int UserId, string Username, string? AvatarUrl, DateTime CreatedAt);
+public record FriendDto(Guid UserId, string Username, string? AvatarUrl);
+public record FriendRequestDto(Guid RequestId, Guid UserId, string Username, string? AvatarUrl, DateTime CreatedAt);
 
 public enum SendRequestResult { Ok, TargetNotFound, Self, AlreadyFriends, AlreadyPending, ReversePending }
 public enum RespondResult { Ok, NotFound, Forbidden }
@@ -22,7 +22,7 @@ public class FriendService
     }
 
     /// <summary>Accepted friendships (either direction) as the "other" user.</summary>
-    public async Task<List<FriendDto>> GetFriendsAsync(int userId)
+    public async Task<List<FriendDto>> GetFriendsAsync(Guid userId)
     {
         var rows = await _context.Friendships
             .Where(f => f.Status == "Accepted" && (f.RequesterId == userId || f.AddresseeId == userId))
@@ -38,7 +38,7 @@ public class FriendService
     }
 
     /// <summary>Pending requests addressed to the user.</summary>
-    public async Task<List<FriendRequestDto>> GetIncomingAsync(int userId)
+    public async Task<List<FriendRequestDto>> GetIncomingAsync(Guid userId)
     {
         var rows = await _context.Friendships
             .Where(f => f.Status == "Pending" && f.AddresseeId == userId)
@@ -52,7 +52,7 @@ public class FriendService
     }
 
     /// <summary>Pending requests the user has sent.</summary>
-    public async Task<List<FriendRequestDto>> GetOutgoingAsync(int userId)
+    public async Task<List<FriendRequestDto>> GetOutgoingAsync(Guid userId)
     {
         var rows = await _context.Friendships
             .Where(f => f.Status == "Pending" && f.RequesterId == userId)
@@ -65,7 +65,7 @@ public class FriendService
             .ToList();
     }
 
-    public async Task<(SendRequestResult Result, Model.User? Target)> SendRequestAsync(int userId, int targetId)
+    public async Task<(SendRequestResult Result, Model.User? Target)> SendRequestAsync(Guid userId, Guid targetId)
     {
         var target = await _context.Users.FindAsync(targetId);
         if (target == null) return (SendRequestResult.TargetNotFound, null);
@@ -95,7 +95,7 @@ public class FriendService
         return (SendRequestResult.Ok, target);
     }
 
-    public async Task<RespondResult> RespondAsync(int userId, int requestId, bool accept)
+    public async Task<RespondResult> RespondAsync(Guid userId, Guid requestId, bool accept)
     {
         var req = await _context.Friendships.FindAsync(requestId);
         if (req == null || req.Status != "Pending") return RespondResult.NotFound;
@@ -115,7 +115,7 @@ public class FriendService
     }
 
     /// <summary>Removes any friendship or pending request between the two users.</summary>
-    public async Task<bool> RemoveAsync(int userId, int otherUserId)
+    public async Task<bool> RemoveAsync(Guid userId, Guid otherUserId)
     {
         var rows = await _context.Friendships
             .Where(f =>
@@ -130,7 +130,7 @@ public class FriendService
     }
 
     /// <summary>Relationship of <paramref name="otherUserId"/> to the viewer.</summary>
-    public async Task<string> RelationshipAsync(int userId, int otherUserId)
+    public async Task<string> RelationshipAsync(Guid userId, Guid otherUserId)
     {
         if (userId == otherUserId) return "self";
         var f = await _context.Friendships.FirstOrDefaultAsync(x =>

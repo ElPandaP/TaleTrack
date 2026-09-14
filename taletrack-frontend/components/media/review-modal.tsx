@@ -21,11 +21,11 @@ import type { LibraryType } from '@/lib/types';
 const MAX_COMMENT = 400;
 
 export interface ReviewTarget {
-  mediaId: number;
+  mediaId: string;
   title: string;
   type: LibraryType;
   posterUrl?: string | null;
-  reviewId?: number | null;
+  reviewId?: string | null;
   rating?: number | null; // 1–10 (backend scale)
   comment?: string | null;
 }

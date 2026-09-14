@@ -17,7 +17,7 @@ import type { Friend, FriendRequest, UserRelationship } from '@/lib/types';
 interface SearchState {
   loading: boolean;
   done: boolean;
-  user: { userId: number; username: string; avatarUrl?: string | null } | null;
+  user: { userId: string; username: string; avatarUrl?: string | null } | null;
   relationship?: UserRelationship;
   sent: boolean;
   error: string | null;
@@ -31,7 +31,7 @@ function PersonLink({
   avatarUrl,
   size = 'md',
 }: {
-  userId: number;
+  userId: string;
   username: string;
   avatarUrl?: string | null;
   size?: 'sm' | 'md';
@@ -55,12 +55,12 @@ export default function FriendsClient({
 }) {
   const router = useRouter();
   const t = useT();
-  const [busy, setBusy] = useState<number | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState<SearchState>(emptySearch);
   const [removeTarget, setRemoveTarget] = useState<Friend | null>(null);
 
-  const respond = async (requestId: number, accept: boolean) => {
+  const respond = async (requestId: string, accept: boolean) => {
     setBusy(requestId);
     try {
       await friendService.respond(requestId, accept);

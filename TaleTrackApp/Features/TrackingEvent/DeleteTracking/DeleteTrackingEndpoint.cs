@@ -7,20 +7,20 @@ public static class DeleteTrackingEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapDelete("/tracking/{mediaId}", HandleAsync)
+        group.MapDelete("/tracking/{mediaId:guid}", HandleAsync)
             .WithName("DeleteTracking")
             .WithDescription("Deletes all of the user's tracking for a media (removes it from their library)")
             .RequireAuthorization(Policies.UserPolicy);
     }
 
     private static async Task<IResult> HandleAsync(
-        int mediaId,
+        Guid mediaId,
         TrackingEventService trackingEventService,
         ClaimsPrincipal user,
-        ILogger<int> logger)
+        ILogger<Guid> logger)
     {
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
         {
             logger.LogWarning("Invalid or missing user ID in JWT token");
             return Results.Unauthorized();

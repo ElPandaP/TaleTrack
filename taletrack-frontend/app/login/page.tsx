@@ -63,7 +63,7 @@ export default function LoginPage() {
       if (res.success && res.token) {
         const decoded = parseJwt(res.token);
         login({
-          id: parseInt(decoded?.sub ?? '0'),
+          id: decoded?.sub ?? '',
           username: decoded?.unique_name ?? email.split('@')[0],
           email: decoded?.email ?? email,
         });
@@ -93,7 +93,7 @@ export default function LoginPage() {
       if (res.success && res.token) {
         const decoded = parseJwt(res.token);
         const authUser: AuthUser = {
-          id: parseInt(decoded?.sub ?? '0'),
+          id: decoded?.sub ?? '',
           username: decoded?.unique_name ?? 'User',
           email: decoded?.email ?? '',
         };

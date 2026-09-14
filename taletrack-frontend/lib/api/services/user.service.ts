@@ -15,7 +15,7 @@ export const userService = {
 
   
   async updateProfile(
-    id: number,
+    id: string,
     patch: ProfileUpdate,
   ): Promise<{ success: boolean; message?: string; token?: string }> {
     return apiClient.put(`/user/${id}`, patch, true);

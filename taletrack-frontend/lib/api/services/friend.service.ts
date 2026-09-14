@@ -13,15 +13,15 @@ export const friendService = {
     );
   },
 
-  async sendRequest(userId: number): Promise<{ success: boolean; message?: string }> {
+  async sendRequest(userId: string): Promise<{ success: boolean; message?: string }> {
     return apiClient.post('/friends/requests', { userId }, true);
   },
 
-  async respond(requestId: number, accept: boolean): Promise<{ success: boolean }> {
+  async respond(requestId: string, accept: boolean): Promise<{ success: boolean }> {
     return apiClient.post(`/friends/requests/${requestId}`, { accept }, true);
   },
 
-  async remove(userId: number): Promise<{ success: boolean }> {
+  async remove(userId: string): Promise<{ success: boolean }> {
     return apiClient.delete(`/friends/${userId}`, true);
   },
 };

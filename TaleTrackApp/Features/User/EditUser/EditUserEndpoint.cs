@@ -8,7 +8,7 @@ public static class EditUserEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapPut("/user/{id}", HandleAsync)
+        group.MapPut("/user/{id:guid}", HandleAsync)
             .WithName("EditUser")
             .WithDescription("Edit a user (requires JWT)")
             .AddEndpointFilter<ValidationFilter>()
@@ -16,7 +16,7 @@ public static class EditUserEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-        int id,
+        Guid id,
         EditUserRequest request,
         UserService userService,
         JwtService jwtService,
@@ -24,8 +24,8 @@ public static class EditUserEndpoint
         ILogger<EditUserRequest> logger)
     {
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
         {
             logger.LogWarning("Invalid or missing user ID in JWT token");
             return Results.Unauthorized();

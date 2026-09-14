@@ -105,7 +105,7 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [progressTarget, setProgressTarget] = useState<TrackingProgressTarget | null>(null);
   const [progressModalOpen, setProgressModalOpen] = useState(false);
-  const [deleting, setDeleting] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   // Target 24 per page (4 rows × 6 cols); when the grid shows fewer columns we
   // drop to the largest multiple of that column count that is ≤ 24, so the last

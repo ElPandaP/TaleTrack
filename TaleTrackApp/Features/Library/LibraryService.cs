@@ -6,7 +6,7 @@ namespace TaleTrackApp.Features.Library;
 
 /// <summary>One deduplicated media in the user's library, with their progress and rating.</summary>
 public record LibraryItem(
-    int MediaId,
+    Guid MediaId,
     string Title,
     string Type,
     string? Author,
@@ -16,7 +16,7 @@ public record LibraryItem(
     int? Progress,
     DateTime LastEventDate,
     int? MyRating,
-    int? MyReviewId,
+    Guid? MyReviewId,
     int? Season = null,
     int? Episode = null,
     int[]? SeasonEpisodeCounts = null);
@@ -37,7 +37,7 @@ public class LibraryService
     /// enriched with the user's own review rating. Supports type / status / year filters and sorting.
     /// </summary>
     public async Task<List<LibraryItem>> GetForUserAsync(
-        int userId,
+        Guid userId,
         string? type = null,
         string? status = null,
         string? sort = null,
@@ -117,7 +117,7 @@ public class LibraryService
     }
 
     /// <summary>Distinct-media counts per type for a user (all time).</summary>
-    public async Task<(int Book, int Movie, int Series, int Total)> CountByTypeAsync(int userId)
+    public async Task<(int Book, int Movie, int Series, int Total)> CountByTypeAsync(Guid userId)
     {
         var types = await _context.TrackingEvents
             .Where(te => te.UserId == userId && te.Media != null)
@@ -133,7 +133,7 @@ public class LibraryService
     }
 
     /// <summary>Finished media the user has not reviewed yet.</summary>
-    public async Task<List<LibraryItem>> GetPendingReviewsAsync(int userId)
+    public async Task<List<LibraryItem>> GetPendingReviewsAsync(Guid userId)
     {
         var finished = await GetForUserAsync(userId, status: "finished", sort: "recent");
         return finished.Where(i => i.MyRating == null).ToList();

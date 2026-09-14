@@ -21,7 +21,7 @@ public static class GetStatsEndpoint
         ILogger<GetStatsRequest> logger)
     {
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
         {
             logger.LogWarning("Invalid or missing user ID in JWT token");
             return Results.Unauthorized();

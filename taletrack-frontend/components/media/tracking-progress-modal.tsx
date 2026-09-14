@@ -17,7 +17,7 @@ import { useT } from '@/lib/i18n';
 import type { LibraryType } from '@/lib/types';
 
 export interface TrackingProgressTarget {
-  mediaId: number;
+  mediaId: string;
   title: string;
   type: LibraryType;
   posterUrl?: string | null;

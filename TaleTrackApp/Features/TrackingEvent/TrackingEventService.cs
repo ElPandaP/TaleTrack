@@ -21,7 +21,7 @@ public class TrackingEventService
     /// inserted. Season/episode are null for movies and books.
     /// </summary>
     public async Task<Model.TrackingEvent> UpsertAsync(
-        int userId, int mediaId, int? progress,
+        Guid userId, Guid mediaId, int? progress,
         int? season = null, int? episode = null)
     {
         var existing = await _context.TrackingEvents
@@ -59,7 +59,7 @@ public class TrackingEventService
         return trackingEvent;
     }
 
-    public async Task<Model.TrackingEvent?> GetLatestForMediaAsync(int userId, int mediaId)
+    public async Task<Model.TrackingEvent?> GetLatestForMediaAsync(Guid userId, Guid mediaId)
     {
         return await _context.TrackingEvents
             .Where(te => te.UserId == userId && te.MediaId == mediaId)
@@ -71,7 +71,7 @@ public class TrackingEventService
     /// The furthest (season, episode) reached for a series — not necessarily the most recently
     /// touched row, so rewatching an earlier episode never moves progress backward.
     /// </summary>
-    public async Task<Model.TrackingEvent?> GetFurthestEpisodeAsync(int userId, int mediaId)
+    public async Task<Model.TrackingEvent?> GetFurthestEpisodeAsync(Guid userId, Guid mediaId)
     {
         return await _context.TrackingEvents
             .Where(te => te.UserId == userId && te.MediaId == mediaId)
@@ -81,7 +81,7 @@ public class TrackingEventService
     }
 
     /// <summary>Removes every tracking event for (user, media) — takes the media out of their library.</summary>
-    public async Task<bool> DeleteAllForMediaAsync(int userId, int mediaId)
+    public async Task<bool> DeleteAllForMediaAsync(Guid userId, Guid mediaId)
     {
         var events = await _context.TrackingEvents
             .Where(te => te.UserId == userId && te.MediaId == mediaId)
@@ -98,7 +98,7 @@ public class TrackingEventService
     }
 
     /// <summary>Overrides the progress of the user's most recent tracking event for a media.</summary>
-    public async Task<Model.TrackingEvent?> SetProgressAsync(int userId, int mediaId, int progress)
+    public async Task<Model.TrackingEvent?> SetProgressAsync(Guid userId, Guid mediaId, int progress)
     {
         var latest = await _context.TrackingEvents
             .Where(te => te.UserId == userId && te.MediaId == mediaId)

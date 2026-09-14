@@ -13,7 +13,7 @@ export default async function UserProfilePage({
   let profile: PublicProfile | undefined;
   let activity: ActivityItem[] = [];
   try {
-    const [pRes, aRes] = await Promise.allSettled([getUserProfile(id), getUserActivity(Number(id))]);
+    const [pRes, aRes] = await Promise.allSettled([getUserProfile(id), getUserActivity(id)]);
     if (pRes.status === 'fulfilled') profile = pRes.value.data;
     if (aRes.status === 'fulfilled') activity = aRes.value.data ?? [];
   } catch {

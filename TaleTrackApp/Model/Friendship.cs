@@ -11,15 +11,15 @@ using System.ComponentModel.DataAnnotations.Schema;
 public class Friendship
 {
     [Key]
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.CreateVersion7();
 
     [Required]
     [ForeignKey(nameof(Requester))]
-    public int RequesterId { get; set; }
+    public Guid RequesterId { get; set; }
 
     [Required]
     [ForeignKey(nameof(Addressee))]
-    public int AddresseeId { get; set; }
+    public Guid AddresseeId { get; set; }
 
     [Required]
     [StringLength(20)]

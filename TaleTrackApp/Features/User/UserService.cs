@@ -39,7 +39,7 @@ public class UserService
         return await _context.Users.FirstOrDefaultAsync(x => x.Username.ToLower() == u);
     }
 
-    public async Task<Model.User?> GetByIdAsync(int id)
+    public async Task<Model.User?> GetByIdAsync(Guid id)
     {
         return await _context.Users.FindAsync(id);
     }
@@ -72,7 +72,7 @@ public class UserService
     }
 
     public async Task<Model.User?> UpdateUserAsync(
-        int id,
+        Guid id,
         string? username,
         string? email,
         string? password,
@@ -124,7 +124,7 @@ public class UserService
         return user;
     }
 
-    public async Task<bool> DeleteUserAsync(int id)
+    public async Task<bool> DeleteUserAsync(Guid id)
     {
         var user = await _context.Users.FindAsync(id);
         if (user == null)
@@ -169,7 +169,7 @@ public class UserService
         return user;
     }
 
-    public async Task LinkGoogleIdAsync(int id, string googleId)
+    public async Task LinkGoogleIdAsync(Guid id, string googleId)
     {
         var user = await _context.Users.FindAsync(id);
         if (user == null) return;
@@ -180,7 +180,7 @@ public class UserService
         await _context.SaveChangesAsync();
     }
 
-    public async Task SetEmailCodeAsync(int id, string code)
+    public async Task SetEmailCodeAsync(Guid id, string code)
     {
         var user = await _context.Users.FindAsync(id);
         if (user == null) return;
@@ -192,7 +192,7 @@ public class UserService
         await _context.SaveChangesAsync();
     }
 
-    public async Task ClearEmailCodeAsync(int id)
+    public async Task ClearEmailCodeAsync(Guid id)
     {
         var user = await _context.Users.FindAsync(id);
         if (user == null) return;
@@ -205,7 +205,7 @@ public class UserService
     }
 
     /// <summary>Sets a new password (PBKDF2) for a user. Returns false if the user is gone.</summary>
-    public async Task<bool> SetPasswordAsync(int userId, string newPassword)
+    public async Task<bool> SetPasswordAsync(Guid userId, string newPassword)
     {
         var user = await _context.Users.FindAsync(userId);
         if (user == null) return false;

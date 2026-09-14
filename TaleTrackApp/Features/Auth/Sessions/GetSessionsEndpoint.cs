@@ -19,7 +19,7 @@ public static class GetSessionsEndpoint
         ClaimsPrincipal principal)
     {
         var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
             return Results.Unauthorized();
 
         var sessions = await refreshTokens.ListActiveAsync(userId);

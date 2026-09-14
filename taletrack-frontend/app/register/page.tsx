@@ -84,7 +84,7 @@ export default function RegisterPage() {
           if (loginRes.success && loginRes.token) {
             const decoded = parseJwt(loginRes.token);
             login({
-              id: parseInt(decoded?.sub ?? '0'),
+              id: decoded?.sub ?? '',
               username: decoded?.unique_name ?? username,
               email: decoded?.email ?? email,
             });
@@ -124,7 +124,7 @@ export default function RegisterPage() {
       if (res.success && res.token) {
         const decoded = parseJwt(res.token);
         const authUser: AuthUser = {
-          id: parseInt(decoded?.sub ?? '0'),
+          id: decoded?.sub ?? '',
           username: decoded?.unique_name ?? 'User',
           email: decoded?.email ?? '',
         };

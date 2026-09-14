@@ -8,8 +8,7 @@ namespace TaleTrackApp.Features.Friend.SendRequest;
 public class SendFriendRequestRequest
 {
     [Required(ErrorMessage = "userId is required")]
-    [Range(1, int.MaxValue)]
-    public int UserId { get; set; }
+    public Guid UserId { get; set; }
 }
 
 public static class SendFriendRequestEndpoint
@@ -30,7 +29,7 @@ public static class SendFriendRequestEndpoint
         ILogger<SendFriendRequestRequest> logger)
     {
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
             return Results.Unauthorized();
 
         var (result, _) = await friendService.SendRequestAsync(userId, request.UserId);

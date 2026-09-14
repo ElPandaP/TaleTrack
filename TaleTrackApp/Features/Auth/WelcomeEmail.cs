@@ -8,7 +8,7 @@ namespace TaleTrackApp.Features.Auth;
 public static class WelcomeEmail
 {
     public static void SendInBackground(
-        IServiceScopeFactory scopeFactory, int userId, string email, string? locale)
+        IServiceScopeFactory scopeFactory, Guid userId, string email, string? locale)
     {
         _ = Task.Run(async () =>
         {

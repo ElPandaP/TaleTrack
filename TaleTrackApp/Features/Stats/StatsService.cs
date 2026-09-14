@@ -29,7 +29,7 @@ public class StatsService
     /// Counts distinct media the user has a tracking event for during <paramref name="year"/>.
     /// Each media is bucketed into the month of its most recent event that year.
     /// </summary>
-    public async Task<YearlyStats> GetYearlyAsync(int userId, int year)
+    public async Task<YearlyStats> GetYearlyAsync(Guid userId, int year)
     {
         var from = new DateTime(year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var to = from.AddYears(1);

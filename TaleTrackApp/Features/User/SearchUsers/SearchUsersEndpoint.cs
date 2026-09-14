@@ -32,7 +32,7 @@ public static class SearchUsersEndpoint
         ILogger<SearchUsersRequest> logger)
     {
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
             return Results.Unauthorized();
 
         var found = await userService.GetByUsernameAsync(request.Username.TrimStart('@'));

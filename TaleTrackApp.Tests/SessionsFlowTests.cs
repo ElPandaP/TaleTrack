@@ -70,13 +70,13 @@ public class SessionsFlowTests(CustomWebApplicationFactory factory)
         var client = await AuthedClientAsync("sessions-revoke@test.com", "sessionsrevoke");
 
         var sessions = await SessionsAsync(client);
-        var sessionId = sessions.GetProperty("data")[0].GetProperty("id").GetInt32();
+        var sessionId = sessions.GetProperty("data")[0].GetProperty("id").GetGuid();
 
         var revokeRes = await client.DeleteAsync($"/api/auth/sessions/{sessionId}");
         Assert.True(revokeRes.IsSuccessStatusCode, await revokeRes.Content.ReadAsStringAsync());
 
         var after = await SessionsAsync(client);
-        Assert.DoesNotContain(after.GetProperty("data").EnumerateArray(), s => s.GetProperty("id").GetInt32() == sessionId);
+        Assert.DoesNotContain(after.GetProperty("data").EnumerateArray(), s => s.GetProperty("id").GetGuid() == sessionId);
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public class SessionsFlowTests(CustomWebApplicationFactory factory)
         var b = await AuthedClientAsync("sessions-stranger@test.com", "sessionsstranger");
 
         var aSessions = await SessionsAsync(a);
-        var aSessionId = aSessions.GetProperty("data")[0].GetProperty("id").GetInt32();
+        var aSessionId = aSessions.GetProperty("data")[0].GetProperty("id").GetGuid();
 
         var res = await b.DeleteAsync($"/api/auth/sessions/{aSessionId}");
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);

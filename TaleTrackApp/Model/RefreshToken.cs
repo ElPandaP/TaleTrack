@@ -11,11 +11,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 public class RefreshToken
 {
     [Key]
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.CreateVersion7();
 
     [Required]
     [ForeignKey(nameof(User))]
-    public int UserId { get; set; }
+    public Guid UserId { get; set; }
 
     /// <summary>Hex-encoded SHA-256 of the raw token.</summary>
     [Required]

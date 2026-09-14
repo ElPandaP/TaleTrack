@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations;
 public class User
 {
     [Key]
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.CreateVersion7();
     
     [Required(ErrorMessage = "Email is required")]
     [EmailAddress(ErrorMessage = "Invalid email format")]

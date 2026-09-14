@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations;
 public class Media
 {
     [Key]
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.CreateVersion7();
     
     [Required(ErrorMessage = "Title is required")]
     [StringLength(255, MinimumLength = 1, ErrorMessage = "Title must be between 1 and 255 characters")]

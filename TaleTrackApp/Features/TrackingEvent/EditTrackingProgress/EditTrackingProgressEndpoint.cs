@@ -7,7 +7,7 @@ public static class EditTrackingProgressEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapPut("/tracking/{mediaId}", HandleAsync)
+        group.MapPut("/tracking/{mediaId:guid}", HandleAsync)
             .WithName("EditTrackingProgress")
             .WithDescription("Updates the progress of the user's most recent tracking event for a media")
             .AddEndpointFilter<ValidationFilter>()
@@ -15,14 +15,14 @@ public static class EditTrackingProgressEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-        int mediaId,
+        Guid mediaId,
         EditTrackingProgressRequest request,
         TrackingEventService trackingEventService,
         ClaimsPrincipal user,
         ILogger<EditTrackingProgressRequest> logger)
     {
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
         {
             logger.LogWarning("Invalid or missing user ID in JWT token");
             return Results.Unauthorized();

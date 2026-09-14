@@ -4,14 +4,14 @@ public static class GetAvatarEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapGet("/users/{id:int}/avatar", HandleAsync)
+        group.MapGet("/users/{id:guid}/avatar", HandleAsync)
             .WithName("GetAvatar")
             .WithDescription("Serves a user's profile photo (public — an <img> tag can't send a token)")
             .AllowAnonymous();
     }
 
     private static async Task<IResult> HandleAsync(
-        int id,
+        Guid id,
         AvatarService avatarService,
         HttpContext http)
     {

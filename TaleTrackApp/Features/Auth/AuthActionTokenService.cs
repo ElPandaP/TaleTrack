@@ -42,7 +42,7 @@ public class AuthActionTokenService
     }
 
     /// <summary>Creates a token for the given purpose and returns the raw value (shown once).</summary>
-    public async Task<string> IssueAsync(int userId, string purpose)
+    public async Task<string> IssueAsync(Guid userId, string purpose)
     {
         var raw = GenerateRawToken();
         _context.AuthActionTokens.Add(new AuthActionToken

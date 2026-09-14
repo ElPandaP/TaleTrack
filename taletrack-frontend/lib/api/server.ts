@@ -59,7 +59,7 @@ export async function getReviews(): Promise<GetReviewsResponse> {
   return serverFetch<GetReviewsResponse>('/reviews');
 }
 
-export async function getMediaDetail(id: number | string): Promise<GetMediaDetailResponse> {
+export async function getMediaDetail(id: string): Promise<GetMediaDetailResponse> {
   return serverFetch<GetMediaDetailResponse>(`/media/${id}`);
 }
 
@@ -74,11 +74,11 @@ export async function getActivity(
   return serverFetch<ActivityResponse>(`/activity?scope=${scope}&limit=${limit}`);
 }
 
-export async function getUserActivity(userId: number, limit = 100): Promise<ActivityResponse> {
+export async function getUserActivity(userId: string, limit = 100): Promise<ActivityResponse> {
   return serverFetch<ActivityResponse>(`/activity?userId=${userId}&limit=${limit}`);
 }
 
-export async function getUserProfile(id: number | string): Promise<PublicProfileResponse> {
+export async function getUserProfile(id: string): Promise<PublicProfileResponse> {
   return serverFetch<PublicProfileResponse>(`/users/${id}`);
 }
 

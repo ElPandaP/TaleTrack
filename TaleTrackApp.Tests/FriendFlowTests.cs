@@ -15,7 +15,7 @@ public class FriendFlowTests(CustomWebApplicationFactory factory)
 {
     private readonly CustomWebApplicationFactory _factory = factory;
 
-    private async Task<(HttpClient Client, int UserId)> AuthedClientAsync(string email, string username)
+    private async Task<(HttpClient Client, Guid UserId)> AuthedClientAsync(string email, string username)
     {
         var client = _factory.CreateClient();
 
@@ -29,7 +29,7 @@ public class FriendFlowTests(CustomWebApplicationFactory factory)
 
         var me = await client.GetAsync("/api/user/me");
         var meBody = await me.Content.ReadFromJsonAsync<JsonElement>();
-        return (client, meBody.GetProperty("data").GetProperty("id").GetInt32());
+        return (client, meBody.GetProperty("data").GetProperty("id").GetGuid());
     }
 
     private static async Task<JsonElement> FriendsAsync(HttpClient client)
@@ -49,7 +49,7 @@ public class FriendFlowTests(CustomWebApplicationFactory factory)
         Assert.True(res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
 
         var aFriends = await FriendsAsync(a);
-        Assert.Contains(aFriends.GetProperty("outgoing").EnumerateArray(), r => r.GetProperty("userId").GetInt32() == bId);
+        Assert.Contains(aFriends.GetProperty("outgoing").EnumerateArray(), r => r.GetProperty("userId").GetGuid() == bId);
     }
 
     [Fact]
@@ -61,16 +61,16 @@ public class FriendFlowTests(CustomWebApplicationFactory factory)
         await a.PostAsJsonAsync("/api/friends/requests", new { UserId = bId });
         var bFriendsBefore = await FriendsAsync(b);
         var requestId = bFriendsBefore.GetProperty("incoming").EnumerateArray()
-            .First(r => r.GetProperty("userId").GetInt32() == aId)
-            .GetProperty("requestId").GetInt32();
+            .First(r => r.GetProperty("userId").GetGuid() == aId)
+            .GetProperty("requestId").GetGuid();
 
         var respondRes = await b.PostAsJsonAsync($"/api/friends/requests/{requestId}", new { Accept = true });
         Assert.True(respondRes.IsSuccessStatusCode, await respondRes.Content.ReadAsStringAsync());
 
         var aFriends = await FriendsAsync(a);
         var bFriends = await FriendsAsync(b);
-        Assert.Contains(aFriends.GetProperty("friends").EnumerateArray(), f => f.GetProperty("userId").GetInt32() == bId);
-        Assert.Contains(bFriends.GetProperty("friends").EnumerateArray(), f => f.GetProperty("userId").GetInt32() == aId);
+        Assert.Contains(aFriends.GetProperty("friends").EnumerateArray(), f => f.GetProperty("userId").GetGuid() == bId);
+        Assert.Contains(bFriends.GetProperty("friends").EnumerateArray(), f => f.GetProperty("userId").GetGuid() == aId);
     }
 
     [Fact]
@@ -82,16 +82,16 @@ public class FriendFlowTests(CustomWebApplicationFactory factory)
         await a.PostAsJsonAsync("/api/friends/requests", new { UserId = bId });
         var bFriendsBefore = await FriendsAsync(b);
         var requestId = bFriendsBefore.GetProperty("incoming").EnumerateArray()
-            .First(r => r.GetProperty("userId").GetInt32() == aId)
-            .GetProperty("requestId").GetInt32();
+            .First(r => r.GetProperty("userId").GetGuid() == aId)
+            .GetProperty("requestId").GetGuid();
 
         await b.PostAsJsonAsync($"/api/friends/requests/{requestId}", new { Accept = false });
 
         var aFriends = await FriendsAsync(a);
         var bFriends = await FriendsAsync(b);
-        Assert.DoesNotContain(aFriends.GetProperty("outgoing").EnumerateArray(), r => r.GetProperty("userId").GetInt32() == bId);
-        Assert.DoesNotContain(bFriends.GetProperty("incoming").EnumerateArray(), r => r.GetProperty("userId").GetInt32() == aId);
-        Assert.DoesNotContain(bFriends.GetProperty("friends").EnumerateArray(), f => f.GetProperty("userId").GetInt32() == aId);
+        Assert.DoesNotContain(aFriends.GetProperty("outgoing").EnumerateArray(), r => r.GetProperty("userId").GetGuid() == bId);
+        Assert.DoesNotContain(bFriends.GetProperty("incoming").EnumerateArray(), r => r.GetProperty("userId").GetGuid() == aId);
+        Assert.DoesNotContain(bFriends.GetProperty("friends").EnumerateArray(), f => f.GetProperty("userId").GetGuid() == aId);
     }
 
     [Fact]
@@ -103,15 +103,15 @@ public class FriendFlowTests(CustomWebApplicationFactory factory)
         await a.PostAsJsonAsync("/api/friends/requests", new { UserId = bId });
         var bFriendsBefore = await FriendsAsync(b);
         var requestId = bFriendsBefore.GetProperty("incoming").EnumerateArray()
-            .First(r => r.GetProperty("userId").GetInt32() == aId)
-            .GetProperty("requestId").GetInt32();
+            .First(r => r.GetProperty("userId").GetGuid() == aId)
+            .GetProperty("requestId").GetGuid();
         await b.PostAsJsonAsync($"/api/friends/requests/{requestId}", new { Accept = true });
 
         var removeRes = await a.DeleteAsync($"/api/friends/{bId}");
         Assert.True(removeRes.IsSuccessStatusCode, await removeRes.Content.ReadAsStringAsync());
 
         var aFriends = await FriendsAsync(a);
-        Assert.DoesNotContain(aFriends.GetProperty("friends").EnumerateArray(), f => f.GetProperty("userId").GetInt32() == bId);
+        Assert.DoesNotContain(aFriends.GetProperty("friends").EnumerateArray(), f => f.GetProperty("userId").GetGuid() == bId);
     }
 
     [Fact]

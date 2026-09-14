@@ -16,7 +16,7 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
 {
     private readonly CustomWebApplicationFactory _factory = factory;
 
-    private async Task<(HttpClient Client, int UserId)> AuthedClientAsync(string email, string username)
+    private async Task<(HttpClient Client, Guid UserId)> AuthedClientAsync(string email, string username)
     {
         var client = _factory.CreateClient();
 
@@ -30,17 +30,17 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
 
         var me = await client.GetAsync("/api/user/me");
         var meBody = await me.Content.ReadFromJsonAsync<JsonElement>();
-        return (client, meBody.GetProperty("data").GetProperty("id").GetInt32());
+        return (client, meBody.GetProperty("data").GetProperty("id").GetGuid());
     }
 
-    private static async Task BefriendAsync(HttpClient a, int aId, HttpClient b, int bId)
+    private static async Task BefriendAsync(HttpClient a, Guid aId, HttpClient b, Guid bId)
     {
         await a.PostAsJsonAsync("/api/friends/requests", new { UserId = bId });
         var bFriends = await b.GetAsync("/api/friends");
         var bFriendsBody = await bFriends.Content.ReadFromJsonAsync<JsonElement>();
         var requestId = bFriendsBody.GetProperty("incoming").EnumerateArray()
-            .First(r => r.GetProperty("userId").GetInt32() == aId)
-            .GetProperty("requestId").GetInt32();
+            .First(r => r.GetProperty("userId").GetGuid() == aId)
+            .GetProperty("requestId").GetGuid();
         await b.PostAsJsonAsync($"/api/friends/requests/{requestId}", new { Accept = true });
     }
 
@@ -78,7 +78,7 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
 
         var feed = await ActivityAsync(a, "?scope=friends");
         Assert.Contains(feed.GetProperty("data").EnumerateArray(),
-            i => i.GetProperty("mediaTitle").GetString() == "Borrowed Aurora" && i.GetProperty("userId").GetInt32() == bId);
+            i => i.GetProperty("mediaTitle").GetString() == "Borrowed Aurora" && i.GetProperty("userId").GetGuid() == bId);
     }
 
     [Fact]

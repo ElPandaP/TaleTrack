@@ -6,17 +6,15 @@ using System.ComponentModel.DataAnnotations.Schema;
 public class Review
 {
     [Key]
-    public int Id { get; set; }
-    
+    public Guid Id { get; set; } = Guid.CreateVersion7();
+
     [Required(ErrorMessage = "UserId is required")]
-    [Range(1, int.MaxValue, ErrorMessage = "UserId must be a valid positive integer")]
     [ForeignKey(nameof(User))]
-    public int UserId { get; set; }
-    
+    public Guid UserId { get; set; }
+
     [Required(ErrorMessage = "MediaId is required")]
-    [Range(1, int.MaxValue, ErrorMessage = "MediaId must be a valid positive integer")]
     [ForeignKey(nameof(Media))]
-    public int MediaId { get; set; }
+    public Guid MediaId { get; set; }
     
     [StringLength(2000, ErrorMessage = "Comment cannot exceed 2000 characters")]
     public string? Comment { get; set; }

@@ -42,7 +42,7 @@ export function ChooseUsernameScreen({
       if (res.success && res.token) {
         const decoded = parseJwt(res.token);
         onDone({
-          id: parseInt(decoded?.sub ?? '0'),
+          id: decoded?.sub ?? '',
           username: decoded?.unique_name ?? username.trim(),
           email: decoded?.email ?? email,
         });

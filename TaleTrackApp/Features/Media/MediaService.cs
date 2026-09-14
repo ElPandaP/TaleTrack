@@ -15,7 +15,7 @@ public class MediaService
         _logger = logger;
     }
 
-    public async Task<Model.Media?> GetByIdAsync(int id)
+    public async Task<Model.Media?> GetByIdAsync(Guid id)
     {
         return await _context.Medias.FindAsync(id);
     }
@@ -90,7 +90,7 @@ public class MediaService
         return await CreateAsync(title, type, length, author, isbn);
     }
 
-    public async Task ApplyEnrichmentAsync(int mediaId, OpenLibraryResult result)
+    public async Task ApplyEnrichmentAsync(Guid mediaId, OpenLibraryResult result)
     {
         var media = await _context.Medias.FindAsync(mediaId);
         if (media == null) return;
@@ -107,7 +107,7 @@ public class MediaService
         _logger.LogInformation("Media {MediaId} enriched from OpenLibrary", mediaId);
     }
 
-    public async Task ApplyTmdbEnrichmentAsync(int mediaId, TmdbResult result)
+    public async Task ApplyTmdbEnrichmentAsync(Guid mediaId, TmdbResult result)
     {
         var media = await _context.Medias.FindAsync(mediaId);
         if (media == null) return;

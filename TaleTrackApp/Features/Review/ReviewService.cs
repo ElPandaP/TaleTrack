@@ -15,7 +15,7 @@ public class ReviewService
         _logger = logger;
     }
 
-    public async Task<Model.Review?> GetByIdAsync(int id)
+    public async Task<Model.Review?> GetByIdAsync(Guid id)
     {
         return await _context.Reviews
             .Include(r => r.User)
@@ -23,7 +23,7 @@ public class ReviewService
             .FirstOrDefaultAsync(r => r.Id == id);
     }
 
-    public async Task<List<Model.Review>> GetByMediaIdAsync(int mediaId)
+    public async Task<List<Model.Review>> GetByMediaIdAsync(Guid mediaId)
     {
         return await _context.Reviews
             .Where(r => r.MediaId == mediaId)
@@ -31,7 +31,7 @@ public class ReviewService
             .ToListAsync();
     }
 
-    public async Task<List<Model.Review>> GetByUserIdAsync(int userId)
+    public async Task<List<Model.Review>> GetByUserIdAsync(Guid userId)
     {
         return await _context.Reviews
             .Where(r => r.UserId == userId)
@@ -43,7 +43,7 @@ public class ReviewService
     /// One review per (user, media) — a repeat call updates the existing review in place
     /// instead of creating a duplicate (mirrors TrackingEventService.UpsertAsync).
     /// </summary>
-    public async Task<Model.Review> CreateAsync(int userId, int mediaId, int rating, string? comment = null)
+    public async Task<Model.Review> CreateAsync(Guid userId, Guid mediaId, int rating, string? comment = null)
     {
         var existing = await _context.Reviews
             .FirstOrDefaultAsync(r => r.UserId == userId && r.MediaId == mediaId);
@@ -75,7 +75,7 @@ public class ReviewService
         return review;
     }
 
-    public async Task<Model.Review?> UpdateAsync(int id, int rating, string? comment = null)
+    public async Task<Model.Review?> UpdateAsync(Guid id, int rating, string? comment = null)
     {
         var review = await _context.Reviews.FindAsync(id);
         if (review == null)
@@ -97,7 +97,7 @@ public class ReviewService
         return review;
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(Guid id)
     {
         var review = await _context.Reviews.FindAsync(id);
         if (review == null)

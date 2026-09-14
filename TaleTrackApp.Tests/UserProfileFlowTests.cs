@@ -15,7 +15,7 @@ public class UserProfileFlowTests(CustomWebApplicationFactory factory)
 {
     private readonly CustomWebApplicationFactory _factory = factory;
 
-    private async Task<(HttpClient Client, int UserId)> AuthedClientAsync(string email, string username)
+    private async Task<(HttpClient Client, Guid UserId)> AuthedClientAsync(string email, string username)
     {
         var client = _factory.CreateClient();
 
@@ -29,7 +29,7 @@ public class UserProfileFlowTests(CustomWebApplicationFactory factory)
 
         var me = await client.GetAsync("/api/user/me");
         var meBody = await me.Content.ReadFromJsonAsync<JsonElement>();
-        return (client, meBody.GetProperty("data").GetProperty("id").GetInt32());
+        return (client, meBody.GetProperty("data").GetProperty("id").GetGuid());
     }
 
     [Fact]

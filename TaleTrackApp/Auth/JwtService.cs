@@ -20,7 +20,7 @@ public class JwtService
     public int ExpirationMinutes =>
         int.TryParse(_configuration["JwtSettings:ExpirationMinutes"], out var m) ? m : 60;
 
-    public string GenerateToken(int userId, string email, string username)
+    public string GenerateToken(Guid userId, string email, string username)
     {
         var jwtSecret = _configuration["JwtSettings:Secret"];
         

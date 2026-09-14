@@ -21,7 +21,7 @@ public class PasswordResetFlowTests(CustomWebApplicationFactory factory)
         return client;
     }
 
-    private async Task<int> RegisterAsync(HttpClient client, string email, string username)
+    private async Task<Guid> RegisterAsync(HttpClient client, string email, string username)
     {
         var register = await client.PostAsJsonAsync("/api/register",
             new { Email = email, Username = username, Password = "Password1!" });
@@ -31,7 +31,7 @@ public class PasswordResetFlowTests(CustomWebApplicationFactory factory)
         return (await db.Users.FirstAsync(u => u.Email == email)).Id;
     }
 
-    private async Task<string> IssueTokenAsync(int userId, string purpose)
+    private async Task<string> IssueTokenAsync(Guid userId, string purpose)
     {
         using var scope = _factory.Services.CreateScope();
         var tokens = scope.ServiceProvider.GetRequiredService<AuthActionTokenService>();

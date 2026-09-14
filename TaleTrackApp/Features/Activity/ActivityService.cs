@@ -5,12 +5,12 @@ namespace TaleTrackApp.Features.Activity;
 
 public record ActivityItem(
     string Id,
-    int UserId,
+    Guid UserId,
     string Username,
     string? AvatarUrl,
     string Kind,          // "started" | "finished" | "reviewed"
     DateTime Date,
-    int MediaId,
+    Guid MediaId,
     string MediaTitle,
     string MediaType,
     string? MediaPosterUrl,
@@ -49,7 +49,7 @@ public class ActivityService
     /// Another user's items are filtered by that user's per-type privacy; the viewer
     /// always sees all of their own.
     /// </summary>
-    public async Task<List<ActivityItem>> GetFeedAsync(int viewerId, string scope, int limit)
+    public async Task<List<ActivityItem>> GetFeedAsync(Guid viewerId, string scope, int limit)
     {
         var friendIds = await FriendIdsAsync(viewerId);
         var userIds = scope.ToLowerInvariant() switch
@@ -63,7 +63,7 @@ public class ActivityService
 
     /// <summary>One user's activity, for their public profile. Empty unless the
     /// viewer is that user or a friend.</summary>
-    public async Task<List<ActivityItem>> GetForUserAsync(int viewerId, int targetUserId, int limit)
+    public async Task<List<ActivityItem>> GetForUserAsync(Guid viewerId, Guid targetUserId, int limit)
     {
         if (viewerId != targetUserId)
         {
@@ -73,13 +73,13 @@ public class ActivityService
         return await BuildAsync(viewerId, [targetUserId], limit);
     }
 
-    private async Task<List<int>> FriendIdsAsync(int userId) =>
+    private async Task<List<Guid>> FriendIdsAsync(Guid userId) =>
         await _context.Friendships
             .Where(f => f.Status == "Accepted" && (f.RequesterId == userId || f.AddresseeId == userId))
             .Select(f => f.RequesterId == userId ? f.AddresseeId : f.RequesterId)
             .ToListAsync();
 
-    private async Task<List<ActivityItem>> BuildAsync(int viewerId, List<int> userIds, int limit)
+    private async Task<List<ActivityItem>> BuildAsync(Guid viewerId, List<Guid> userIds, int limit)
     {
         if (userIds.Count == 0) return [];
 

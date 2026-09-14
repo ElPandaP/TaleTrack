@@ -31,22 +31,22 @@ public class ReviewFlowTests(CustomWebApplicationFactory factory)
     }
 
     /// <summary>Tracks a finished movie and returns its mediaId, so tests have something to review.</summary>
-    private static async Task<int> TrackFinishedMovieAsync(HttpClient client, string title)
+    private static async Task<Guid> TrackFinishedMovieAsync(HttpClient client, string title)
     {
         await client.PostAsJsonAsync("/api/tracking/movies", new { Title = title, Minutes = 100, Progress = 100 });
         var lib = await client.GetAsync("/api/library?type=Movie");
         var body = await lib.Content.ReadFromJsonAsync<JsonElement>();
         return body.GetProperty("data").EnumerateArray()
             .First(i => i.GetProperty("title").GetString() == title)
-            .GetProperty("mediaId").GetInt32();
+            .GetProperty("mediaId").GetGuid();
     }
 
-    private static async Task<int> AddReviewAsync(HttpClient client, int mediaId, int rating, string? comment = null)
+    private static async Task<Guid> AddReviewAsync(HttpClient client, Guid mediaId, int rating, string? comment = null)
     {
         var res = await client.PostAsJsonAsync("/api/review", new { MediaId = mediaId, Rating = rating, Comment = comment });
         Assert.True(res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
         var body = await res.Content.ReadFromJsonAsync<JsonElement>();
-        return body.GetProperty("data").GetProperty("id").GetInt32();
+        return body.GetProperty("data").GetProperty("id").GetGuid();
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class ReviewFlowTests(CustomWebApplicationFactory factory)
         var pendingBefore = await client.GetAsync("/api/reviews/pending");
         var pendingBeforeBody = await pendingBefore.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Contains(pendingBeforeBody.GetProperty("data").EnumerateArray(),
-            i => i.GetProperty("mediaId").GetInt32() == mediaId);
+            i => i.GetProperty("mediaId").GetGuid() == mediaId);
 
         await AddReviewAsync(client, mediaId, 8, "Loved it");
 
@@ -70,7 +70,7 @@ public class ReviewFlowTests(CustomWebApplicationFactory factory)
         var pendingAfter = await client.GetAsync("/api/reviews/pending");
         var pendingAfterBody = await pendingAfter.Content.ReadFromJsonAsync<JsonElement>();
         Assert.DoesNotContain(pendingAfterBody.GetProperty("data").EnumerateArray(),
-            i => i.GetProperty("mediaId").GetInt32() == mediaId);
+            i => i.GetProperty("mediaId").GetGuid() == mediaId);
     }
 
     [Fact]

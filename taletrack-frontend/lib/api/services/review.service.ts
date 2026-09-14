@@ -7,7 +7,7 @@ import type {
 
 export const reviewService = {
   /** Create a review. */
-  async addReview(mediaId: number, rating: number, comment?: string): Promise<AddReviewResponse> {
+  async addReview(mediaId: string, rating: number, comment?: string): Promise<AddReviewResponse> {
     return apiClient.post<AddReviewResponse>(
       '/review',
       { mediaId, rating, comment },
@@ -15,7 +15,7 @@ export const reviewService = {
     );
   },
 
-  async editReview(id: number, rating: number, comment?: string): Promise<AddReviewResponse> {
+  async editReview(id: string, rating: number, comment?: string): Promise<AddReviewResponse> {
     return apiClient.put<AddReviewResponse>(
       `/review/${id}`,
       { rating, comment } as EditReviewRequest,
@@ -23,7 +23,7 @@ export const reviewService = {
     );
   },
 
-  async deleteReview(id: number): Promise<{ success: boolean; message: string }> {
+  async deleteReview(id: string): Promise<{ success: boolean; message: string }> {
     return apiClient.delete<{ success: boolean; message: string }>(
       `/review/${id}`,
       true,

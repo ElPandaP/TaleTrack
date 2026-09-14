@@ -115,7 +115,7 @@ public class AuthFlowTests(CustomWebApplicationFactory factory)
 
         var sessionsRes = await client.GetAsync("/api/auth/sessions");
         var sessions = await sessionsRes.Content.ReadFromJsonAsync<JsonElement>();
-        var sessionId = sessions.GetProperty("data")[0].GetProperty("id").GetInt32();
+        var sessionId = sessions.GetProperty("data")[0].GetProperty("id").GetGuid();
 
         var del = await client.DeleteAsync($"/api/auth/sessions/{sessionId}");
         Assert.True(del.IsSuccessStatusCode);
@@ -155,7 +155,7 @@ public class AuthFlowTests(CustomWebApplicationFactory factory)
         owner.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", ownerBody.GetProperty("token").GetString());
         var ownerSessions = await (await owner.GetAsync("/api/auth/sessions")).Content.ReadFromJsonAsync<JsonElement>();
-        var ownerSessionId = ownerSessions.GetProperty("data")[0].GetProperty("id").GetInt32();
+        var ownerSessionId = ownerSessions.GetProperty("data")[0].GetProperty("id").GetGuid();
 
         var attacker = NewClient();
         var attackerBody = await RegisterAndLoginAsync(attacker, "attacker@test.com", "attacker");
