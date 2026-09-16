@@ -57,7 +57,10 @@ public class GoogleSignupTokenService
         var jwtSecret = _configuration["JwtSettings:Secret"];
         if (string.IsNullOrEmpty(jwtSecret)) return null;
 
-        var handler = new JwtSecurityTokenHandler();
+        // Without this, JwtSecurityTokenHandler silently rewrites registered short claim
+        // names (like "email") to long legacy XML/SOAP claim URIs on validation, so the
+        // literal "email" lookup below would never match and every signup would fail.
+        var handler = new JwtSecurityTokenHandler { MapInboundClaims = false };
         var parameters = new TokenValidationParameters
         {
             ValidateIssuer = true,

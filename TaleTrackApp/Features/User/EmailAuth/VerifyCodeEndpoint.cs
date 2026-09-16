@@ -53,7 +53,7 @@ public static class VerifyCodeEndpoint
         await userService.ClearEmailCodeAsync(user.Id);
 
         var token = jwtService.GenerateToken(user.Id, user.Email, user.Username);
-        var refreshToken = await refreshTokens.IssueAsync(user.Id, "Web");
+        var refreshToken = await refreshTokens.IssueAsync(user.Id, "KOReader");
         logger.LogInformation("User {Username} authenticated via email code", user.Username);
 
         return Results.Ok(new

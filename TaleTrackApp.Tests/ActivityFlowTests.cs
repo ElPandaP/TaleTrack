@@ -51,6 +51,21 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
         return await res.Content.ReadFromJsonAsync<JsonElement>();
     }
 
+    private static async Task<Guid> AddReviewAsync(HttpClient client, Guid mediaId, int rating)
+    {
+        var res = await client.PostAsJsonAsync("/api/review", new { MediaId = mediaId, Rating = rating });
+        Assert.True(res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
+        var body = await res.Content.ReadFromJsonAsync<JsonElement>();
+        return body.GetProperty("data").GetProperty("id").GetGuid();
+    }
+
+    private static async Task SetMoviePrivacyAsync(HttpClient client, Guid userId, bool? progress = null, bool? reviews = null)
+    {
+        var res = await client.PutAsJsonAsync($"/api/user/{userId}",
+            new { Privacy = new { MovieProgress = progress, MovieReviews = reviews } });
+        Assert.True(res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
+    }
+
     [Fact]
     public async Task TrackingAMovie_ShowsAsStartedAndFinished_InOwnActivity()
     {
@@ -118,5 +133,67 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
         var viewed = await ActivityAsync(a, $"?userId={bId}");
         Assert.Contains(viewed.GetProperty("data").EnumerateArray(),
             i => i.GetProperty("mediaTitle").GetString() == "Open Meridian");
+    }
+
+    [Fact]
+    public async Task ReviewingAMovie_ShowsAsReviewed_InFriendsSharedFeed()
+    {
+        var (a, aId) = await AuthedClientAsync("activity-review-a@test.com", "activityreviewa");
+        var (b, bId) = await AuthedClientAsync("activity-review-b@test.com", "activityreviewb");
+        await BefriendAsync(a, aId, b, bId);
+
+        await b.PostAsJsonAsync("/api/tracking/movies", new { Title = "Reviewed Nebula", Minutes = 90, Progress = 100 });
+        var lib = await b.GetAsync("/api/library?type=Movie");
+        var mediaId = (await lib.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data").EnumerateArray()
+            .First(i => i.GetProperty("title").GetString() == "Reviewed Nebula").GetProperty("mediaId").GetGuid();
+        await AddReviewAsync(b, mediaId, 8);
+
+        var feed = await ActivityAsync(a, "?scope=friends");
+        Assert.Contains(feed.GetProperty("data").EnumerateArray(),
+            i => i.GetProperty("kind").GetString() == "reviewed"
+                && i.GetProperty("mediaTitle").GetString() == "Reviewed Nebula"
+                && i.GetProperty("rating").GetInt32() == 8);
+    }
+
+    [Fact]
+    public async Task DisablingMovieProgressPrivacy_HidesEventsFromFriends_ButNotFromOwner()
+    {
+        var (a, aId) = await AuthedClientAsync("activity-privacy-progress-a@test.com", "activityprivacyprogressa");
+        var (b, bId) = await AuthedClientAsync("activity-privacy-progress-b@test.com", "activityprivacyprogressb");
+        await BefriendAsync(a, aId, b, bId);
+        await SetMoviePrivacyAsync(b, bId, progress: false);
+
+        await b.PostAsJsonAsync("/api/tracking/movies", new { Title = "Private Comet", Minutes = 90, Progress = 100 });
+
+        var friendsFeed = await ActivityAsync(a, "?scope=friends");
+        Assert.DoesNotContain(friendsFeed.GetProperty("data").EnumerateArray(),
+            i => i.GetProperty("mediaTitle").GetString() == "Private Comet");
+
+        var ownFeed = await ActivityAsync(b, "?scope=mine");
+        Assert.Contains(ownFeed.GetProperty("data").EnumerateArray(),
+            i => i.GetProperty("mediaTitle").GetString() == "Private Comet");
+    }
+
+    [Fact]
+    public async Task DisablingMovieReviewPrivacy_HidesReviewFromFriends_ButNotFromOwner()
+    {
+        var (a, aId) = await AuthedClientAsync("activity-privacy-review-a@test.com", "activityprivacyreviewa");
+        var (b, bId) = await AuthedClientAsync("activity-privacy-review-b@test.com", "activityprivacyreviewb");
+        await BefriendAsync(a, aId, b, bId);
+        await SetMoviePrivacyAsync(b, bId, reviews: false);
+
+        await b.PostAsJsonAsync("/api/tracking/movies", new { Title = "Private Aurora", Minutes = 90, Progress = 100 });
+        var lib = await b.GetAsync("/api/library?type=Movie");
+        var mediaId = (await lib.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data").EnumerateArray()
+            .First(i => i.GetProperty("title").GetString() == "Private Aurora").GetProperty("mediaId").GetGuid();
+        await AddReviewAsync(b, mediaId, 6);
+
+        var friendsFeed = await ActivityAsync(a, "?scope=friends");
+        Assert.DoesNotContain(friendsFeed.GetProperty("data").EnumerateArray(),
+            i => i.GetProperty("kind").GetString() == "reviewed" && i.GetProperty("mediaTitle").GetString() == "Private Aurora");
+
+        var ownFeed = await ActivityAsync(b, "?scope=mine");
+        Assert.Contains(ownFeed.GetProperty("data").EnumerateArray(),
+            i => i.GetProperty("kind").GetString() == "reviewed" && i.GetProperty("mediaTitle").GetString() == "Private Aurora");
     }
 }
