@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { Geist, Geist_Mono, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-import TopNav from "@/components/layout/topnav";
+import TopNav from "@/components/layout/TopNav";
 import { getMe } from "@/lib/api/server";
 import { isJwtValid } from "@/lib/jwt";
 import { getServerDict, getServerLocale } from "@/lib/i18n-server";

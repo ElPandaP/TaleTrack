@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { authService } from '@/lib/api/services';
 import { ApiError } from '@/lib/api/client';
 import { useI18n } from '@/lib/i18n';
-import AuthShell from '@/app/_components/auth-shell';
+import AuthShell from '@/components/auth/AuthShell';
 
 function RevokeSignupInner() {
   const { t } = useI18n();

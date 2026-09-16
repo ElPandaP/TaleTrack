@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
-import Landing from './_components/landing';
-import HomeView, { type HomeData } from './_components/home/home-view';
-import Footer from '@/components/layout/footer';
+import Landing from './_components/Landing';
+import HomeView, { type HomeData } from './_components/home/HomeView';
+import Footer from '@/components/layout/Footer';
 import { getStats, getLibrary, getPendingReviews, getMe } from '@/lib/api/server';
 import { isJwtValid } from '@/lib/jwt';
 import type { GetLibraryResponse, GetStatsResponse, LibraryItem } from '@/lib/types';
@@ -30,7 +30,14 @@ export default async function RootPage() {
   const token = (await cookies()).get('tt-token')?.value;
 
   // Logged-out or expired visitors get the public landing page.
-  if (!token || !isJwtValid(token)) return <Landing />;
+  if (!token || !isJwtValid(token)) {
+    return (
+      <>
+        <Landing />
+        <Footer />
+      </>
+    );
+  }
 
   const [me, stats, books, movies, series, inProgress, pending] = await Promise.allSettled([
     getMe(),

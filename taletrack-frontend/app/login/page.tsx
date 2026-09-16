@@ -18,9 +18,9 @@ import { authService } from '@/lib/api/services';
 import { ApiError } from '@/lib/api/client';
 import { useAuth, parseJwt, type AuthUser } from '@/lib/auth-context';
 import { useI18n } from '@/lib/i18n';
-import LocaleToggle from '@/components/layout/locale-toggle';
-import { ChooseUsernameScreen } from '@/components/auth/choose-username-screen';
-import { LinkedAccountNotice } from '@/components/auth/linked-account-notice';
+import LocaleToggle from '@/components/layout/LocaleToggle';
+import { ChooseUsernameScreen } from '@/components/auth/ChooseUsernameScreen';
+import { LinkedAccountNotice } from '@/components/auth/LinkedAccountNotice';
 
 export default function LoginPage() {
   const router = useRouter();

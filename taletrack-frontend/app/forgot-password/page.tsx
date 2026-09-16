@@ -6,7 +6,7 @@ import { Mail, ArrowRight, ArrowLeft, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authService } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n';
-import AuthShell from '@/app/_components/auth-shell';
+import AuthShell from '@/components/auth/AuthShell';
 
 export default function ForgotPasswordPage() {
   const { t, locale } = useI18n();

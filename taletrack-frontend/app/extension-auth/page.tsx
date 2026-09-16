@@ -9,7 +9,7 @@ import { API_CONFIG } from '@/lib/api/config';
 import { sessionsService } from '@/lib/api/services';
 import { useAuth } from '@/lib/auth-context';
 import { useT } from '@/lib/i18n';
-import LocaleToggle from '@/components/layout/locale-toggle';
+import LocaleToggle from '@/components/layout/LocaleToggle';
 
 // Minimal shape of the API the extension's manifest.json (externally_connectable)
 // grants this origin — no @types/chrome dependency needed for this one call.
