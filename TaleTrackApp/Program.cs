@@ -1,6 +1,9 @@
+using System.Net;
 using System.Reflection;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using TaleTrackApp.Features.User.Login;
 using TaleTrackApp.Features.User.Register;
@@ -60,6 +63,8 @@ configureDatabase();
 configureAuth();
 configureApi();
 configureCors();
+configureRateLimiting();
+configureRequestLimits();
 
 var app = builder.Build();
 
@@ -187,6 +192,49 @@ void configureCors()
     });
 }
 
+void configureRateLimiting()
+{
+    // The backend is only reachable through the Caddy reverse proxy (Docker network, no
+    // published port), so X-Forwarded-For from any peer can be trusted here.
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+        // The in-memory test server has no real client IPs and fires far more requests per
+        // second than any real client would, so the integration test suite would trip this.
+        if (builder.Environment.EnvironmentName == "Testing") return;
+
+        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, IPAddress>(httpContext =>
+        {
+            var ip = httpContext.Connection.RemoteIpAddress ?? IPAddress.None;
+            return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 200,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            });
+        });
+    });
+}
+
+void configureRequestLimits()
+{
+    // Headroom over the 5 MB avatar upload cap (UploadAvatarEndpoint.MaxBytes); every other
+    // request body is small JSON. Rejects oversized bodies at the transport level instead of
+    // buffering them into memory first.
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.Limits.MaxRequestBodySize = 8 * 1024 * 1024;
+    });
+}
+
 void applyMigrations()
 {
     using var scope = app.Services.CreateScope();
@@ -200,11 +248,22 @@ void applyMigrations()
 void configurePipeline()
 {
     applyMigrations();
+    app.UseForwardedHeaders();
+
+    app.Use(async (context, next) =>
+    {
+        context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+        context.Response.Headers.Append("X-Frame-Options", "DENY");
+        context.Response.Headers.Append("Referrer-Policy", "no-referrer");
+        await next();
+    });
+
     app.UseSwagger();
     app.UseSwaggerUI();
     app.UseHttpsRedirection();
     app.UseCors("FrontendCors");
-    
+    app.UseRateLimiter();
+
     app.UseAuthentication();
     app.UseAuthorization();
     
