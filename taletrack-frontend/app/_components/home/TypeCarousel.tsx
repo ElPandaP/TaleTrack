@@ -8,7 +8,7 @@ import { Cover } from '@/components/media/Cover';
 import { StarRating, toStars } from '@/components/media/StarRating';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useT } from '@/lib/i18n';
+import { pickTitle, useI18n } from '@/lib/i18n';
 import type { LibraryItem, LibraryType } from '@/lib/types';
 
 export function TypeCarousel({
@@ -20,7 +20,7 @@ export function TypeCarousel({
   items: LibraryItem[];
   total?: number;
 }) {
-  const t = useT();
+  const { t, locale } = useI18n();
   const plural = t(`typePlural.${type}`);
   const count = total ?? items.length;
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -109,26 +109,29 @@ export function TypeCarousel({
           onClickCapture={onClickCapture}
         >
           <div className="flex gap-3">
-            {items.map((item) => (
-              <figure key={item.mediaId} className="shrink-0 grow-0 basis-[7.5rem]">
-                <Link href={`/media/${item.mediaId}`} draggable={false} className="group block">
-                  <Cover
-                    title={item.title}
-                    type={item.type}
-                    posterUrl={item.posterUrl}
-                    className="transition group-hover:shadow-md group-hover:brightness-[1.03]"
-                  />
-                  <figcaption className="mt-1.5">
-                    <p className="line-clamp-2 text-xs leading-tight text-foreground group-hover:text-primary">
-                      {item.title}
-                    </p>
-                    {item.myRating != null && (
-                      <StarRating stars={toStars(item.myRating)} className="mt-0.5" />
-                    )}
-                  </figcaption>
-                </Link>
-              </figure>
-            ))}
+            {items.map((item) => {
+              const title = pickTitle(item.titleEN, item.titleES, locale);
+              return (
+                <figure key={item.mediaId} className="shrink-0 grow-0 basis-[7.5rem]">
+                  <Link href={`/media/${item.mediaId}`} draggable={false} className="group block">
+                    <Cover
+                      title={title}
+                      type={item.type}
+                      posterUrl={item.posterUrl}
+                      className="transition group-hover:shadow-md group-hover:brightness-[1.03]"
+                    />
+                    <figcaption className="mt-1.5">
+                      <p className="line-clamp-2 text-xs leading-tight text-foreground group-hover:text-primary">
+                        {title}
+                      </p>
+                      {item.myRating != null && (
+                        <StarRating stars={toStars(item.myRating)} className="mt-0.5" />
+                      )}
+                    </figcaption>
+                  </Link>
+                </figure>
+              );
+            })}
 
             {count > items.length && (
               <figure className="shrink-0 grow-0 basis-[7.5rem]">

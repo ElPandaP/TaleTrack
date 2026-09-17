@@ -53,7 +53,8 @@ public static class GetMediaByIdEndpoint
                 data = new
                 {
                     id = media.Id,
-                    title = media.Title,
+                    titleEN = media.TitleEN,
+                    titleES = media.TitleES,
                     type = media.Type,
                     author = media.Author,
                     posterUrl = media.PosterUrl,

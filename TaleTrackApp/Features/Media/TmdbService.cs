@@ -7,8 +7,10 @@ public class TmdbResult
 {
     public string? PosterUrl { get; set; }
     public int? RuntimeMinutes { get; set; }
-    /// <summary>The title in the other language (en↔es), when TMDB has that translation.</summary>
-    public string? AltTitle { get; set; }
+    /// <summary>Title translated to English, when the source was Spanish and TMDB has that translation.</summary>
+    public string? TitleEN { get; set; }
+    /// <summary>Title translated to Spanish, when the source was English and TMDB has that translation.</summary>
+    public string? TitleES { get; set; }
     /// <summary>Episode count per season (index 0 = season 1). Series only.</summary>
     public int[]? SeasonEpisodeCounts { get; set; }
 }
@@ -87,11 +89,14 @@ public class TmdbService(HttpClient http, ILogger<TmdbService> logger, IConfigur
             logger.LogInformation("TMDB: matched '{Found}' ({Score:P0}) for '{Query}'",
                 isMovie ? detail.Title : detail.Name, bestScore, title);
 
+            var cleanAltTitle = string.IsNullOrWhiteSpace(altTitle) ? null : altTitle;
+
             return new TmdbResult
             {
                 PosterUrl = posterUrl,
                 RuntimeMinutes = runtime is > 0 ? runtime : null,
-                AltTitle = string.IsNullOrWhiteSpace(altTitle) ? null : altTitle,
+                TitleEN = otherLang == "en" ? cleanAltTitle : null,
+                TitleES = otherLang == "es" ? cleanAltTitle : null,
                 SeasonEpisodeCounts = seasonEpisodeCounts is { Length: > 0 } ? seasonEpisodeCounts : null,
             };
         }

@@ -1,20 +1,27 @@
 namespace TaleTrackApp.Model;
 
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 public class Media
 {
     [Key]
     public Guid Id { get; set; } = Guid.CreateVersion7();
-    
-    [Required(ErrorMessage = "Title is required")]
-    [StringLength(255, MinimumLength = 1, ErrorMessage = "Title must be between 1 and 255 characters")]
-    public required string Title { get; set; }
 
-    /// <summary>Title in the "other" language (en/es), from TMDB — lets a Netflix UI
-    /// language switch match back to this same row instead of creating a duplicate.</summary>
-    [StringLength(255)]
-    public string? AltTitle { get; set; }
+    /// <summary>English title. At least one of TitleEN/TitleES is always set — which one
+    /// depends on the language the content was first registered in; unsupported/unknown
+    /// languages (e.g. a book, or Netflix in a third language) default here.</summary>
+    [StringLength(255, MinimumLength = 1, ErrorMessage = "TitleEN must be between 1 and 255 characters")]
+    public string? TitleEN { get; set; }
+
+    /// <summary>Spanish title. Filled either directly (content registered from a Spanish
+    /// Netflix UI) or later via TMDB translation once the other language is known.</summary>
+    [StringLength(255, MinimumLength = 1, ErrorMessage = "TitleES must be between 1 and 255 characters")]
+    public string? TitleES { get; set; }
+
+    /// <summary>Display fallback for logging — the frontend picks EN/ES itself per viewer locale.</summary>
+    [NotMapped]
+    public string Title => TitleEN ?? TitleES ?? string.Empty;
 
     [StringLength(1000, ErrorMessage = "Description cannot exceed 1000 characters")]
     public string? Description { get; set; }

@@ -59,11 +59,11 @@ public class LibraryFlowTests(CustomWebApplicationFactory factory)
 
         var inProgress = await LibraryAsync(client, "?type=Movie&status=in_progress");
         Assert.Equal(1, inProgress.GetProperty("count").GetInt32());
-        Assert.Equal("Amber Static", inProgress.GetProperty("data")[0].GetProperty("title").GetString());
+        Assert.Equal("Amber Static", inProgress.GetProperty("data")[0].GetProperty("titleEN").GetString());
 
         var finished = await LibraryAsync(client, "?type=Movie&status=finished");
         Assert.Equal(1, finished.GetProperty("count").GetInt32());
-        Assert.Equal("Rusted Compass", finished.GetProperty("data")[0].GetProperty("title").GetString());
+        Assert.Equal("Rusted Compass", finished.GetProperty("data")[0].GetProperty("titleEN").GetString());
     }
 
     [Fact]
@@ -76,6 +76,6 @@ public class LibraryFlowTests(CustomWebApplicationFactory factory)
 
         var bLibrary = await LibraryAsync(b, "?type=Movie");
         Assert.DoesNotContain(bLibrary.GetProperty("data").EnumerateArray(),
-            i => i.GetProperty("title").GetString() == "Private Nebula");
+            i => i.GetProperty("titleEN").GetString() == "Private Nebula");
     }
 }

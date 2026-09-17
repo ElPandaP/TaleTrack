@@ -8,7 +8,7 @@ import { StarRating, toStars } from '@/components/media/StarRating';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Pagination } from '@/components/ui/pagination';
 import { useAuth } from '@/lib/auth-context';
-import { useI18n } from '@/lib/i18n';
+import { pickTitle, useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { ActivityItem } from '@/lib/types';
 
@@ -33,7 +33,7 @@ function useRelativeTime() {
 
 export default function ActivityClient({ items }: { items: ActivityItem[] }) {
   const { user } = useAuth();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const rel = useRelativeTime();
   const [scope, setScope] = useState<Scope>('all');
   const [page, setPage] = useState(1);
@@ -83,44 +83,47 @@ export default function ActivityClient({ items }: { items: ActivityItem[] }) {
       ) : (
         <>
           <ul className="flex flex-col gap-3">
-            {pageItems.map((it) => (
-              <li key={it.id} className="tt-card flex gap-3 p-4">
-                <Link href={`/u/${it.userId}`} className="shrink-0">
-                  <UserAvatar username={it.username} avatarUrl={it.avatarUrl} size="md" />
-                </Link>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm text-foreground">
-                      <Link href={`/u/${it.userId}`} className="font-medium hover:text-primary">
-                        @{it.username}
-                      </Link>{' '}
-                      <span className="font-semibold">{t(`activity.${it.kind}`)}</span>{' '}
-                      <Link
-                        href={`/media/${it.mediaId}`}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {it.mediaTitle}
-                      </Link>
-                    </p>
-                    <span className="shrink-0 text-xs text-muted-foreground">{rel(it.date)}</span>
+            {pageItems.map((it) => {
+              const title = pickTitle(it.mediaTitleEN, it.mediaTitleES, locale);
+              return (
+                <li key={it.id} className="tt-card flex gap-3 p-4">
+                  <Link href={`/u/${it.userId}`} className="shrink-0">
+                    <UserAvatar username={it.username} avatarUrl={it.avatarUrl} size="md" />
+                  </Link>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm text-foreground">
+                        <Link href={`/u/${it.userId}`} className="font-medium hover:text-primary">
+                          @{it.username}
+                        </Link>{' '}
+                        <span className="font-semibold">{t(`activity.${it.kind}`)}</span>{' '}
+                        <Link
+                          href={`/media/${it.mediaId}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {title}
+                        </Link>
+                      </p>
+                      <span className="shrink-0 text-xs text-muted-foreground">{rel(it.date)}</span>
+                    </div>
+                    {it.kind === 'reviewed' && it.rating != null && (
+                      <StarRating stars={toStars(it.rating)} className="mt-1.5" />
+                    )}
+                    {it.kind === 'reviewed' && it.comment && (
+                      <p className="mt-1.5 line-clamp-3 text-sm text-foreground/80">{it.comment}</p>
+                    )}
                   </div>
-                  {it.kind === 'reviewed' && it.rating != null && (
-                    <StarRating stars={toStars(it.rating)} className="mt-1.5" />
-                  )}
-                  {it.kind === 'reviewed' && it.comment && (
-                    <p className="mt-1.5 line-clamp-3 text-sm text-foreground/80">{it.comment}</p>
-                  )}
-                </div>
-                <Link href={`/media/${it.mediaId}`} className="shrink-0">
-                  <Cover
-                    title={it.mediaTitle}
-                    type={it.mediaType}
-                    posterUrl={it.mediaPosterUrl}
-                    className="w-10 rounded-md"
-                  />
-                </Link>
-              </li>
-            ))}
+                  <Link href={`/media/${it.mediaId}`} className="shrink-0">
+                    <Cover
+                      title={title}
+                      type={it.mediaType}
+                      posterUrl={it.mediaPosterUrl}
+                      className="w-10 rounded-md"
+                    />
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
 
           <Pagination page={current} totalPages={totalPages} onChange={setPage} className="mt-8" />

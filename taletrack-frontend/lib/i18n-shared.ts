@@ -14,3 +14,15 @@ export function isLocale(v: string | undefined | null): v is Locale {
 export function localeFromHeader(header: string | null): Locale {
   return header?.toLowerCase().trimStart().startsWith('es') ? 'es' : 'en';
 }
+
+/** Media titles come from the backend as separate EN/ES fields (see Media.TitleEN/TitleES) —
+ * pick the one matching the viewer's locale, falling back to whichever one is set. */
+export function pickTitle(
+  titleEN: string | null | undefined,
+  titleES: string | null | undefined,
+  locale: Locale,
+): string {
+  const preferred = locale === 'es' ? titleES : titleEN;
+  const fallback = locale === 'es' ? titleEN : titleES;
+  return preferred || fallback || '';
+}

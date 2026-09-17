@@ -11,7 +11,8 @@ public record ActivityItem(
     string Kind,          // "started" | "finished" | "reviewed"
     DateTime Date,
     Guid MediaId,
-    string MediaTitle,
+    string? MediaTitleEN,
+    string? MediaTitleES,
     string MediaType,
     string? MediaPosterUrl,
     int? Rating,
@@ -108,7 +109,7 @@ public class ActivityService
             var started = g.OrderBy(x => x.EventDate).First();
             items.Add(new ActivityItem(
                 $"start-{g.Key.UserId}-{g.Key.MediaId}", u.Id, u.Username, u.AvatarUrl,
-                "started", started.EventDate, media.Id, media.Title, media.Type, media.PosterUrl, null, null));
+                "started", started.EventDate, media.Id, media.TitleEN, media.TitleES, media.Type, media.PosterUrl, null, null));
 
             // With upsert, a title finished in one sitting is a single row — so a lone
             // Progress==100 event still counts as "finished".
@@ -117,7 +118,7 @@ public class ActivityService
             {
                 items.Add(new ActivityItem(
                     $"finish-{g.Key.UserId}-{g.Key.MediaId}", u.Id, u.Username, u.AvatarUrl,
-                    "finished", finished.EventDate, media.Id, media.Title, media.Type, media.PosterUrl, null, null));
+                    "finished", finished.EventDate, media.Id, media.TitleEN, media.TitleES, media.Type, media.PosterUrl, null, null));
             }
         }
 
@@ -127,7 +128,7 @@ public class ActivityService
             if (r.UserId != viewerId && !ShowReviews(u, r.Media!.Type)) continue;
             items.Add(new ActivityItem(
                 $"review-{r.Id}", u.Id, u.Username, u.AvatarUrl,
-                "reviewed", r.CreatedAt, r.Media!.Id, r.Media.Title, r.Media.Type, r.Media.PosterUrl, r.Rating, r.Comment));
+                "reviewed", r.CreatedAt, r.Media!.Id, r.Media.TitleEN, r.Media.TitleES, r.Media.Type, r.Media.PosterUrl, r.Rating, r.Comment));
         }
 
         return items

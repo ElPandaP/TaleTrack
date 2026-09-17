@@ -4,7 +4,13 @@
 // Page-reading logic (what's on this Netflix page) lives in ./netflix-extract.
 
 import type { NetflixMedia, ExtractDataMessage } from './types';
-import { NO_TITLE, extractNetflixData, requestNetflixData } from './netflix-extract';
+import {
+  NO_TITLE,
+  extractNetflixData,
+  requestNetflixData,
+  getCreditsOffsetSeconds,
+  CREDITS_MARGIN_SECONDS,
+} from './netflix-extract';
 import { AUTO_POLL_MS } from './config';
 
 chrome.runtime.onMessage.addListener((message: ExtractDataMessage, _sender, sendResponse) => {
@@ -46,14 +52,25 @@ const AUTH_BACKOFF_MS = 5 * 60 * 1000;
 
 let trackedVideoId: string | null = null;
 let trackedMedia: NetflixMedia | null = null;
+let trackedCreditsOffsetSeconds: number | null = null;
 let backoffUntil = 0;
 
-function livePlayback(): { percent: number; runtimeSeconds: number } | null {
+function livePlayback(creditsOffsetSeconds: number | null): { percent: number; runtimeSeconds: number } | null {
   const video = document.querySelector('video') as HTMLVideoElement | null;
   if (!video || !Number.isFinite(video.duration) || video.duration <= 0) return null;
   if (!Number.isFinite(video.currentTime)) return null;
+
+  let percent = Math.max(0, Math.min(100, Math.round((video.currentTime / video.duration) * 100)));
+
+  // Once within reach of the credits — or already past them — count it as
+  // done, instead of tracking stalling just under 100% (Netflix often cuts
+  // to the next episode before the <video> itself reaches its duration).
+  if (creditsOffsetSeconds !== null && video.currentTime >= creditsOffsetSeconds - CREDITS_MARGIN_SECONDS) {
+    percent = 100;
+  }
+
   return {
-    percent: Math.max(0, Math.min(100, Math.round((video.currentTime / video.duration) * 100))),
+    percent,
     runtimeSeconds: Math.round(video.duration),
   };
 }
@@ -112,6 +129,7 @@ async function resolveMediaFor(videoId: string): Promise<void> {
     console.log('[TaleTrack] resolveMediaFor: settled on ->', media?.title, 'for videoId', videoId);
     trackedVideoId = videoId;
     trackedMedia = media;
+    trackedCreditsOffsetSeconds = getCreditsOffsetSeconds();
   } finally {
     resolvingVideoId = null;
   }
@@ -122,7 +140,7 @@ function reportProgress(flush: boolean): void {
   const videoId = getCurrentVideoId();
   if (!videoId || !trackedMedia || trackedVideoId !== videoId) return;
 
-  const playback = livePlayback();
+  const playback = livePlayback(trackedCreditsOffsetSeconds);
   if (!playback) return;
 
   const media: NetflixMedia = {
@@ -151,6 +169,7 @@ async function autoTick(): Promise<void> {
   if (trackedVideoId && trackedVideoId !== videoId) {
     reportProgress(true);
     trackedMedia = null;
+    trackedCreditsOffsetSeconds = null;
   }
 
   await resolveMediaFor(videoId);

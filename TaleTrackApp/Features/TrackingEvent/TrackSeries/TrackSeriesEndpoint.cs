@@ -31,7 +31,8 @@ public static class TrackSeriesEndpoint
         {
             // Length is a movie/book-only concept (a single runtime/page-count); a series'
             // episodes vary in length, so there's no meaningful single "length" to record.
-            var media = await mediaService.FindOrCreateAsync(request.Title, "Series", length: 0);
+            var media = await mediaService.FindOrCreateAsync(request.Title, "Series", length: 0,
+                language: request.Language);
             await trackingEventService.UpsertAsync(
                 userId, media.Id, request.Progress,
                 request.Season, request.Episode);
@@ -41,7 +42,8 @@ public static class TrackSeriesEndpoint
 
             // Fire-and-forget TMDB enrichment — the extension doesn't wait for this.
             if (!string.IsNullOrWhiteSpace(request.Language) &&
-                (string.IsNullOrWhiteSpace(media.PosterUrl) || string.IsNullOrWhiteSpace(media.AltTitle)))
+                (string.IsNullOrWhiteSpace(media.PosterUrl) ||
+                 string.IsNullOrWhiteSpace(media.TitleEN) || string.IsNullOrWhiteSpace(media.TitleES)))
             {
                 var (mediaId, title, language) = (media.Id, request.Title, request.Language);
                 _ = Task.Run(async () =>

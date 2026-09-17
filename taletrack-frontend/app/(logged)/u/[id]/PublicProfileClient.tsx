@@ -14,7 +14,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { friendService } from '@/lib/api/services';
-import { useI18n } from '@/lib/i18n';
+import { pickTitle, useI18n } from '@/lib/i18n';
 import { sendErrorKey } from '@/lib/api/friend-errors';
 import type { ActivityItem, PublicProfile } from '@/lib/types';
 
@@ -152,33 +152,36 @@ export default function PublicProfileClient({
       ) : (
         <>
           <ul className="flex flex-col gap-3">
-            {pageItems.map((it) => (
-              <li key={it.id} className="tt-card flex items-start gap-3 p-4">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-foreground">
-                    {t(`activity.${it.kind}`)}{' '}
-                    <Link href={`/media/${it.mediaId}`} className="font-medium text-primary hover:underline">
-                      {it.mediaTitle}
-                    </Link>
-                    <span className="ml-2 text-xs text-muted-foreground">{rel(it.date)}</span>
-                  </p>
-                  {it.kind === 'reviewed' && it.rating != null && (
-                    <StarRating stars={toStars(it.rating)} className="mt-1.5" />
-                  )}
-                  {it.kind === 'reviewed' && it.comment && (
-                    <p className="mt-1.5 line-clamp-3 text-sm text-foreground/80">{it.comment}</p>
-                  )}
-                </div>
-                <Link href={`/media/${it.mediaId}`} className="shrink-0">
-                  <Cover
-                    title={it.mediaTitle}
-                    type={it.mediaType}
-                    posterUrl={it.mediaPosterUrl}
-                    className="w-10 rounded-md"
-                  />
-                </Link>
-              </li>
-            ))}
+            {pageItems.map((it) => {
+              const title = pickTitle(it.mediaTitleEN, it.mediaTitleES, locale);
+              return (
+                <li key={it.id} className="tt-card flex items-start gap-3 p-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-foreground">
+                      {t(`activity.${it.kind}`)}{' '}
+                      <Link href={`/media/${it.mediaId}`} className="font-medium text-primary hover:underline">
+                        {title}
+                      </Link>
+                      <span className="ml-2 text-xs text-muted-foreground">{rel(it.date)}</span>
+                    </p>
+                    {it.kind === 'reviewed' && it.rating != null && (
+                      <StarRating stars={toStars(it.rating)} className="mt-1.5" />
+                    )}
+                    {it.kind === 'reviewed' && it.comment && (
+                      <p className="mt-1.5 line-clamp-3 text-sm text-foreground/80">{it.comment}</p>
+                    )}
+                  </div>
+                  <Link href={`/media/${it.mediaId}`} className="shrink-0">
+                    <Cover
+                      title={title}
+                      type={it.mediaType}
+                      posterUrl={it.mediaPosterUrl}
+                      className="w-10 rounded-md"
+                    />
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
 
           <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} className="mt-6" />

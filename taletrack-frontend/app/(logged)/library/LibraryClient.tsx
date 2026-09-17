@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Pagination } from '@/components/ui/pagination';
 import { trackingService } from '@/lib/api/services';
-import { useT } from '@/lib/i18n';
+import { pickTitle, useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { LibraryItem, LibraryType } from '@/lib/types';
 
@@ -85,7 +85,7 @@ const REVIEW_KEYS: ReviewKey[] = ['all', 'done', 'todo'];
 const STATUS_KEYS: StatusKey[] = ['all', 'reading', 'done'];
 
 export default function LibraryClient({ items }: { items: LibraryItem[] }) {
-  const t = useT();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
   const initialTab = (params.get('type') as Tab) ?? 'all';
@@ -126,7 +126,10 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
   const visible = useMemo(() => {
     const list = items.filter((it) => {
       if (tab !== 'all' && it.type !== tab) return false;
-      if (trimmedQuery && !`${it.title} ${it.author ?? ''}`.toLowerCase().includes(trimmedQuery))
+      if (
+        trimmedQuery &&
+        !`${it.titleEN ?? ''} ${it.titleES ?? ''} ${it.author ?? ''}`.toLowerCase().includes(trimmedQuery)
+      )
         return false;
       if (status === 'reading' && it.progress === 100) return false;
       if (status === 'done' && it.progress !== 100) return false;
@@ -177,7 +180,7 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
   const openReview = (it: LibraryItem) => {
     setTarget({
       mediaId: it.mediaId,
-      title: it.title,
+      title: pickTitle(it.titleEN, it.titleES, locale),
       type: it.type,
       posterUrl: it.posterUrl,
       reviewId: it.myReviewId,
@@ -194,7 +197,7 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
   const openEditProgress = (it: LibraryItem) => {
     setProgressTarget({
       mediaId: it.mediaId,
-      title: it.title,
+      title: pickTitle(it.titleEN, it.titleES, locale),
       type: it.type,
       posterUrl: it.posterUrl,
       progress: it.progress,
@@ -206,7 +209,7 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
   };
 
   const removeTracking = async (it: LibraryItem) => {
-    if (!confirm(t('library.removeConfirm', { title: it.title }))) return;
+    if (!confirm(t('library.removeConfirm', { title: pickTitle(it.titleEN, it.titleES, locale) }))) return;
     setDeleting(it.mediaId);
     try {
       await trackingService.deleteTracking(it.mediaId);
@@ -319,17 +322,18 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
             {pageItems.map((it) => {
               const finished = it.progress === 100;
               const rated = it.myRating != null;
+              const title = pickTitle(it.titleEN, it.titleES, locale);
               return (
                 <li key={it.mediaId} className="group/item relative flex flex-col">
                   <Link href={`/media/${it.mediaId}`} className="group block">
                     <Cover
-                      title={it.title}
+                      title={title}
                       type={it.type}
                       posterUrl={it.posterUrl}
                       className="transition group-hover:shadow-md group-hover:brightness-[1.03]"
                     />
                     <p className="mt-1.5 line-clamp-2 text-xs leading-tight text-foreground group-hover:text-primary">
-                      {it.title}
+                      {title}
                     </p>
                   </Link>
                   <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 transition-opacity group-hover/item:opacity-100 focus-within:opacity-100">
@@ -338,7 +342,7 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
                       variant="secondary"
                       size="icon-xs"
                       onClick={() => openEditProgress(it)}
-                      aria-label={t('library.editProgressOf', { title: it.title })}
+                      aria-label={t('library.editProgressOf', { title })}
                       className="bg-background/90 text-muted-foreground shadow-sm backdrop-blur hover:bg-background hover:text-foreground"
                     >
                       <Pencil aria-hidden="true" className="size-3.5" />
@@ -349,7 +353,7 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
                       size="icon-xs"
                       onClick={() => removeTracking(it)}
                       disabled={deleting === it.mediaId}
-                      aria-label={t('library.removeFromLibrary', { title: it.title })}
+                      aria-label={t('library.removeFromLibrary', { title })}
                       className="bg-background/90 text-muted-foreground shadow-sm backdrop-blur hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash2 aria-hidden="true" className="size-3.5" />
@@ -361,7 +365,7 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
                       type="button"
                       onClick={() => openReview(it)}
                       className="mt-1 cursor-pointer self-start"
-                      aria-label={t('library.editReviewOf', { title: it.title })}
+                      aria-label={t('library.editReviewOf', { title })}
                     >
                       <StarRating stars={toStars(it.myRating)} />
                     </button>

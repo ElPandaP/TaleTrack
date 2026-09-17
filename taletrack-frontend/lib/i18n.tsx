@@ -5,7 +5,7 @@ import en from '@/messages/en.json';
 import es from '@/messages/es.json';
 import { type Locale } from './i18n-shared';
 
-export { LOCALES, DEFAULT_LOCALE, isLocale, localeFromHeader, type Locale } from './i18n-shared';
+export { LOCALES, DEFAULT_LOCALE, isLocale, localeFromHeader, pickTitle, type Locale } from './i18n-shared';
 
 const DICTS: Record<Locale, Record<string, string>> = { en, es };
 

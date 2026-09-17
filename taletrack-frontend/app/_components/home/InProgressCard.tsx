@@ -3,13 +3,13 @@
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { Cover } from '@/components/media/Cover';
-import { useT } from '@/lib/i18n';
+import { pickTitle, useI18n } from '@/lib/i18n';
 import type { LibraryItem } from '@/lib/types';
 
 const MAX_ROWS = 5;
 
 export function InProgressCard({ items }: { items: LibraryItem[] }) {
-  const t = useT();
+  const { t, locale } = useI18n();
   const shown = items.slice(0, MAX_ROWS);
 
   return (
@@ -32,6 +32,7 @@ export function InProgressCard({ items }: { items: LibraryItem[] }) {
         <ul className="flex flex-col gap-2.5">
           {shown.map((item) => {
             const pct = item.progress ?? 0;
+            const title = pickTitle(item.titleEN, item.titleES, locale);
             return (
               <li key={item.mediaId}>
                 <Link
@@ -39,14 +40,14 @@ export function InProgressCard({ items }: { items: LibraryItem[] }) {
                   className="group -mx-1 flex items-center gap-3 rounded-lg px-1 py-1 transition-colors hover:bg-secondary/50"
                 >
                   <Cover
-                    title={item.title}
+                    title={title}
                     type={item.type}
                     posterUrl={item.posterUrl}
                     className="w-10 shrink-0 rounded-md"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-medium text-foreground group-hover:text-primary">
-                      {item.title}
+                      {title}
                     </p>
                     <div className="mt-1.5 flex items-center gap-2">
                       <Progress value={pct} className="h-1" />

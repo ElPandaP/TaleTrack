@@ -45,7 +45,7 @@ public class TrackingSplitTests(CustomWebApplicationFactory factory)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        return await db.TrackingEvents.CountAsync(te => te.Media!.Title == title);
+        return await db.TrackingEvents.CountAsync(te => te.Media!.TitleEN == title || te.Media!.TitleES == title);
     }
 
     [Fact]

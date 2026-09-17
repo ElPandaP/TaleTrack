@@ -37,7 +37,7 @@ public class ReviewFlowTests(CustomWebApplicationFactory factory)
         var lib = await client.GetAsync("/api/library?type=Movie");
         var body = await lib.Content.ReadFromJsonAsync<JsonElement>();
         return body.GetProperty("data").EnumerateArray()
-            .First(i => i.GetProperty("title").GetString() == title)
+            .First(i => i.GetProperty("titleEN").GetString() == title)
             .GetProperty("mediaId").GetGuid();
     }
 

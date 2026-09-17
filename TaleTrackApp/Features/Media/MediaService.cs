@@ -21,11 +21,15 @@ public class MediaService
     }
 
     public async Task<Model.Media> CreateAsync(string title, string type, int length,
-        string? author = null, string? isbn = null)
+        string? author = null, string? isbn = null, string? language = null)
     {
         var media = new Model.Media
         {
-            Title = title,
+            // Spanish only when explicitly detected; everything else (English,
+            // unsupported/unknown languages, books with no language concept) defaults
+            // to the English field.
+            TitleEN = language == "es" ? null : title,
+            TitleES = language == "es" ? title : null,
             Type = type,
             Length = length,
             Author = author,
@@ -41,7 +45,7 @@ public class MediaService
     }
 
     public async Task<Model.Media> FindOrCreateAsync(string title, string type, int length,
-        string? author = null, string? isbn = null)
+        string? author = null, string? isbn = null, string? language = null)
     {
         // 1. Deduplicate by ISBN (most precise)
         if (!string.IsNullOrWhiteSpace(isbn))
@@ -55,11 +59,11 @@ public class MediaService
             }
         }
 
-        // 2. Deduplicate by title + author
+        // 2. Deduplicate by title (either language) + author
         if (!string.IsNullOrWhiteSpace(author))
         {
             var byTitleAuthor = await _context.Medias
-                .FirstOrDefaultAsync(m => m.Title == title && m.Author == author && m.Type == type);
+                .FirstOrDefaultAsync(m => (m.TitleEN == title || m.TitleES == title) && m.Author == author && m.Type == type);
             if (byTitleAuthor != null)
             {
                 _logger.LogInformation("Media found by title+author: {Title} (ID: {Id})", byTitleAuthor.Title, byTitleAuthor.Id);
@@ -67,27 +71,18 @@ public class MediaService
             }
         }
 
-        // 3. Deduplicate by title alone (existing behaviour)
+        // 3. Deduplicate by title alone (either language) — catches the same movie/series
+        // tracked again after the Netflix UI language changed (e.g. "Rick y Morty" vs
+        // "Rick and Morty"), once TMDB enrichment has recorded the other-language title.
         var byTitle = await _context.Medias
-            .FirstOrDefaultAsync(m => m.Title == title && m.Type == type);
+            .FirstOrDefaultAsync(m => (m.TitleEN == title || m.TitleES == title) && m.Type == type);
         if (byTitle != null)
         {
             _logger.LogInformation("Media found by title: {Title} (ID: {Id})", byTitle.Title, byTitle.Id);
             return byTitle;
         }
 
-        // 4. Deduplicate by AltTitle — catches the same movie/series tracked again
-        // after the Netflix UI language changed (e.g. "Rick y Morty" vs "Rick and
-        // Morty"), once TMDB enrichment has recorded the other-language title.
-        var byAltTitle = await _context.Medias
-            .FirstOrDefaultAsync(m => m.AltTitle == title && m.Type == type);
-        if (byAltTitle != null)
-        {
-            _logger.LogInformation("Media found by AltTitle: {Title} (ID: {Id})", byAltTitle.Title, byAltTitle.Id);
-            return byAltTitle;
-        }
-
-        return await CreateAsync(title, type, length, author, isbn);
+        return await CreateAsync(title, type, length, author, isbn, language);
     }
 
     public async Task ApplyEnrichmentAsync(Guid mediaId, OpenLibraryResult result)
@@ -118,8 +113,10 @@ public class MediaService
         // there's no single "length" worth recording for one (see SeasonEpisodeCounts).
         if (media.Type == "Movie" && result.RuntimeMinutes is int minutes && minutes > 0 && media.Length <= 0)
             media.Length = minutes;
-        if (!string.IsNullOrWhiteSpace(result.AltTitle) && string.IsNullOrWhiteSpace(media.AltTitle))
-            media.AltTitle = result.AltTitle;
+        if (!string.IsNullOrWhiteSpace(result.TitleEN) && string.IsNullOrWhiteSpace(media.TitleEN))
+            media.TitleEN = result.TitleEN;
+        if (!string.IsNullOrWhiteSpace(result.TitleES) && string.IsNullOrWhiteSpace(media.TitleES))
+            media.TitleES = result.TitleES;
         if (result.SeasonEpisodeCounts is { Length: > 0 } && media.SeasonEpisodeCounts == null)
             media.SeasonEpisodeCounts = result.SeasonEpisodeCounts;
 

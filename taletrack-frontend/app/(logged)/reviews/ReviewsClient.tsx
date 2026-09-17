@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ReviewModal, type ReviewTarget } from '@/components/media/ReviewModal';
 import { reviewService } from '@/lib/api/services';
-import { useI18n } from '@/lib/i18n';
+import { pickTitle, useI18n } from '@/lib/i18n';
 import type { ReviewItem } from '@/lib/types';
 
 export default function ReviewsClient({ reviews }: { reviews: ReviewItem[] }) {
@@ -26,7 +26,7 @@ export default function ReviewsClient({ reviews }: { reviews: ReviewItem[] }) {
     if (!r.media) return;
     setTarget({
       mediaId: r.mediaId,
-      title: r.media.title,
+      title: pickTitle(r.media.titleEN, r.media.titleES, locale),
       type: r.media.type,
       posterUrl: r.media.posterUrl,
       reviewId: r.id,
@@ -56,11 +56,13 @@ export default function ReviewsClient({ reviews }: { reviews: ReviewItem[] }) {
         <EmptyState>{t('reviews.empty')}</EmptyState>
       ) : (
         <ul className="flex flex-col gap-4">
-          {reviews.map((r) => (
+          {reviews.map((r) => {
+            const title = r.media ? pickTitle(r.media.titleEN, r.media.titleES, locale) : null;
+            return (
             <li key={r.id} className="tt-card flex gap-4 p-4">
               {r.media && (
                 <Cover
-                  title={r.media.title}
+                  title={title ?? ''}
                   type={r.media.type}
                   posterUrl={r.media.posterUrl}
                   className="w-14 shrink-0"
@@ -70,7 +72,7 @@ export default function ReviewsClient({ reviews }: { reviews: ReviewItem[] }) {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate font-medium text-foreground">
-                      {r.media?.title ?? `#${r.mediaId}`}
+                      {title ?? `#${r.mediaId}`}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {r.media ? t(`type.${r.media.type}`) : ''} · {fmtDate(r.createdAt)}
@@ -104,7 +106,8 @@ export default function ReviewsClient({ reviews }: { reviews: ReviewItem[] }) {
                 {r.comment && <p className="mt-2 text-sm text-foreground/90">{r.comment}</p>}
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 

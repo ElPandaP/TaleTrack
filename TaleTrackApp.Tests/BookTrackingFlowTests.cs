@@ -64,7 +64,7 @@ public class BookTrackingFlowTests(CustomWebApplicationFactory factory)
         Assert.Equal(1, books.GetProperty("count").GetInt32());
 
         var first = books.GetProperty("data")[0];
-        Assert.Equal("Dune",          first.GetProperty("title").GetString());
+        Assert.Equal("Dune",          first.GetProperty("titleEN").GetString());
         Assert.Equal("Frank Herbert", first.GetProperty("author").GetString());
     }
 

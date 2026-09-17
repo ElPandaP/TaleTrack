@@ -47,7 +47,8 @@ export type LibraryType = 'Book' | 'Movie' | 'Series';
 
 export interface LibraryItem {
   mediaId: string;
-  title: string;
+  titleEN?: string | null;
+  titleES?: string | null;
   type: LibraryType;
   author?: string | null;
   posterUrl?: string | null;
@@ -93,7 +94,8 @@ export interface ReviewItem {
   updatedAt?: string | null;
   media?: {
     id: string;
-    title: string;
+    titleEN?: string | null;
+    titleES?: string | null;
     type: LibraryType;
     posterUrl?: string | null;
     author?: string | null;
@@ -122,7 +124,8 @@ export interface MediaDetailReview {
 
 export interface MediaDetail {
   id: string;
-  title: string;
+  titleEN?: string | null;
+  titleES?: string | null;
   type: LibraryType;
   author?: string | null;
   posterUrl?: string | null;
@@ -188,7 +191,8 @@ export interface ActivityItem {
   kind: ActivityKind;
   date: string;
   mediaId: string;
-  mediaTitle: string;
+  mediaTitleEN?: string | null;
+  mediaTitleES?: string | null;
   mediaType: LibraryType;
   mediaPosterUrl?: string | null;
   rating?: number | null;

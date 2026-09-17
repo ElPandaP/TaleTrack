@@ -74,7 +74,7 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
 
         var feed = await ActivityAsync(client, "?scope=mine");
         var kinds = feed.GetProperty("data").EnumerateArray()
-            .Where(i => i.GetProperty("mediaTitle").GetString() == "Drifting Static")
+            .Where(i => i.GetProperty("mediaTitleEN").GetString() == "Drifting Static")
             .Select(i => i.GetProperty("kind").GetString())
             .ToList();
 
@@ -93,7 +93,7 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
 
         var feed = await ActivityAsync(a, "?scope=friends");
         Assert.Contains(feed.GetProperty("data").EnumerateArray(),
-            i => i.GetProperty("mediaTitle").GetString() == "Borrowed Aurora" && i.GetProperty("userId").GetGuid() == bId);
+            i => i.GetProperty("mediaTitleEN").GetString() == "Borrowed Aurora" && i.GetProperty("userId").GetGuid() == bId);
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
 
         var feed = await ActivityAsync(a, "?scope=all");
         Assert.DoesNotContain(feed.GetProperty("data").EnumerateArray(),
-            i => i.GetProperty("mediaTitle").GetString() == "Unshared Comet");
+            i => i.GetProperty("mediaTitleEN").GetString() == "Unshared Comet");
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
 
         var viewed = await ActivityAsync(a, $"?userId={bId}");
         Assert.Contains(viewed.GetProperty("data").EnumerateArray(),
-            i => i.GetProperty("mediaTitle").GetString() == "Open Meridian");
+            i => i.GetProperty("mediaTitleEN").GetString() == "Open Meridian");
     }
 
     [Fact]
@@ -145,13 +145,13 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
         await b.PostAsJsonAsync("/api/tracking/movies", new { Title = "Reviewed Nebula", Minutes = 90, Progress = 100 });
         var lib = await b.GetAsync("/api/library?type=Movie");
         var mediaId = (await lib.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data").EnumerateArray()
-            .First(i => i.GetProperty("title").GetString() == "Reviewed Nebula").GetProperty("mediaId").GetGuid();
+            .First(i => i.GetProperty("titleEN").GetString() == "Reviewed Nebula").GetProperty("mediaId").GetGuid();
         await AddReviewAsync(b, mediaId, 8);
 
         var feed = await ActivityAsync(a, "?scope=friends");
         Assert.Contains(feed.GetProperty("data").EnumerateArray(),
             i => i.GetProperty("kind").GetString() == "reviewed"
-                && i.GetProperty("mediaTitle").GetString() == "Reviewed Nebula"
+                && i.GetProperty("mediaTitleEN").GetString() == "Reviewed Nebula"
                 && i.GetProperty("rating").GetInt32() == 8);
     }
 
@@ -167,11 +167,11 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
 
         var friendsFeed = await ActivityAsync(a, "?scope=friends");
         Assert.DoesNotContain(friendsFeed.GetProperty("data").EnumerateArray(),
-            i => i.GetProperty("mediaTitle").GetString() == "Private Comet");
+            i => i.GetProperty("mediaTitleEN").GetString() == "Private Comet");
 
         var ownFeed = await ActivityAsync(b, "?scope=mine");
         Assert.Contains(ownFeed.GetProperty("data").EnumerateArray(),
-            i => i.GetProperty("mediaTitle").GetString() == "Private Comet");
+            i => i.GetProperty("mediaTitleEN").GetString() == "Private Comet");
     }
 
     [Fact]
@@ -185,15 +185,15 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
         await b.PostAsJsonAsync("/api/tracking/movies", new { Title = "Private Aurora", Minutes = 90, Progress = 100 });
         var lib = await b.GetAsync("/api/library?type=Movie");
         var mediaId = (await lib.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data").EnumerateArray()
-            .First(i => i.GetProperty("title").GetString() == "Private Aurora").GetProperty("mediaId").GetGuid();
+            .First(i => i.GetProperty("titleEN").GetString() == "Private Aurora").GetProperty("mediaId").GetGuid();
         await AddReviewAsync(b, mediaId, 6);
 
         var friendsFeed = await ActivityAsync(a, "?scope=friends");
         Assert.DoesNotContain(friendsFeed.GetProperty("data").EnumerateArray(),
-            i => i.GetProperty("kind").GetString() == "reviewed" && i.GetProperty("mediaTitle").GetString() == "Private Aurora");
+            i => i.GetProperty("kind").GetString() == "reviewed" && i.GetProperty("mediaTitleEN").GetString() == "Private Aurora");
 
         var ownFeed = await ActivityAsync(b, "?scope=mine");
         Assert.Contains(ownFeed.GetProperty("data").EnumerateArray(),
-            i => i.GetProperty("kind").GetString() == "reviewed" && i.GetProperty("mediaTitle").GetString() == "Private Aurora");
+            i => i.GetProperty("kind").GetString() == "reviewed" && i.GetProperty("mediaTitleEN").GetString() == "Private Aurora");
     }
 }

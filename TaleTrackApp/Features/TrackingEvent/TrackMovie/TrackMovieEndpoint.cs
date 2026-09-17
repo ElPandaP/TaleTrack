@@ -29,14 +29,16 @@ public static class TrackMovieEndpoint
 
         try
         {
-            var media = await mediaService.FindOrCreateAsync(request.Title, "Movie", request.Minutes ?? 0);
+            var media = await mediaService.FindOrCreateAsync(request.Title, "Movie", request.Minutes ?? 0,
+                language: request.Language);
             await trackingEventService.UpsertAsync(userId, media.Id, request.Progress);
 
             logger.LogInformation("Movie tracking for user {UserId}, '{Title}'", userId, media.Title);
 
             // Fire-and-forget TMDB enrichment — the extension doesn't wait for this.
             if (!string.IsNullOrWhiteSpace(request.Language) &&
-                (string.IsNullOrWhiteSpace(media.PosterUrl) || string.IsNullOrWhiteSpace(media.AltTitle)))
+                (string.IsNullOrWhiteSpace(media.PosterUrl) ||
+                 string.IsNullOrWhiteSpace(media.TitleEN) || string.IsNullOrWhiteSpace(media.TitleES)))
             {
                 var (mediaId, title, language) = (media.Id, request.Title, request.Language);
                 _ = Task.Run(async () =>

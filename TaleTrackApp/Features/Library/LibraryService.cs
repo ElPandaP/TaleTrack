@@ -7,7 +7,8 @@ namespace TaleTrackApp.Features.Library;
 /// <summary>One deduplicated media in the user's library, with their progress and rating.</summary>
 public record LibraryItem(
     Guid MediaId,
-    string Title,
+    string? TitleEN,
+    string? TitleES,
     string Type,
     string? Author,
     string? PosterUrl,
@@ -78,7 +79,8 @@ public class LibraryService
                 reviewByMedia.TryGetValue(g.Key, out var review);
                 return new LibraryItem(
                     MediaId: media.Id,
-                    Title: media.Title,
+                    TitleEN: media.TitleEN,
+                    TitleES: media.TitleES,
                     Type: media.Type,
                     Author: media.Author,
                     PosterUrl: media.PosterUrl,

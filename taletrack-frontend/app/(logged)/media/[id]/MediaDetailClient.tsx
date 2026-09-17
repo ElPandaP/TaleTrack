@@ -9,12 +9,13 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ReviewModal, type ReviewTarget } from '@/components/media/ReviewModal';
-import { useI18n } from '@/lib/i18n';
+import { pickTitle, useI18n } from '@/lib/i18n';
 import type { MediaDetail } from '@/lib/types';
 
 export default function MediaDetailClient({ detail }: { detail: MediaDetail }) {
   const { t, tp, locale } = useI18n();
   const router = useRouter();
+  const title = pickTitle(detail.titleEN, detail.titleES, locale);
   const [modalOpen, setModalOpen] = useState(false);
   // history.state.idx is only > 0 once you've navigated within the app, so
   // back() is safe; a direct load/refresh has no history to go back to.
@@ -29,7 +30,7 @@ export default function MediaDetailClient({ detail }: { detail: MediaDetail }) {
 
   const target: ReviewTarget = {
     mediaId: detail.id,
-    title: detail.title,
+    title,
     type: detail.type,
     posterUrl: detail.posterUrl,
     reviewId: detail.myReviewId,
@@ -56,7 +57,7 @@ export default function MediaDetailClient({ detail }: { detail: MediaDetail }) {
 
       <div className="flex flex-col gap-6 sm:flex-row">
         <Cover
-          title={detail.title}
+          title={title}
           type={detail.type}
           posterUrl={detail.posterUrl}
           className="w-40 shrink-0 self-center sm:self-start"
@@ -64,7 +65,7 @@ export default function MediaDetailClient({ detail }: { detail: MediaDetail }) {
 
         <div className="min-w-0 flex-1">
           <p className={`text-xs font-medium ${meta.text}`}>{t(`type.${detail.type}`)}</p>
-          <h1 className="mt-1 font-heading text-2xl font-semibold">{detail.title}</h1>
+          <h1 className="mt-1 font-heading text-2xl font-semibold">{title}</h1>
           {detail.author && <p className="mt-0.5 text-muted-foreground">{detail.author}</p>}
 
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">

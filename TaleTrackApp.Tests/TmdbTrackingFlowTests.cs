@@ -46,7 +46,7 @@ public class TmdbTrackingFlowTests(CustomWebApplicationFactory factory)
     private async Task<int> MediaRowCountAsync(string title)
     {
         using var scope = _factory.NewDbScope(out var db);
-        return await db.Medias.CountAsync(m => m.Title == title);
+        return await db.Medias.CountAsync(m => m.TitleEN == title || m.TitleES == title);
     }
 
     // ─── 1. New movie/series, not registered yet ──────────────────────────
@@ -63,7 +63,7 @@ public class TmdbTrackingFlowTests(CustomWebApplicationFactory factory)
         var lib = await LibraryRows(client, "Movie");
         Assert.Equal(1, lib.GetProperty("count").GetInt32());
         var item = lib.GetProperty("data")[0];
-        Assert.Equal("The Endless Horizon", item.GetProperty("title").GetString());
+        Assert.Equal("The Endless Horizon", item.GetProperty("titleES").GetString());
         Assert.Equal(10, item.GetProperty("progress").GetInt32());
 
         // exactly one Media row was created for it — TMDB enrichment (stubbed to
@@ -107,9 +107,9 @@ public class TmdbTrackingFlowTests(CustomWebApplicationFactory factory)
         var ownerLib = await LibraryRows(owner, "Movie");
         var otherLib = await LibraryRows(other, "Movie");
         var ownerItem = ownerLib.GetProperty("data").EnumerateArray()
-            .First(i => i.GetProperty("title").GetString() == "Nebula Drift");
+            .First(i => i.GetProperty("titleES").GetString() == "Nebula Drift");
         var otherItem = otherLib.GetProperty("data").EnumerateArray()
-            .First(i => i.GetProperty("title").GetString() == "Nebula Drift");
+            .First(i => i.GetProperty("titleES").GetString() == "Nebula Drift");
 
         Assert.Equal(ownerItem.GetProperty("mediaId").GetGuid(), otherItem.GetProperty("mediaId").GetGuid());
         Assert.Equal(100, ownerItem.GetProperty("progress").GetInt32());
