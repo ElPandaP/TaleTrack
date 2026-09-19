@@ -41,12 +41,13 @@ docker compose -f docker-compose.dev.yml up -d
 
 Usuario de prueba (si sembraste datos): `demo@taletrack.dev` / `demo1234`.
 
-### Solo base de datos + migraciones (sin .NET local)
+### Solo base de datos (backend fuera de Docker)
 
 ```bash
 docker compose up -d postgres
-docker compose --profile db run --rm migrator
 ```
+
+El backend aplica las migraciones pendientes al arrancar.
 
 ## Variables de entorno (`.env` en la raíz)
 

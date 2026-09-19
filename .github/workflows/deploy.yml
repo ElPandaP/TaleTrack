@@ -18,5 +18,8 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
+            # Only check out what the server needs (root files + these folders);
+            # the extension, koplugin and tests never reach the working tree.
+            git sparse-checkout set --cone TaleTrackApp taletrack-frontend scripts
             git pull origin deploy
             docker compose up -d --build backend frontend

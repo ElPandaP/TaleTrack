@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using TaleTrackApp.Features.Review;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Review.AddReview;
 
@@ -31,7 +31,7 @@ public static class AddReviewEndpoint
 
         try
         {
-            var review = await reviewService.CreateAsync(userId, request.MediaId, request.Rating, request.Comment);
+            var review = await reviewService.CreateAsync(userId, request.MediaId!.Value, request.Rating, request.Comment);
 
             logger.LogInformation($"Review created by user {userId} for media {request.MediaId}");
             return Results.Ok(new 

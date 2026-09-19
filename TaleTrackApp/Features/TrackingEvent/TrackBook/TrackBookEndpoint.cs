@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using TaleTrackApp.Features.Media;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
+using TaleTrackApp.Services;
 
 namespace TaleTrackApp.Features.TrackingEvent.TrackBook;
 
@@ -19,7 +20,7 @@ public static class TrackBookEndpoint
         TrackBookRequest request,
         MediaService mediaService,
         TrackingEventService trackingEventService,
-        IServiceScopeFactory scopeFactory,
+        BackgroundRunner background,
         ClaimsPrincipal user,
         ILogger<TrackBookRequest> logger)
     {
@@ -40,23 +41,8 @@ public static class TrackBookEndpoint
             if (string.IsNullOrWhiteSpace(media.PosterUrl) || string.IsNullOrWhiteSpace(media.Author))
             {
                 var (mediaId, title, author, isbn) = (media.Id, request.Title, request.Author, request.Isbn);
-                _ = Task.Run(async () =>
-                {
-                    await using var scope = scopeFactory.CreateAsyncScope();
-                    var bgMedia = scope.ServiceProvider.GetRequiredService<MediaService>();
-                    var bgOL = scope.ServiceProvider.GetRequiredService<OpenLibraryService>();
-                    var bgLog = scope.ServiceProvider.GetRequiredService<ILogger<TrackBookRequest>>();
-                    try
-                    {
-                        var result = await bgOL.EnrichAsync(title, author, isbn);
-                        if (result != null)
-                            await bgMedia.ApplyEnrichmentAsync(mediaId, result);
-                    }
-                    catch (Exception ex)
-                    {
-                        bgLog.LogError(ex, "Background enrichment failed for mediaId={Id}", mediaId);
-                    }
-                });
+                background.Run<MediaService>($"OpenLibrary enrichment for media {mediaId}",
+                    mediaService => mediaService.EnrichFromOpenLibraryAsync(mediaId, title, author, isbn));
             }
 
             return Results.Ok(new { success = true, message = "Tracking event added successfully" });

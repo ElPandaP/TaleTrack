@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using TaleTrackApp.Features.Review;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Review.EditReview;
 

@@ -100,25 +100,23 @@ public class ActivityService
 
         var items = new List<ActivityItem>();
 
-        foreach (var g in events.Where(e => e.Media != null).GroupBy(e => new { e.UserId, e.MediaId }))
+        // One row per (user, media) — it doubles as both "started" (however long ago it was
+        // last touched) and, when it reached 100%, "finished" too.
+        foreach (var e in events.Where(e => e.Media != null))
         {
-            var media = g.First().Media!;
-            var u = users[g.Key.UserId];
-            if (g.Key.UserId != viewerId && !ShowProgress(u, media.Type)) continue;
+            var media = e.Media!;
+            var u = users[e.UserId];
+            if (e.UserId != viewerId && !ShowProgress(u, media.Type)) continue;
 
-            var started = g.OrderBy(x => x.EventDate).First();
             items.Add(new ActivityItem(
-                $"start-{g.Key.UserId}-{g.Key.MediaId}", u.Id, u.Username, u.AvatarUrl,
-                "started", started.EventDate, media.Id, media.TitleEN, media.TitleES, media.Type, media.PosterUrl, null, null));
+                $"start-{e.UserId}-{e.MediaId}", u.Id, u.Username, u.AvatarUrl,
+                "started", e.EventDate, media.Id, media.TitleEN, media.TitleES, media.Type, media.PosterUrl, null, null));
 
-            // With upsert, a title finished in one sitting is a single row — so a lone
-            // Progress==100 event still counts as "finished".
-            var finished = g.Where(x => x.Progress == 100).OrderByDescending(x => x.EventDate).FirstOrDefault();
-            if (finished != null && (g.Count() == 1 || finished.EventDate > started.EventDate))
+            if (e.Progress == 100)
             {
                 items.Add(new ActivityItem(
-                    $"finish-{g.Key.UserId}-{g.Key.MediaId}", u.Id, u.Username, u.AvatarUrl,
-                    "finished", finished.EventDate, media.Id, media.TitleEN, media.TitleES, media.Type, media.PosterUrl, null, null));
+                    $"finish-{e.UserId}-{e.MediaId}", u.Id, u.Username, u.AvatarUrl,
+                    "finished", e.EventDate, media.Id, media.TitleEN, media.TitleES, media.Type, media.PosterUrl, null, null));
             }
         }
 

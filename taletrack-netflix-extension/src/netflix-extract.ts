@@ -19,7 +19,13 @@ const titleCache = new Map<string, string>();
 // Margin before the credits (seconds) that counts as "close enough, call it
 // done". At least one poll interval, so a single check can't miss the window
 // entirely; doubled for slack.
-const CREDITS_MARGIN_SECONDS = (AUTO_POLL_MS / 1000) * 2;
+export const CREDITS_MARGIN_SECONDS = (AUTO_POLL_MS / 1000) * 2;
+
+/** Where the credits start (seconds), from the last data read via requestNetflixData(). */
+export function getCreditsOffsetSeconds(): number | null {
+  const value = netflixData?.creditsOffset;
+  return typeof value === 'number' && value > 0 ? value : null;
+}
 
 /** Ask the page (MAIN world) for its Netflix player/Falcor data and cache it. */
 export async function requestNetflixData(): Promise<void> {
@@ -60,6 +66,14 @@ function formatRuntime(totalSeconds: number): string {
   return h > 0 ? `${h}h ${m}min` : `${m}min`;
 }
 
+// TODO(depuración temporal): comprobar si el elemento <video> del DOM basta
+// por sí solo (posición, duración) sin depender de la API interna de Netflix
+// (netflixData.player, vía injected.ts). Los console.log de abajo comparan
+// ambas fuentes en paralelo. Si tras unas cuantas reproducciones el <video>
+// del DOM siempre da los mismos valores que la API del reproductor, quitar
+// la dependencia de la API interna (injected.ts, requestNetflixData) y
+// quedarse solo con el DOM. Quitar también estos logs al cerrar esto.
+
 /** Current playback position + total runtime + progress %, when watching. */
 function extractPlayback(): { progressPercent?: number; positionSeconds?: number; runtimeSeconds?: number } | null {
   let positionMs: number | undefined;
@@ -74,6 +88,12 @@ function extractPlayback(): { progressPercent?: number; positionSeconds?: number
 
   // 2. The <video> element (content scripts share the page DOM)
   const video = document.querySelector('video') as HTMLVideoElement | null;
+  console.log('[TaleTrack][depuración] API interna del reproductor ->', player
+    ? { currentTime: player.currentTime, duration: player.duration }
+    : 'no disponible');
+  console.log('[TaleTrack][depuración] elemento <video> del DOM ->', video
+    ? { currentTime: video.currentTime, duration: video.duration }
+    : 'no encontrado');
   if (video) {
     if (positionMs === undefined && Number.isFinite(video.currentTime)) {
       positionMs = video.currentTime * 1000;

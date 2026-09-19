@@ -1,5 +1,5 @@
 using TaleTrackApp.Features.Media;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Media.AddMedia;
 

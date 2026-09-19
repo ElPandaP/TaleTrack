@@ -1,3 +1,4 @@
 {
-    "dotnet.defaultSolution": "TaleTrackApp/TaleTrackApp.slnx"
+    "dotnet.defaultSolution": "TaleTrackApp/TaleTrackApp.slnx",
+    "css.lint.unknownAtRules": "ignore"
 }

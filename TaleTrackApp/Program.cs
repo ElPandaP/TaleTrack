@@ -2,25 +2,29 @@ using System.Net;
 using System.Reflection;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
-using TaleTrackApp.Features.User.Login;
-using TaleTrackApp.Features.User.Register;
-using TaleTrackApp.Features.User.GoogleLogin;
-using TaleTrackApp.Features.User.GoogleSignupComplete;
-using TaleTrackApp.Features.User.EmailAuth;
+using TaleTrackApp.Features.Auth.Login;
+using TaleTrackApp.Features.Auth.Register;
+using TaleTrackApp.Features.Auth.GoogleLogin;
+using TaleTrackApp.Features.Auth.GoogleSignupComplete;
+using TaleTrackApp.Features.Auth.RequestCode;
+using TaleTrackApp.Features.Auth.VerifyCode;
 using TaleTrackApp.Features.Auth;
 using TaleTrackApp.Features.Auth.Refresh;
 using TaleTrackApp.Features.Auth.Logout;
 using TaleTrackApp.Features.Auth.ExtensionGrant;
-using TaleTrackApp.Features.Auth.Sessions;
-using TaleTrackApp.Features.Auth.PasswordReset;
+using TaleTrackApp.Features.Auth.GetSessions;
+using TaleTrackApp.Features.Auth.RevokeSession;
+using TaleTrackApp.Features.Auth.RequestPasswordReset;
+using TaleTrackApp.Features.Auth.ResetPassword;
 using TaleTrackApp.Features.Auth.ConfirmDelete;
 using TaleTrackApp.Features.Auth.RevokeSignup;
 using TaleTrackApp.Features.User.EditUser;
-using TaleTrackApp.Features.User.RequestDeletion;
-using TaleTrackApp.Features.User.Avatar;
+using TaleTrackApp.Features.Auth.RequestDeletion;
+using TaleTrackApp.Features.User.GetAvatar;
+using TaleTrackApp.Features.User.UploadAvatar;
+using TaleTrackApp.Features.User.DeleteAvatar;
 using TaleTrackApp.Features.User.GetMe;
 using TaleTrackApp.Features.User.SearchUsers;
 using TaleTrackApp.Features.User.GetUserProfile;
@@ -51,7 +55,8 @@ using TaleTrackApp.Features.Friend.RespondRequest;
 using TaleTrackApp.Features.Friend.RemoveFriend;
 using TaleTrackApp.Features.Activity;
 using TaleTrackApp.Features.Activity.GetActivity;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
+using TaleTrackApp.Services;
 
 // Load environment variables from .env
 loadEnvironment();
@@ -68,6 +73,7 @@ configureRequestLimits();
 
 var app = builder.Build();
 
+applyMigrations();
 configurePipeline();
 
 app.Run();
@@ -128,9 +134,11 @@ void configureAuth()
 
     builder.Services.AddScoped<JwtService>();
     builder.Services.AddMemoryCache();
-    builder.Services.AddScoped<RefreshTokenService>();
+    builder.Services.AddScoped<SessionService>();
     builder.Services.AddScoped<AuthActionTokenService>();
     builder.Services.AddScoped<GoogleSignupTokenService>();
+    builder.Services.AddScoped<GoogleAuthService>();
+    builder.Services.AddSingleton<BackgroundRunner>();
 
     var resendApiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY")!;
     builder.Services.AddHttpClient<EmailService>(client =>
@@ -141,6 +149,7 @@ void configureAuth()
 
 void configureApi()
 {
+    builder.Services.AddProblemDetails();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(options =>
     {
@@ -170,9 +179,6 @@ void configureApi()
     {
         client.Timeout = TimeSpan.FromSeconds(10);
     });
-
-    // Add automatic model validation filter
-    builder.Services.AddScoped<IEndpointFilter, ValidationFilter>();
 }
 
 void configureCors()
@@ -247,7 +253,8 @@ void applyMigrations()
 
 void configurePipeline()
 {
-    applyMigrations();
+    // Outermost, so any unhandled exception becomes a logged ProblemDetails 500 without leaking internals
+    app.UseExceptionHandler();
     app.UseForwardedHeaders();
 
     app.Use(async (context, next) =>
@@ -266,11 +273,12 @@ void configurePipeline()
 
     app.UseAuthentication();
     app.UseAuthorization();
-    
+
     // Map endpoints by feature (REPR pattern)
-    var apiGroup = app.MapGroup("/api").WithName("API");
-    
-    // Public endpoints
+    var apiGroup = app.MapGroup("/api");
+
+    // Public endpoints (anonymous)
+    RegisterEndpoint.Map(apiGroup);
     LoginEndpoint.Map(apiGroup);
     GoogleLoginEndpoint.Map(apiGroup);
     GoogleSignupCompleteEndpoint.Map(apiGroup);
@@ -282,31 +290,41 @@ void configurePipeline()
     ResetPasswordEndpoint.Map(apiGroup);
     ConfirmDeleteEndpoint.Map(apiGroup);
     RevokeSignupEndpoint.Map(apiGroup);
+    GetAvatarEndpoint.Map(apiGroup);
 
     // Session / token management (JWT)
     ExtensionGrantEndpoint.Map(apiGroup);
     GetSessionsEndpoint.Map(apiGroup);
     RevokeSessionEndpoint.Map(apiGroup);
-    
-    // User endpoints (JWT + API Key)
+
+    // Account & profiles (JWT)
+    GetMeEndpoint.Map(apiGroup);
+    EditUserEndpoint.Map(apiGroup);
+    RequestAccountDeletionEndpoint.Map(apiGroup);
+    UploadAvatarEndpoint.Map(apiGroup);
+    DeleteAvatarEndpoint.Map(apiGroup);
+    SearchUsersEndpoint.Map(apiGroup);
+    GetUserProfileEndpoint.Map(apiGroup);
+
+    // Media & tracking (JWT)
     AddMediaEndpoint.Map(apiGroup);
+    GetMediaByIdEndpoint.Map(apiGroup);
     TrackMovieEndpoint.Map(apiGroup);
     TrackSeriesEndpoint.Map(apiGroup);
     TrackBookEndpoint.Map(apiGroup);
-    DeleteTrackingEndpoint.Map(apiGroup);
     EditTrackingProgressEndpoint.Map(apiGroup);
-    RegisterEndpoint.Map(apiGroup);
+    DeleteTrackingEndpoint.Map(apiGroup);
 
-    // User data endpoints (JWT)
-    GetStatsEndpoint.Map(apiGroup);
-    GetLibraryEndpoint.Map(apiGroup);
+    // Reviews (JWT)
     GetReviewsEndpoint.Map(apiGroup);
     GetPendingReviewsEndpoint.Map(apiGroup);
-    GetMediaByIdEndpoint.Map(apiGroup);
-    GetMeEndpoint.Map(apiGroup);
-    SearchUsersEndpoint.Map(apiGroup);
-    GetUserProfileEndpoint.Map(apiGroup);
-    GetAvatarEndpoint.Map(apiGroup);
+    AddReviewEndpoint.Map(apiGroup);
+    EditReviewEndpoint.Map(apiGroup);
+    DeleteReviewEndpoint.Map(apiGroup);
+
+    // Library & stats (JWT)
+    GetLibraryEndpoint.Map(apiGroup);
+    GetStatsEndpoint.Map(apiGroup);
 
     // Friends & activity (JWT)
     GetFriendsEndpoint.Map(apiGroup);
@@ -314,17 +332,6 @@ void configurePipeline()
     RespondFriendRequestEndpoint.Map(apiGroup);
     RemoveFriendEndpoint.Map(apiGroup);
     GetActivityEndpoint.Map(apiGroup);
-
-    // User management endpoints (JWT)
-    EditUserEndpoint.Map(apiGroup);
-    RequestAccountDeletionEndpoint.Map(apiGroup);
-    UploadAvatarEndpoint.Map(apiGroup);
-    DeleteAvatarEndpoint.Map(apiGroup);
-    
-    // Review endpoints (JWT + API Key)
-    AddReviewEndpoint.Map(apiGroup);
-    EditReviewEndpoint.Map(apiGroup);
-    DeleteReviewEndpoint.Map(apiGroup);
 }
 
 public partial class Program { }

@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using TaleTrackApp.Features.User;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.User.GetMe;
 
@@ -26,24 +26,24 @@ public static class GetMeEndpoint
         var me = await userService.GetByIdAsync(userId);
         if (me == null) return Results.NotFound();
 
-        return Results.Ok(new
+        return Results.Ok(new GetMeResponse
         {
-            success = true,
-            data = new
+            Success = true,
+            Data = new MeData
             {
-                id = me.Id,
-                username = me.Username,
-                email = me.Email,
-                avatarUrl = me.AvatarUrl,
-                createdAt = me.CreatedAt,
-                privacy = new
+                Id = me.Id,
+                Username = me.Username,
+                Email = me.Email,
+                AvatarUrl = me.AvatarUrl,
+                CreatedAt = me.CreatedAt,
+                Privacy = new FeedPrivacyData
                 {
-                    bookProgress = me.ShareBookProgress,
-                    bookReviews = me.ShareBookReviews,
-                    movieProgress = me.ShareMovieProgress,
-                    movieReviews = me.ShareMovieReviews,
-                    seriesProgress = me.ShareSeriesProgress,
-                    seriesReviews = me.ShareSeriesReviews,
+                    BookProgress = me.ShareBookProgress,
+                    BookReviews = me.ShareBookReviews,
+                    MovieProgress = me.ShareMovieProgress,
+                    MovieReviews = me.ShareMovieReviews,
+                    SeriesProgress = me.ShareSeriesProgress,
+                    SeriesReviews = me.ShareSeriesReviews,
                 },
             }
         });

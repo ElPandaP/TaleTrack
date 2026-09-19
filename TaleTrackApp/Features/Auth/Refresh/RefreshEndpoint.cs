@@ -1,13 +1,6 @@
-using System.ComponentModel.DataAnnotations;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Auth.Refresh;
-
-public class RefreshRequest
-{
-    [Required(ErrorMessage = "refreshToken is required")]
-    public required string RefreshToken { get; set; }
-}
 
 public static class RefreshEndpoint
 {
@@ -22,25 +15,18 @@ public static class RefreshEndpoint
 
     private static async Task<IResult> HandleAsync(
         RefreshRequest request,
-        RefreshTokenService refreshTokens,
-        JwtService jwtService,
-        ILogger<RefreshRequest> logger)
+        SessionService sessions)
     {
-        var rotated = await refreshTokens.ValidateAndRotateAsync(request.RefreshToken);
-        if (rotated is null)
+        var session = await sessions.RefreshAsync(request.RefreshToken);
+        if (session is null)
             return Results.Json(new { success = false, message = "Invalid or expired refresh token." }, statusCode: 401);
 
-        var (user, newRefreshToken) = rotated.Value;
-        var token = jwtService.GenerateToken(user.Id, user.Email, user.Username);
-
-        logger.LogInformation("Refreshed tokens for user {UserId}", user.Id);
-
-        return Results.Ok(new
+        return Results.Ok(new RefreshResponse
         {
-            success = true,
-            token,
-            refreshToken = newRefreshToken,
-            expiresIn = jwtService.ExpirationMinutes * 60,
+            Success = true,
+            Token = session.AccessToken,
+            RefreshToken = session.RefreshToken,
+            ExpiresIn = session.ExpiresIn,
         });
     }
 }

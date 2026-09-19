@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 using TaleTrackApp.Features.User;
 
 namespace TaleTrackApp.Features.Auth.ExtensionGrant;
@@ -22,8 +22,7 @@ public static class ExtensionGrantEndpoint
 
     private static async Task<IResult> HandleAsync(
         UserService userService,
-        RefreshTokenService refreshTokens,
-        JwtService jwtService,
+        SessionService sessions,
         ClaimsPrincipal principal,
         ILoggerFactory loggerFactory)
     {
@@ -34,18 +33,17 @@ public static class ExtensionGrantEndpoint
         var user = await userService.GetByIdAsync(userId);
         if (user is null) return Results.Unauthorized();
 
-        var token = jwtService.GenerateToken(user.Id, user.Email, user.Username);
-        var refreshToken = await refreshTokens.IssueAsync(user.Id, DeviceName);
+        var session = await sessions.StartAsync(user, DeviceName);
 
         loggerFactory.CreateLogger(nameof(ExtensionGrantEndpoint))
             .LogInformation("Extension grant issued for user {UserId}", user.Id);
 
-        return Results.Ok(new
+        return Results.Ok(new ExtensionGrantResponse
         {
-            success = true,
-            token,
-            refreshToken,
-            expiresIn = jwtService.ExpirationMinutes * 60,
+            Success = true,
+            Token = session.AccessToken,
+            RefreshToken = session.RefreshToken,
+            ExpiresIn = session.ExpiresIn,
         });
     }
 }

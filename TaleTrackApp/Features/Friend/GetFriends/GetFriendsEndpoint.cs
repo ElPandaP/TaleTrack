@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using TaleTrackApp.Features.Friend;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Friend.GetFriends;
 
@@ -29,7 +29,7 @@ public static class GetFriendsEndpoint
             var friends = await friendService.GetFriendsAsync(userId);
             var incoming = await friendService.GetIncomingAsync(userId);
             var outgoing = await friendService.GetOutgoingAsync(userId);
-            return Results.Ok(new { success = true, friends, incoming, outgoing });
+            return Results.Ok(new GetFriendsResponse { Success = true, Friends = friends, Incoming = incoming, Outgoing = outgoing });
         }
         catch (Exception ex)
         {

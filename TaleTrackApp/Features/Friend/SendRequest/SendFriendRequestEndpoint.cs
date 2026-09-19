@@ -1,15 +1,8 @@
-using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using TaleTrackApp.Features.Friend;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Friend.SendRequest;
-
-public class SendFriendRequestRequest
-{
-    [Required(ErrorMessage = "userId is required")]
-    public Guid UserId { get; set; }
-}
 
 public static class SendFriendRequestEndpoint
 {
@@ -32,7 +25,7 @@ public static class SendFriendRequestEndpoint
         if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
             return Results.Unauthorized();
 
-        var (result, _) = await friendService.SendRequestAsync(userId, request.UserId);
+        var (result, _) = await friendService.SendRequestAsync(userId, request.UserId!.Value);
 
         // `code` is a stable machine key the frontend maps to a localized message.
         return result switch

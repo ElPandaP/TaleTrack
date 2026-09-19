@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.TrackingEvent.EditTrackingProgress;
 

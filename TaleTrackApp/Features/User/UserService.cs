@@ -74,7 +74,6 @@ public class UserService
     public async Task<Model.User?> UpdateUserAsync(
         Guid id,
         string? username,
-        string? email,
         string? password,
         string? avatarUrl = null,
         FeedPrivacy? privacy = null)
@@ -88,11 +87,6 @@ public class UserService
         if (!string.IsNullOrEmpty(username))
         {
             user.Username = username;
-        }
-
-        if (!string.IsNullOrEmpty(email))
-        {
-            user.Email = email;
         }
 
         if (!string.IsNullOrEmpty(password))

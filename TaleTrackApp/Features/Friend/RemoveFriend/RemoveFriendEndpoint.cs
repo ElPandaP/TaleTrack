@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using TaleTrackApp.Features.Friend;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Friend.RemoveFriend;
 

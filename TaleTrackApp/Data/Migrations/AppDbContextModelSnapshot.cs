@@ -253,7 +253,8 @@ namespace TaleTrackApp.Data.Migrations
 
                     b.HasIndex("MediaId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "MediaId")
+                        .IsUnique();
 
                     b.ToTable("TrackingEvents");
                 });
@@ -331,6 +332,9 @@ namespace TaleTrackApp.Data.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
 
                     b.HasIndex("Username")
                         .IsUnique();

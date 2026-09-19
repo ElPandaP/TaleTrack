@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Library.GetLibrary;
 
@@ -35,7 +35,7 @@ public static class GetLibraryEndpoint
             var data = request.Limit is int limit && limit > 0 ? all.Take(limit).ToList() : all;
 
             // `total` is the count before the limit — lets the client show "50 · see all".
-            return Results.Ok(new { success = true, count = data.Count, total = all.Count, data });
+            return Results.Ok(new GetLibraryResponse { Success = true, Count = data.Count, Total = all.Count, Data = data });
         }
         catch (Exception ex)
         {

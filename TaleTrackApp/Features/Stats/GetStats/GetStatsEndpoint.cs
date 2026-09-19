@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Stats.GetStats;
 
@@ -31,7 +31,7 @@ public static class GetStatsEndpoint
         {
             var year = request.Year ?? DateTime.UtcNow.Year;
             var stats = await statsService.GetYearlyAsync(userId, year);
-            return Results.Ok(new { success = true, data = stats });
+            return Results.Ok(new GetStatsResponse { Success = true, Data = stats });
         }
         catch (Exception ex)
         {

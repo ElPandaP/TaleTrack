@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using TaleTrackApp.Features.Library;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Review.GetPendingReviews;
 
@@ -31,7 +31,7 @@ public static class GetPendingReviewsEndpoint
         try
         {
             var pending = await libraryService.GetPendingReviewsAsync(userId);
-            return Results.Ok(new { success = true, count = pending.Count, data = pending });
+            return Results.Ok(new GetPendingReviewsResponse { Success = true, Count = pending.Count, Data = pending });
         }
         catch (Exception ex)
         {

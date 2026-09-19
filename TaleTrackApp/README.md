@@ -18,7 +18,7 @@ Todo el arranque está en el top-level `Program.cs` con funciones locales:
 ```
 loadEnvironment()      -> carga ../.env con DotNetEnv (relativo al cwd)
 configureDatabase()    -> DbContext Npgsql; se SALTA si Environment == "Testing"
-configureAuth()        -> JWT bearer + policy UserPolicy + EmailService HttpClient
+configureAuth()        -> JWT bearer + policy UserPolicy + EmailService HttpClient + BackgroundRunner
 configureApi()         -> Swagger, servicios scoped (REPR), OpenLibrary/TMDB HttpClient, ValidationFilter
 configureCors()        -> policy "FrontendCors" desde CORS_ALLOWED_ORIGINS (coma-separado)
 --- build ---
@@ -44,18 +44,20 @@ configurePipeline():
 TaleTrackApp/
 ├── Program.cs                 # arranque + registro de TODOS los endpoints
 ├── appsettings.json           # JwtSettings, Logging, OpenLibrary:SimilarityThreshold
-├── Auth/
+├── Security/                  # piezas que se enganchan al pipeline de los endpoints
 │   ├── Policies.cs            # constante: UserPolicy (JWT válido)
+│   └── ValidationFilter.cs    # IEndpointFilter: valida DataAnnotations de cada argumento -> 400
+├── Services/                  # servicios usados por varios features (no pertenecen a uno)
 │   ├── JwtService.cs          # GenerateToken(userId, email, username)
-│   ├── RefreshTokenService.cs # emite/rota/revoca refresh tokens; lista sesiones activas
-│   ├── ValidationFilter.cs    # IEndpointFilter: valida DataAnnotations de cada argumento -> 400
-│   └── EmailService.cs        # manda códigos OTP vía API de Resend (https://api.resend.com/emails)
+│   └── BackgroundRunner.cs    # ejecuta trabajo tras responder (scope DI propio, errores logueados)
 ├── Data/
 │   ├── AppDbContext.cs        # DbSets: Users, Medias, Reviews, TrackingEvents, Friendships, RefreshTokens
 │   └── Migrations/            # generadas por EF, nunca a mano
 ├── Model/                     # entidades EF: User, Media, Review, TrackingEvent, Friendship, RefreshToken
 ├── Features/
-│   ├── User/  Media/  TrackingEvent/  Review/  Friend/  Activity/  Auth/
+│   ├── User/                  # UserService + AvatarService: perfil, avatar, búsqueda (no un único <Feature>Service.cs)
+│   ├── Media/  TrackingEvent/  Review/  Friend/  Activity/
+│   ├── Auth/                  # registro, logins y sesiones: SessionService + AuthActionTokenService + GoogleAuthService (+ GoogleSignupTokenService, TokenHasher, EmailService)
 │   ├── Stats/                 # StatsService + GetStats/  → GET /api/stats (resumen anual)
 │   └── Library/               # LibraryService + GetLibrary/  → GET /api/library (1 fila por media)
 └── Features/<Feature>/<Accion>/
@@ -101,7 +103,7 @@ Expira a los 60 min; el frontend/extensión lo renuevan con el refresh token sin
 2. Google OAuth → `POST /api/auth/google` (valida el idToken con `Google.Apis.Auth`; crea o vincula usuario por `GoogleId`/email)
 3. Email OTP → `POST /api/auth/request-code` (manda código de 6 dígitos, expira 10 min) + `POST /api/auth/verify-code`
 
-**Sesiones / refresh tokens** (`RefreshTokenService`, un `RefreshToken` por dispositivo/cliente):
+**Sesiones / refresh tokens** (`SessionService`, un `RefreshToken` por dispositivo/cliente; todos los logins arrancan la sesión con `SessionService.StartAsync`):
 - `POST /api/auth/refresh` — cambia un refresh token por un par nuevo (rota; hay una ventana de gracia de
   60s para tolerar reintentos duplicados por red).
 - `POST /api/auth/logout` — revoca el refresh token indicado.
@@ -143,7 +145,7 @@ entran con código por email y se ponen contraseña nueva desde el perfil.
 | Método | Ruta | Auth | Qué hace |
 |---|---|---|---|
 | GET | `/user/me` | JWT | perfil completo (avatar, privacidad) del usuario autenticado |
-| PUT | `/user/{id}` | JWT | edita username/email/password/avatarUrl + `privacy{...}`; solo uno mismo (403 si no) |
+| PUT | `/user/{id}` | JWT | edita username/password/avatarUrl + `privacy{...}`; el email es fijo tras el registro; solo uno mismo (403 si no) |
 | DELETE | `/user/{id}` | JWT | borra la cuenta; solo uno mismo. Cascade borra Reviews + TrackingEvents |
 | GET | `/users/{id}` | JWT | perfil público: `{ id, username, avatarUrl, createdAt, relationship, counts{book,movie,series,total} }` |
 | GET | `/users/{id}/avatar` | anónimo | sirve la foto de perfil (WebP 256×256) desde la BD |
@@ -284,9 +286,8 @@ Se leen de `../.env` (repo root).
 ## 9. Cómo levantarlo
 
 ```bash
-# Solo DB + migraciones (sin .NET local):
+# Solo DB (el backend aplica las migraciones al arrancar):
 docker compose up -d postgres
-docker compose --profile db run --rm migrator
 
 # Stack de desarrollo completo (hot-reload):
 docker compose -f docker-compose.dev.yml up -d

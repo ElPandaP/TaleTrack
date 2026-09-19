@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using TaleTrackApp.Features.User;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
+using TaleTrackApp.Services;
 
 namespace TaleTrackApp.Features.User.EditUser;
 
@@ -46,7 +47,7 @@ public static class EditUserEndpoint
                 request.Privacy.SeriesProgress, request.Privacy.SeriesReviews);
 
             var updatedUser = await userService.UpdateUserAsync(
-                id, request.Username, request.Email, request.Password, request.AvatarUrl, privacy);
+                id, request.Username, request.Password, request.AvatarUrl, privacy);
             
             if (updatedUser == null)
             {

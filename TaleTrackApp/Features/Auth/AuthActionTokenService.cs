@@ -1,7 +1,6 @@
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using TaleTrackApp.Data;
+using TaleTrackApp.Features.User;
 using TaleTrackApp.Model;
 
 namespace TaleTrackApp.Features.Auth;
@@ -9,7 +8,7 @@ namespace TaleTrackApp.Features.Auth;
 /// <summary>
 /// Issues and consumes the single-use tokens carried by email links
 /// (password reset, delete confirmation, "I didn't sign up"). Raw tokens live
-/// only in the emailed link; the DB stores their SHA-256 hash.
+/// only in the emailed link; the DB stores their SHA-256 hash. Also owns sending those emails.
 /// </summary>
 public class AuthActionTokenService
 {
@@ -21,34 +20,30 @@ public class AuthActionTokenService
     };
 
     private readonly AppDbContext _context;
+    private readonly UserService _users;
+    private readonly EmailService _email;
     private readonly ILogger<AuthActionTokenService> _logger;
 
-    public AuthActionTokenService(AppDbContext context, ILogger<AuthActionTokenService> logger)
+    public AuthActionTokenService(
+        AppDbContext context,
+        UserService users,
+        EmailService email,
+        ILogger<AuthActionTokenService> logger)
     {
         _context = context;
+        _users = users;
+        _email = email;
         _logger = logger;
-    }
-
-    public static string Hash(string rawToken)
-    {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawToken));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
-
-    private static string GenerateRawToken()
-    {
-        var bytes = RandomNumberGenerator.GetBytes(32);
-        return Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 
     /// <summary>Creates a token for the given purpose and returns the raw value (shown once).</summary>
     public async Task<string> IssueAsync(Guid userId, string purpose)
     {
-        var raw = GenerateRawToken();
+        var raw = TokenHasher.GenerateRawToken();
         _context.AuthActionTokens.Add(new AuthActionToken
         {
             UserId = userId,
-            TokenHash = Hash(raw),
+            TokenHash = TokenHasher.Hash(raw),
             Purpose = purpose,
             CreatedAt = DateTime.UtcNow,
             ExpiresAt = DateTime.UtcNow.Add(Lifetimes[purpose]),
@@ -65,7 +60,7 @@ public class AuthActionTokenService
     {
         if (string.IsNullOrWhiteSpace(rawToken)) return null;
 
-        var hash = Hash(rawToken);
+        var hash = TokenHasher.Hash(rawToken);
         var token = await _context.AuthActionTokens
             .Include(t => t.User)
             .FirstOrDefaultAsync(t => t.TokenHash == hash && t.Purpose == purpose);
@@ -83,5 +78,30 @@ public class AuthActionTokenService
         token.ConsumedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
         return token.User;
+    }
+
+    /// <summary>Sent to every newly created account: a 7-day link that deletes the account, for
+    /// when someone signed up with an address they don't own.</summary>
+    public async Task SendWelcomeAsync(Guid userId, string email, string? locale)
+    {
+        var raw = await IssueAsync(userId, AuthActionToken.SignupRevoke);
+        await _email.SendWelcomeAsync(email, raw, locale);
+    }
+
+    /// <summary>Emails a reset link if the account exists and has a password. Silent otherwise,
+    /// so the caller's response can't reveal whether the address is registered.</summary>
+    public async Task SendPasswordResetAsync(string email, string? locale)
+    {
+        var user = await _users.GetByEmailAsync(email);
+        if (user is null || string.IsNullOrEmpty(user.PasswordHash)) return;
+
+        var raw = await IssueAsync(user.Id, AuthActionToken.PasswordReset);
+        await _email.SendPasswordResetAsync(user.Email, raw, locale);
+    }
+
+    public async Task SendDeleteConfirmationAsync(Guid userId, string email, string? locale)
+    {
+        var raw = await IssueAsync(userId, AuthActionToken.DeleteAccount);
+        await _email.SendDeleteConfirmationAsync(email, raw, locale);
     }
 }

@@ -81,7 +81,7 @@ public class TrackingSplitTests(CustomWebApplicationFactory factory)
     }
 
     [Fact]
-    public async Task TrackSeries_DistinctEpisodes_AreSeparateRows_LibraryCollapses()
+    public async Task TrackSeries_LaterEpisodes_ShareOneRow_FurthestWins()
     {
         var client = await AuthedClientAsync("series-eps@test.com", "serieseps");
 
@@ -93,11 +93,34 @@ public class TrackingSplitTests(CustomWebApplicationFactory factory)
         await client.PostAsJsonAsync("/api/tracking/series",
             new { Title = "Severance", Season = 1, Episode = 2, Minutes = 49, Progress = 75 });
 
-        // One row per episode (2), not one per POST (3) — episode 2's re-report upserted.
-        Assert.Equal(2, await RawEventCountAsync("Severance"));
+        // A single row per (user, media) — episode 2 replaces episode 1 as the furthest reached.
+        Assert.Equal(1, await RawEventCountAsync("Severance"));
 
         var lib = await LibraryRows(client, "Series");
         Assert.Equal(1, lib.GetProperty("count").GetInt32());
+        var item = lib.GetProperty("data")[0];
+        Assert.Equal(2, item.GetProperty("episode").GetInt32());
+        Assert.Equal(75, item.GetProperty("progress").GetInt32());
+    }
+
+    [Fact]
+    public async Task TrackSeries_RewatchingAnEarlierEpisode_DoesNotMoveFurthestBack()
+    {
+        var client = await AuthedClientAsync("series-rewatch@test.com", "seriesrewatch");
+
+        await client.PostAsJsonAsync("/api/tracking/series",
+            new { Title = "Fringe", Season = 2, Episode = 5, Minutes = 43, Progress = 100 });
+        // rewatching an earlier episode — must not regress the furthest reached
+        await client.PostAsJsonAsync("/api/tracking/series",
+            new { Title = "Fringe", Season = 1, Episode = 1, Minutes = 43, Progress = 60 });
+
+        Assert.Equal(1, await RawEventCountAsync("Fringe"));
+
+        var lib = await LibraryRows(client, "Series");
+        var item = lib.GetProperty("data")[0];
+        Assert.Equal(2, item.GetProperty("season").GetInt32());
+        Assert.Equal(5, item.GetProperty("episode").GetInt32());
+        Assert.Equal(100, item.GetProperty("progress").GetInt32());
     }
 
     [Fact]

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace TaleTrackApp.Tests;
@@ -145,6 +146,77 @@ public class AuthFlowTests(CustomWebApplicationFactory factory)
         var client = _factory.CreateClient();
         var res = await client.PostAsJsonAsync("/api/auth/logout", new { refreshToken = "nope" });
         Assert.True(res.IsSuccessStatusCode);
+    }
+
+    [Fact]
+    public async Task LoginByCode_WithWebDevice_IssuesWebSession()
+    {
+        var client = NewClient();
+        await client.PostAsJsonAsync("/api/register",
+            new { Email = "code-web@test.com", Username = "codeweb", Password = "Password1!" });
+        await client.PostAsJsonAsync("/api/auth/request-code", new { Email = "code-web@test.com" });
+
+        string code;
+        using (_factory.NewDbScope(out var db))
+        {
+            var user = await db.Users.SingleAsync(u => u.Email == "code-web@test.com");
+            code = user.EmailCode!;
+        }
+
+        var verify = await client.PostAsJsonAsync("/api/auth/verify-code",
+            new { Email = "code-web@test.com", Code = code, Device = "Web" });
+        Assert.True(verify.IsSuccessStatusCode, $"Verify failed: {await verify.Content.ReadAsStringAsync()}");
+        var body = await verify.Content.ReadFromJsonAsync<JsonElement>();
+        var jwt = body.GetProperty("token").GetString();
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwt);
+        var sessions = await (await client.GetAsync("/api/auth/sessions")).Content.ReadFromJsonAsync<JsonElement>();
+        var devices = sessions.GetProperty("data").EnumerateArray()
+            .Select(s => s.GetProperty("device").GetString())
+            .ToList();
+        Assert.Contains("Web", devices);
+    }
+
+    [Fact]
+    public async Task LoginByCode_WithoutDevice_DefaultsToKOReaderSession()
+    {
+        var client = NewClient();
+        await client.PostAsJsonAsync("/api/register",
+            new { Email = "code-koreader@test.com", Username = "codekoreader", Password = "Password1!" });
+        await client.PostAsJsonAsync("/api/auth/request-code", new { Email = "code-koreader@test.com" });
+
+        string code;
+        using (_factory.NewDbScope(out var db))
+        {
+            var user = await db.Users.SingleAsync(u => u.Email == "code-koreader@test.com");
+            code = user.EmailCode!;
+        }
+
+        var verify = await client.PostAsJsonAsync("/api/auth/verify-code",
+            new { Email = "code-koreader@test.com", Code = code });
+        Assert.True(verify.IsSuccessStatusCode, $"Verify failed: {await verify.Content.ReadAsStringAsync()}");
+        var body = await verify.Content.ReadFromJsonAsync<JsonElement>();
+        var jwt = body.GetProperty("token").GetString();
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwt);
+        var sessions = await (await client.GetAsync("/api/auth/sessions")).Content.ReadFromJsonAsync<JsonElement>();
+        var devices = sessions.GetProperty("data").EnumerateArray()
+            .Select(s => s.GetProperty("device").GetString())
+            .ToList();
+        Assert.Contains("KOReader", devices);
+    }
+
+    [Fact]
+    public async Task LoginByCode_WrongCode_Returns401()
+    {
+        var client = NewClient();
+        await client.PostAsJsonAsync("/api/register",
+            new { Email = "code-wrong@test.com", Username = "codewrong", Password = "Password1!" });
+        await client.PostAsJsonAsync("/api/auth/request-code", new { Email = "code-wrong@test.com" });
+
+        var verify = await client.PostAsJsonAsync("/api/auth/verify-code",
+            new { Email = "code-wrong@test.com", Code = "000000" });
+        Assert.Equal(HttpStatusCode.Unauthorized, verify.StatusCode);
     }
 
     [Fact]

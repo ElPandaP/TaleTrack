@@ -1,15 +1,8 @@
-using System.ComponentModel.DataAnnotations;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 using TaleTrackApp.Features.User;
 using TaleTrackApp.Model;
 
 namespace TaleTrackApp.Features.Auth.ConfirmDelete;
-
-public class ConfirmDeleteRequest
-{
-    [Required(ErrorMessage = "token is required")]
-    public required string Token { get; set; }
-}
 
 public static class ConfirmDeleteEndpoint
 {

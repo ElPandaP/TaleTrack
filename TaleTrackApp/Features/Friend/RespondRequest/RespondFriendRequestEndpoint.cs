@@ -1,15 +1,8 @@
-using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using TaleTrackApp.Features.Friend;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Friend.RespondRequest;
-
-public class RespondFriendRequestRequest
-{
-    [Required]
-    public bool Accept { get; set; }
-}
 
 public static class RespondFriendRequestEndpoint
 {
@@ -33,7 +26,7 @@ public static class RespondFriendRequestEndpoint
         if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
             return Results.Unauthorized();
 
-        var result = await friendService.RespondAsync(userId, id, request.Accept);
+        var result = await friendService.RespondAsync(userId, id, request.Accept!.Value);
         return result switch
         {
             RespondResult.Ok => Results.Ok(new { success = true }),

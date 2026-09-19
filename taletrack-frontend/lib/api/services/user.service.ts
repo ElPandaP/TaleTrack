@@ -3,7 +3,6 @@ import type { UserProfileResponse, FeedPrivacy } from '../../types';
 
 export interface ProfileUpdate {
   username?: string;
-  email?: string;
   avatarUrl?: string;
   privacy?: Partial<FeedPrivacy>;
 }

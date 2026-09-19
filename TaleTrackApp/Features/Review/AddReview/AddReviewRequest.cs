@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations;
 public class AddReviewRequest
 {
     [Required(ErrorMessage = "MediaId is required")]
-    public Guid MediaId { get; set; }
+    public Guid? MediaId { get; set; }
     
     [Required(ErrorMessage = "Rating is required")]
     [Range(1, 10, ErrorMessage = "Rating must be between 1 and 10")]

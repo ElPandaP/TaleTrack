@@ -1,17 +1,9 @@
-using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using TaleTrackApp.Features.User;
 using TaleTrackApp.Features.Friend;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.User.SearchUsers;
-
-public class SearchUsersRequest
-{
-    [Required(ErrorMessage = "username is required")]
-    [StringLength(50, MinimumLength = 1)]
-    public required string Username { get; set; }
-}
 
 public static class SearchUsersEndpoint
 {
@@ -37,15 +29,15 @@ public static class SearchUsersEndpoint
 
         var found = await userService.GetByUsernameAsync(request.Username.TrimStart('@'));
         if (found == null)
-            return Results.Ok(new { success = true, user = (object?)null });
+            return Results.Ok(new SearchUsersResponse { Success = true });
 
         var relationship = await friendService.RelationshipAsync(userId, found.Id);
 
-        return Results.Ok(new
+        return Results.Ok(new SearchUsersResponse
         {
-            success = true,
-            user = new { userId = found.Id, username = found.Username, avatarUrl = found.AvatarUrl },
-            relationship,
+            Success = true,
+            User = new FoundUser { UserId = found.Id, Username = found.Username, AvatarUrl = found.AvatarUrl },
+            Relationship = relationship,
         });
     }
 }

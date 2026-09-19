@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using TaleTrackApp.Features.Review;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Review.GetReviews;
 
@@ -34,27 +34,27 @@ public static class GetReviewsEndpoint
 
             var data = reviews
                 .OrderByDescending(r => r.CreatedAt)
-                .Select(r => new
+                .Select(r => new ReviewWithMediaItem
                 {
-                    id = r.Id,
-                    mediaId = r.MediaId,
-                    rating = r.Rating,
-                    comment = r.Comment,
-                    createdAt = r.CreatedAt,
-                    updatedAt = r.UpdatedAt,
-                    media = new
+                    Id = r.Id,
+                    MediaId = r.MediaId,
+                    Rating = r.Rating,
+                    Comment = r.Comment,
+                    CreatedAt = r.CreatedAt,
+                    UpdatedAt = r.UpdatedAt,
+                    Media = new ReviewMediaSummary
                     {
-                        id = r.Media?.Id,
-                        titleEN = r.Media?.TitleEN,
-                        titleES = r.Media?.TitleES,
-                        type = r.Media?.Type,
-                        posterUrl = r.Media?.PosterUrl,
-                        author = r.Media?.Author,
+                        Id = r.Media?.Id,
+                        TitleEN = r.Media?.TitleEN,
+                        TitleES = r.Media?.TitleES,
+                        Type = r.Media?.Type,
+                        PosterUrl = r.Media?.PosterUrl,
+                        Author = r.Media?.Author,
                     }
                 })
                 .ToList();
 
-            return Results.Ok(new { success = true, count = data.Count, data });
+            return Results.Ok(new GetReviewsResponse { Success = true, Count = data.Count, Data = data });
         }
         catch (Exception ex)
         {

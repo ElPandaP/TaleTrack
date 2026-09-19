@@ -2,7 +2,7 @@ using System.Security.Claims;
 using TaleTrackApp.Features.User;
 using TaleTrackApp.Features.Friend;
 using TaleTrackApp.Features.Library;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.User.GetUserProfile;
 
@@ -37,17 +37,17 @@ public static class GetUserProfileEndpoint
             var relationship = await friendService.RelationshipAsync(me, id);
             var (book, movie, series, total) = await libraryService.CountByTypeAsync(id);
 
-            return Results.Ok(new
+            return Results.Ok(new GetUserProfileResponse
             {
-                success = true,
-                data = new
+                Success = true,
+                Data = new UserProfileData
                 {
-                    id = target.Id,
-                    username = target.Username,
-                    avatarUrl = target.AvatarUrl,
-                    createdAt = target.CreatedAt,
-                    relationship,
-                    counts = new { book, movie, series, total },
+                    Id = target.Id,
+                    Username = target.Username,
+                    AvatarUrl = target.AvatarUrl,
+                    CreatedAt = target.CreatedAt,
+                    Relationship = relationship,
+                    Counts = new MediaCounts { Book = book, Movie = movie, Series = series, Total = total },
                 }
             });
         }

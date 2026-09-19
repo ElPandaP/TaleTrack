@@ -22,6 +22,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasIndex(u => u.Username)
             .IsUnique();
 
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Email)
+            .IsUnique();
+
         // Cascade delete to clean up related data
         modelBuilder.Entity<Review>(r =>
         {
@@ -33,10 +37,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             r.HasIndex(x => new { x.UserId, x.MediaId }).IsUnique();
         });
 
-        modelBuilder.Entity<TrackingEvent>()
-            .HasOne(te => te.User)
-            .WithMany(u => u.TrackingEvents)
-            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<TrackingEvent>(te =>
+        {
+            te.HasOne(x => x.User)
+                .WithMany(u => u.TrackingEvents)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // One tracking event per (user, media) — for a series it holds the furthest
+            // (season, episode) reached, not one row per episode.
+            te.HasIndex(x => new { x.UserId, x.MediaId }).IsUnique();
+        });
 
         modelBuilder.Entity<RefreshToken>(rt =>
         {

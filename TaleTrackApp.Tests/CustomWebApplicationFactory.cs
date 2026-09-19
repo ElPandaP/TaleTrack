@@ -5,8 +5,8 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
-using TaleTrackApp.Auth;
 using TaleTrackApp.Data;
+using TaleTrackApp.Features.Auth;
 using TaleTrackApp.Features.Media;
 using Xunit;
 

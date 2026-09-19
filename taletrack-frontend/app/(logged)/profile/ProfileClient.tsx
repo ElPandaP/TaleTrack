@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  User, Mail, BookOpen, Film, Tv, Activity, Calendar, LogOut, Trash2, Save,
+  User, BookOpen, Film, Tv, Activity, Calendar, LogOut, Trash2, Save,
 } from 'lucide-react';
 import { UserAvatar } from '@/components/media/UserAvatar';
 import AvatarUpload, { AVATAR_MAX_BYTES } from '@/components/profile/AvatarUpload';
@@ -85,7 +85,6 @@ export default function ProfileClient({
   const router = useRouter();
 
   const [username, setUsername] = useState(profile.username);
-  const [email, setEmail] = useState(profile.email);
   const [privacy, setPrivacy] = useState<FeedPrivacy>(profile.privacy);
 
   // Avatar changes are staged locally and only sent to the server on "Save changes".
@@ -144,7 +143,6 @@ export default function ProfileClient({
 
   const isDirty =
     username !== profile.username ||
-    email !== profile.email ||
     JSON.stringify(privacy) !== JSON.stringify(profile.privacy) ||
     avatarDirty;
 
@@ -159,7 +157,7 @@ export default function ProfileClient({
         await userService.removeAvatar();
       }
 
-      const res = await userService.updateProfile(profile.id, { username, email, privacy });
+      const res = await userService.updateProfile(profile.id, { username, privacy });
       // The access token carries username/email as claims — swap it in so the header/menu
       // and everything else driven by useAuth() stops showing the pre-edit values.
       if (res.token) {
@@ -211,7 +209,7 @@ export default function ProfileClient({
         <UserAvatar username={username} avatarUrl={displayAvatarUrl} size="xl" />
         <div className="min-w-0 flex-1">
           <h2 className="font-heading text-xl font-semibold">@{username}</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">{email}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{profile.email}</p>
           <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground/70">
             <Calendar className="size-3.5" />
             <span>{t('profile.firstTracked', { date: memberSince })}</span>
@@ -266,20 +264,6 @@ export default function ProfileClient({
                   onChange={(e) => setUsername(e.target.value)}
                   minLength={3}
                   maxLength={50}
-                  className="tt-input py-2.5 pr-4 pl-10"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                {t('auth.email')}
-              </label>
-              <div className="relative">
-                <Mail className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground/50" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   className="tt-input py-2.5 pr-4 pl-10"
                 />
               </div>

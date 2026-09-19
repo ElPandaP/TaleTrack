@@ -1,23 +1,62 @@
 using TaleTrackApp.Data;
+using TaleTrackApp.Features.Review;
+using TaleTrackApp.Features.TrackingEvent;
 using TaleTrackApp.Model;
 using Microsoft.EntityFrameworkCore;
 
 namespace TaleTrackApp.Features.Media;
 
+/// <summary>What a media detail page needs: the media, all its reviews and the viewer's own tracking.</summary>
+public record MediaDetail(
+    Model.Media Media,
+    List<Model.Review> Reviews,
+    Model.Review? MyReview,
+    Model.TrackingEvent? MyTracking,
+    int? MyProgress);
+
 public class MediaService
 {
     private readonly AppDbContext _context;
+    private readonly ReviewService _reviews;
+    private readonly TmdbService _tmdb;
+    private readonly OpenLibraryService _openLibrary;
+    private readonly TrackingEventService _tracking;
     private readonly ILogger<MediaService> _logger;
 
-    public MediaService(AppDbContext context, ILogger<MediaService> logger)
+    public MediaService(
+        AppDbContext context,
+        ReviewService reviews,
+        TmdbService tmdb,
+        OpenLibraryService openLibrary,
+        TrackingEventService tracking,
+        ILogger<MediaService> logger)
     {
         _context = context;
+        _reviews = reviews;
+        _tmdb = tmdb;
+        _openLibrary = openLibrary;
+        _tracking = tracking;
         _logger = logger;
     }
 
     public async Task<Model.Media?> GetByIdAsync(Guid id)
     {
         return await _context.Medias.FindAsync(id);
+    }
+
+    /// <summary>The detail page for one media as seen by one user; null if the media doesn't exist.</summary>
+    public async Task<MediaDetail?> GetDetailAsync(Guid id, Guid userId)
+    {
+        var media = await GetByIdAsync(id);
+        if (media == null) return null;
+
+        var reviews = await _reviews.GetByMediaIdAsync(id);
+        var myTracking = await _tracking.GetForMediaAsync(userId, id);
+        var myProgress = media.Type == "Series"
+            ? SeriesProgressService.Calculate(media.SeasonEpisodeCounts, myTracking?.Season, myTracking?.Episode) ?? myTracking?.Progress
+            : myTracking?.Progress;
+
+        return new MediaDetail(media, reviews, reviews.FirstOrDefault(r => r.UserId == userId), myTracking, myProgress);
     }
 
     public async Task<Model.Media> CreateAsync(string title, string type, int length,
@@ -123,5 +162,21 @@ public class MediaService
         media.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
         _logger.LogInformation("Media {MediaId} enriched from TMDB", mediaId);
+    }
+
+    /// <summary>Looks the media up on TMDB and fills in whatever it is missing. Does nothing if TMDB has no match.</summary>
+    public async Task EnrichFromTmdbAsync(Guid mediaId, string title, string type, string? language)
+    {
+        var result = await _tmdb.EnrichAsync(title, type, language);
+        if (result != null)
+            await ApplyTmdbEnrichmentAsync(mediaId, result);
+    }
+
+    /// <summary>Looks the book up on OpenLibrary and fills in whatever it is missing. Does nothing if there is no match.</summary>
+    public async Task EnrichFromOpenLibraryAsync(Guid mediaId, string title, string? author, string? isbn)
+    {
+        var result = await _openLibrary.EnrichAsync(title, author, isbn);
+        if (result != null)
+            await ApplyEnrichmentAsync(mediaId, result);
     }
 }

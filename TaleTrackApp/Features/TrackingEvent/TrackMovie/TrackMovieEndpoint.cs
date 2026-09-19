@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using TaleTrackApp.Features.Media;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
+using TaleTrackApp.Services;
 
 namespace TaleTrackApp.Features.TrackingEvent.TrackMovie;
 
@@ -19,7 +20,7 @@ public static class TrackMovieEndpoint
         TrackMovieRequest request,
         MediaService mediaService,
         TrackingEventService trackingEventService,
-        IServiceScopeFactory scopeFactory,
+        BackgroundRunner background,
         ClaimsPrincipal user,
         ILogger<TrackMovieRequest> logger)
     {
@@ -41,23 +42,8 @@ public static class TrackMovieEndpoint
                  string.IsNullOrWhiteSpace(media.TitleEN) || string.IsNullOrWhiteSpace(media.TitleES)))
             {
                 var (mediaId, title, language) = (media.Id, request.Title, request.Language);
-                _ = Task.Run(async () =>
-                {
-                    await using var scope = scopeFactory.CreateAsyncScope();
-                    var bgMedia = scope.ServiceProvider.GetRequiredService<MediaService>();
-                    var bgTmdb = scope.ServiceProvider.GetRequiredService<TmdbService>();
-                    var bgLog = scope.ServiceProvider.GetRequiredService<ILogger<TrackMovieRequest>>();
-                    try
-                    {
-                        var result = await bgTmdb.EnrichAsync(title, "Movie", language);
-                        if (result != null)
-                            await bgMedia.ApplyTmdbEnrichmentAsync(mediaId, result);
-                    }
-                    catch (Exception ex)
-                    {
-                        bgLog.LogError(ex, "Background TMDB enrichment failed for mediaId={Id}", mediaId);
-                    }
-                });
+                background.Run<MediaService>($"TMDB enrichment for media {mediaId}",
+                    mediaService => mediaService.EnrichFromTmdbAsync(mediaId, title, "Movie", language));
             }
 
             return Results.Ok(new { success = true, message = "Tracking event added successfully" });

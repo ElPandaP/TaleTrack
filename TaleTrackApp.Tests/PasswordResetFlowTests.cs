@@ -105,7 +105,7 @@ public class PasswordResetFlowTests(CustomWebApplicationFactory factory)
 
         using (var scope = _factory.NewDbScope(out var db))
         {
-            var hash = AuthActionTokenService.Hash(token);
+            var hash = TokenHasher.Hash(token);
             var row = await db.AuthActionTokens.FirstAsync(t => t.TokenHash == hash);
             row.ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
             await db.SaveChangesAsync();

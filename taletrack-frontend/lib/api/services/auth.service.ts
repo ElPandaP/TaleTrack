@@ -73,6 +73,26 @@ export const authService = {
     return apiClient.post('/auth/request-password-reset', { email, locale });
   },
 
+  /** Emails a 6-digit login code. Always resolves — the response is identical whether or not the account exists. */
+  async requestLoginCode(email: string, locale: string): Promise<{ success: boolean }> {
+    return apiClient.post('/auth/request-code', { email, locale });
+  },
+
+  /** Verifies a login code and signs in. Throws ApiError (status 401) on a wrong or expired code. */
+  async verifyLoginCode(email: string, code: string): Promise<LoginResponse> {
+    const response = await apiClient.post<LoginResponse>('/auth/verify-code', {
+      email,
+      code,
+      device: 'Web',
+    });
+
+    if (response.success && response.token) {
+      apiClient.setToken(response.token, response.refreshToken);
+    }
+
+    return response;
+  },
+
   /** Sets a new password from a reset-link token. Throws ApiError (code `invalid_or_expired`) on a bad token. */
   async resetPassword(token: string, password: string): Promise<{ success: boolean; code?: string }> {
     return apiClient.post('/auth/reset-password', { token, password });

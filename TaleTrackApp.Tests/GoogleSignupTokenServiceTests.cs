@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using TaleTrackApp.Features.User.GoogleLogin;
+using TaleTrackApp.Features.Auth;
 using Xunit;
 
 namespace TaleTrackApp.Tests;

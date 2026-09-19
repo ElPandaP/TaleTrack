@@ -1,21 +1,8 @@
-using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using TaleTrackApp.Features.Activity;
-using TaleTrackApp.Auth;
+using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Activity.GetActivity;
-
-public class GetActivityRequest
-{
-    [RegularExpression(@"^(mine|friends|all)?$", ErrorMessage = "scope must be 'mine', 'friends', 'all' or empty")]
-    public string? Scope { get; set; }
-
-    [Range(1, 500)]
-    public int? Limit { get; set; }
-
-    /// <summary>When set, returns just that user's activity (public profile).</summary>
-    public Guid? UserId { get; set; }
-}
 
 public static class GetActivityEndpoint
 {
@@ -45,7 +32,7 @@ public static class GetActivityEndpoint
                 ? await activityService.GetForUserAsync(userId, target, limit)
                 : await activityService.GetFeedAsync(userId, request.Scope ?? "all", limit);
 
-            return Results.Ok(new { success = true, count = feed.Count, data = feed });
+            return Results.Ok(new GetActivityResponse { Success = true, Count = feed.Count, Data = feed });
         }
         catch (Exception ex)
         {

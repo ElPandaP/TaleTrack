@@ -59,24 +59,16 @@ public class LibraryService
 
         var items = events
             .Where(te => te.Media != null)
-            .GroupBy(te => te.MediaId)
-            .Select(g =>
+            .Select(te =>
             {
-                var media = g.First().Media!;
+                var media = te.Media!;
                 var isSeries = media.Type == "Series";
 
-                // For series, the furthest (season, episode) reached — not just the most
-                // recently-touched row — decides progress, so a rewatch of an earlier
-                // episode never moves it backward.
-                var latest = isSeries
-                    ? g.OrderByDescending(x => x.Season ?? 0).ThenByDescending(x => x.Episode ?? 0).First()
-                    : g.OrderByDescending(x => x.EventDate).First();
-
                 var progress = isSeries
-                    ? SeriesProgress.Calculate(media.SeasonEpisodeCounts, latest.Season, latest.Episode) ?? latest.Progress
-                    : latest.Progress;
+                    ? SeriesProgressService.Calculate(media.SeasonEpisodeCounts, te.Season, te.Episode) ?? te.Progress
+                    : te.Progress;
 
-                reviewByMedia.TryGetValue(g.Key, out var review);
+                reviewByMedia.TryGetValue(te.MediaId, out var review);
                 return new LibraryItem(
                     MediaId: media.Id,
                     TitleEN: media.TitleEN,
@@ -87,11 +79,11 @@ public class LibraryService
                     Length: media.Length,
                     Isbn: media.Isbn,
                     Progress: progress,
-                    LastEventDate: latest.EventDate,
+                    LastEventDate: te.EventDate,
                     MyRating: review?.Rating,
                     MyReviewId: review?.Id,
-                    Season: isSeries ? latest.Season : null,
-                    Episode: isSeries ? latest.Episode : null,
+                    Season: isSeries ? te.Season : null,
+                    Episode: isSeries ? te.Episode : null,
                     SeasonEpisodeCounts: isSeries ? media.SeasonEpisodeCounts : null);
             })
             .AsEnumerable();
