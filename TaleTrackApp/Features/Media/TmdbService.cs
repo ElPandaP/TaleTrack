@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using TaleTrackApp.Model;
 
 namespace TaleTrackApp.Features.Media;
 
@@ -28,13 +29,13 @@ public class TmdbService(HttpClient http, ILogger<TmdbService> logger, IConfigur
     private static string Locale(string lang) => lang == "es" ? "es-ES" : "en-US";
     private static string OtherLanguage(string lang) => lang == "es" ? "en" : "es";
 
-    public async Task<TmdbResult?> EnrichAsync(string title, string type, string? detectedLanguage)
+    public async Task<TmdbResult?> EnrichAsync(string title, MediaType type, string? detectedLanguage)
     {
         if (string.IsNullOrWhiteSpace(_apiKey)) return null;
         if (detectedLanguage != "es" && detectedLanguage != "en") return null;
-        if (type != "Movie" && type != "Series") return null;
+        if (type != MediaType.Movie && type != MediaType.Series) return null;
 
-        var isMovie = type == "Movie";
+        var isMovie = type == MediaType.Movie;
         var mediaPath = isMovie ? "movie" : "tv";
         var locale = Locale(detectedLanguage);
         var otherLang = OtherLanguage(detectedLanguage);

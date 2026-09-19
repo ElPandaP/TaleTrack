@@ -52,14 +52,14 @@ public class MediaService
 
         var reviews = await _reviews.GetByMediaIdAsync(id);
         var myTracking = await _tracking.GetForMediaAsync(userId, id);
-        var myProgress = media.Type == "Series"
+        var myProgress = media.Type == MediaType.Series
             ? SeriesProgressService.Calculate(media.SeasonEpisodeCounts, myTracking?.Season, myTracking?.Episode) ?? myTracking?.Progress
             : myTracking?.Progress;
 
         return new MediaDetail(media, reviews, reviews.FirstOrDefault(r => r.UserId == userId), myTracking, myProgress);
     }
 
-    public async Task<Model.Media> CreateAsync(string title, string type, int length,
+    public async Task<Model.Media> CreateAsync(string title, MediaType type, int length,
         string? author = null, string? isbn = null, string? language = null)
     {
         var media = new Model.Media
@@ -83,7 +83,7 @@ public class MediaService
         return media;
     }
 
-    public async Task<Model.Media> FindOrCreateAsync(string title, string type, int length,
+    public async Task<Model.Media> FindOrCreateAsync(string title, MediaType type, int length,
         string? author = null, string? isbn = null, string? language = null)
     {
         // 1. Deduplicate by ISBN (most precise)
@@ -150,7 +150,7 @@ public class MediaService
             media.PosterUrl = result.PosterUrl;
         // Length is a movie-only concept here — a series' episodes vary in length, so
         // there's no single "length" worth recording for one (see SeasonEpisodeCounts).
-        if (media.Type == "Movie" && result.RuntimeMinutes is int minutes && minutes > 0 && media.Length <= 0)
+        if (media.Type == MediaType.Movie && result.RuntimeMinutes is int minutes && minutes > 0 && media.Length <= 0)
             media.Length = minutes;
         if (!string.IsNullOrWhiteSpace(result.TitleEN) && string.IsNullOrWhiteSpace(media.TitleEN))
             media.TitleEN = result.TitleEN;
@@ -165,7 +165,7 @@ public class MediaService
     }
 
     /// <summary>Looks the media up on TMDB and fills in whatever it is missing. Does nothing if TMDB has no match.</summary>
-    public async Task EnrichFromTmdbAsync(Guid mediaId, string title, string type, string? language)
+    public async Task EnrichFromTmdbAsync(Guid mediaId, string title, MediaType type, string? language)
     {
         var result = await _tmdb.EnrichAsync(title, type, language);
         if (result != null)

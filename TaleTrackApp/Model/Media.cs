@@ -26,10 +26,7 @@ public class Media
     [StringLength(1000, ErrorMessage = "Description cannot exceed 1000 characters")]
     public string? Description { get; set; }
     
-    [Required(ErrorMessage = "Type is required")]
-    [StringLength(20, ErrorMessage = "Type cannot exceed 20 characters")]
-    [RegularExpression(@"^(Movie|Series|Book)$", ErrorMessage = "Type must be 'Movie', 'Series', or 'Book'")]
-    public required string Type { get; set; }
+    public required MediaType Type { get; set; }
     
     [Range(1, int.MaxValue, ErrorMessage = "Length must be greater than 0")]
     public int Length { get; set; }
@@ -38,13 +35,15 @@ public class Media
     [StringLength(2048, ErrorMessage = "PosterUrl cannot exceed 2048 characters")]
     public string? PosterUrl { get; set; }
 
+    /// <summary>Books only (enforced by a check constraint).</summary>
     [StringLength(255)]
     public string? Author { get; set; }
 
+    /// <summary>Books only (enforced by a check constraint).</summary>
     [StringLength(13)]
     public string? Isbn { get; set; }
 
-    /// <summary>Episode count per season (index 0 = season 1), from TMDB. Series only, null until enriched.</summary>
+    /// <summary>Episode count per season (index 0 = season 1), from TMDB. Series only (enforced by a check constraint), null until enriched.</summary>
     public int[]? SeasonEpisodeCounts { get; set; }
 
     [Required]

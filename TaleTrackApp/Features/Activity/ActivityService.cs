@@ -29,19 +29,19 @@ public class ActivityService
         _logger = logger;
     }
 
-    private static bool ShowProgress(Model.User u, string type) => type switch
+    private static bool ShowProgress(Model.User u, Model.MediaType type) => type switch
     {
-        "Book" => u.ShareBookProgress,
-        "Movie" => u.ShareMovieProgress,
-        "Series" => u.ShareSeriesProgress,
+        Model.MediaType.Book => u.ShareBookProgress,
+        Model.MediaType.Movie => u.ShareMovieProgress,
+        Model.MediaType.Series => u.ShareSeriesProgress,
         _ => true,
     };
 
-    private static bool ShowReviews(Model.User u, string type) => type switch
+    private static bool ShowReviews(Model.User u, Model.MediaType type) => type switch
     {
-        "Book" => u.ShareBookReviews,
-        "Movie" => u.ShareMovieReviews,
-        "Series" => u.ShareSeriesReviews,
+        Model.MediaType.Book => u.ShareBookReviews,
+        Model.MediaType.Movie => u.ShareMovieReviews,
+        Model.MediaType.Series => u.ShareSeriesReviews,
         _ => true,
     };
 
@@ -110,13 +110,13 @@ public class ActivityService
 
             items.Add(new ActivityItem(
                 $"start-{e.UserId}-{e.MediaId}", u.Id, u.Username, u.AvatarUrl,
-                "started", e.EventDate, media.Id, media.TitleEN, media.TitleES, media.Type, media.PosterUrl, null, null));
+                "started", e.EventDate, media.Id, media.TitleEN, media.TitleES, media.Type.ToString(), media.PosterUrl, null, null));
 
             if (e.Progress == 100)
             {
                 items.Add(new ActivityItem(
                     $"finish-{e.UserId}-{e.MediaId}", u.Id, u.Username, u.AvatarUrl,
-                    "finished", e.EventDate, media.Id, media.TitleEN, media.TitleES, media.Type, media.PosterUrl, null, null));
+                    "finished", e.EventDate, media.Id, media.TitleEN, media.TitleES, media.Type.ToString(), media.PosterUrl, null, null));
             }
         }
 
@@ -126,7 +126,7 @@ public class ActivityService
             if (r.UserId != viewerId && !ShowReviews(u, r.Media!.Type)) continue;
             items.Add(new ActivityItem(
                 $"review-{r.Id}", u.Id, u.Username, u.AvatarUrl,
-                "reviewed", r.CreatedAt, r.Media!.Id, r.Media.TitleEN, r.Media.TitleES, r.Media.Type, r.Media.PosterUrl, r.Rating, r.Comment));
+                "reviewed", r.CreatedAt, r.Media!.Id, r.Media.TitleEN, r.Media.TitleES, r.Media.Type.ToString(), r.Media.PosterUrl, r.Rating, r.Comment));
         }
 
         return items

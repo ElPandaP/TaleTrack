@@ -50,9 +50,9 @@ public class StatsService
             byMonth[te.EventDate.Month - 1]++;
 
         var byType = new TypeBreakdown(
-            Book: latestPerMedia.Count(te => te.Media!.Type == "Book"),
-            Movie: latestPerMedia.Count(te => te.Media!.Type == "Movie"),
-            Series: latestPerMedia.Count(te => te.Media!.Type == "Series"));
+            Book: latestPerMedia.Count(te => te.Media!.Type == Model.MediaType.Book),
+            Movie: latestPerMedia.Count(te => te.Media!.Type == Model.MediaType.Movie),
+            Series: latestPerMedia.Count(te => te.Media!.Type == Model.MediaType.Series));
 
         var reviewCount = await _context.Reviews.CountAsync(r => r.UserId == userId);
 

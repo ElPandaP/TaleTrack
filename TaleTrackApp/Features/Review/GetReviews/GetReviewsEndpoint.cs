@@ -47,7 +47,7 @@ public static class GetReviewsEndpoint
                         Id = r.Media?.Id,
                         TitleEN = r.Media?.TitleEN,
                         TitleES = r.Media?.TitleES,
-                        Type = r.Media?.Type,
+                        Type = r.Media?.Type.ToString(),
                         PosterUrl = r.Media?.PosterUrl,
                         Author = r.Media?.Author,
                     }

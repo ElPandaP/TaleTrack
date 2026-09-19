@@ -32,7 +32,7 @@ public static class TrackSeriesEndpoint
         {
             // Length is a movie/book-only concept (a single runtime/page-count); a series'
             // episodes vary in length, so there's no meaningful single "length" to record.
-            var media = await mediaService.FindOrCreateAsync(request.Title, "Series", length: 0,
+            var media = await mediaService.FindOrCreateAsync(request.Title, Model.MediaType.Series, length: 0,
                 language: request.Language);
             await trackingEventService.UpsertAsync(
                 userId, media.Id, request.Progress,
@@ -48,7 +48,7 @@ public static class TrackSeriesEndpoint
             {
                 var (mediaId, title, language) = (media.Id, request.Title, request.Language);
                 background.Run<MediaService>($"TMDB enrichment for media {mediaId}",
-                    mediaService => mediaService.EnrichFromTmdbAsync(mediaId, title, "Series", language));
+                    mediaService => mediaService.EnrichFromTmdbAsync(mediaId, title, Model.MediaType.Series, language));
             }
 
             return Results.Ok(new { success = true, message = "Tracking event added successfully" });

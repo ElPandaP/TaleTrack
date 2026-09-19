@@ -26,6 +26,27 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasIndex(u => u.Email)
             .IsUnique();
 
+        // Single table for every media type: the columns that only make sense for one type
+        // are nullable, and the check constraints keep them empty for the others.
+        modelBuilder.Entity<Media>(m =>
+        {
+            m.Property(x => x.Type).HasConversion<string>().HasMaxLength(20);
+
+            m.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_Medias_Type", "\"Type\" IN ('Movie', 'Series', 'Book')");
+                t.HasCheckConstraint("CK_Medias_Author_BookOnly", "\"Author\" IS NULL OR \"Type\" = 'Book'");
+                t.HasCheckConstraint("CK_Medias_Isbn_BookOnly", "\"Isbn\" IS NULL OR \"Type\" = 'Book'");
+                t.HasCheckConstraint("CK_Medias_SeasonEpisodeCounts_SeriesOnly",
+                    "\"SeasonEpisodeCounts\" IS NULL OR \"Type\" = 'Series'");
+            });
+
+            // Lookups made by MediaService.FindOrCreateAsync on every tracking event.
+            m.HasIndex(x => x.Isbn).HasFilter("\"Isbn\" IS NOT NULL");
+            m.HasIndex(x => x.TitleEN);
+            m.HasIndex(x => x.TitleES);
+        });
+
         // Cascade delete to clean up related data
         modelBuilder.Entity<Review>(r =>
         {

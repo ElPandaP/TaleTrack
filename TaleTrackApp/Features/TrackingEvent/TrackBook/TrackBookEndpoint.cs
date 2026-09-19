@@ -31,7 +31,7 @@ public static class TrackBookEndpoint
         try
         {
             var media = await mediaService.FindOrCreateAsync(
-                request.Title, "Book", request.Pages ?? 0, request.Author, request.Isbn);
+                request.Title, Model.MediaType.Book, request.Pages ?? 0, request.Author, request.Isbn);
 
             await trackingEventService.UpsertAsync(userId, media.Id, request.Progress);
 

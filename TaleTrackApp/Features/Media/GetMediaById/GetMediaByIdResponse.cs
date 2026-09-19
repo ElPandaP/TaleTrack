@@ -8,7 +8,7 @@ public class GetMediaByIdResponse
     public static GetMediaByIdResponse From(MediaDetail detail, Guid userId)
     {
         var (media, reviews, myReview, myTracking, myProgress) = detail;
-        var isSeries = media.Type == "Series";
+        var isSeries = media.Type == Model.MediaType.Series;
 
         return new GetMediaByIdResponse
         {
@@ -18,7 +18,7 @@ public class GetMediaByIdResponse
                 Id = media.Id,
                 TitleEN = media.TitleEN,
                 TitleES = media.TitleES,
-                Type = media.Type,
+                Type = media.Type.ToString(),
                 Author = media.Author,
                 PosterUrl = media.PosterUrl,
                 Length = media.Length,

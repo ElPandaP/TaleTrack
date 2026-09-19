@@ -30,7 +30,7 @@ public static class TrackMovieEndpoint
 
         try
         {
-            var media = await mediaService.FindOrCreateAsync(request.Title, "Movie", request.Minutes ?? 0,
+            var media = await mediaService.FindOrCreateAsync(request.Title, Model.MediaType.Movie, request.Minutes ?? 0,
                 language: request.Language);
             await trackingEventService.UpsertAsync(userId, media.Id, request.Progress);
 
@@ -43,7 +43,7 @@ public static class TrackMovieEndpoint
             {
                 var (mediaId, title, language) = (media.Id, request.Title, request.Language);
                 background.Run<MediaService>($"TMDB enrichment for media {mediaId}",
-                    mediaService => mediaService.EnrichFromTmdbAsync(mediaId, title, "Movie", language));
+                    mediaService => mediaService.EnrichFromTmdbAsync(mediaId, title, Model.MediaType.Movie, language));
             }
 
             return Results.Ok(new { success = true, message = "Tracking event added successfully" });

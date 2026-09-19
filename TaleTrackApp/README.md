@@ -213,7 +213,7 @@ encontrada, parámetro interno ausente...).
 | Entidad | Campos clave | Notas |
 |---|---|---|
 | **User** | Email, Username, PasswordHash?, GoogleId?, EmailCode?/Expiry?, AvatarUrl?, IsActive, CreatedAt, 6 flags `Share{Book,Movie,Series}{Progress,Reviews}` | password/google opcionales → un user puede ser solo-Google |
-| **Media** | Title, AltTitle?, Type, Length, Description?, PosterUrl?, Author?, Isbn?, FirstTrackedAt, UpdatedAt? | `Type` regex `^(Movie\|Series\|Book)$`. `AltTitle` = título en el otro idioma (es↔en), rellenado por TMDB |
+| **Media** | TitleEN?, TitleES?, Type, Length, Description?, PosterUrl?, Author?, Isbn?, SeasonEpisodeCounts?, FirstTrackedAt, UpdatedAt? | Tabla única para los tres tipos. `Type` es el enum `MediaType` (Movie, Series, Book), guardado como texto. Al menos uno de `TitleEN`/`TitleES`; el otro lo rellena TMDB. Check constraints: `Author` e `Isbn` solo en Book, `SeasonEpisodeCounts` solo en Series, `Type` limitado a los tres valores. Índices no únicos en `Isbn` (parcial), `TitleEN` y `TitleES` |
 | **TrackingEvent** | UserId→, MediaId→, Progress? (0–100), Season?, Episode?, EpisodeTitle?, EventDate | `EventDate` = `DateTime.UtcNow` al crear/actualizar |
 | **Review** | UserId→, MediaId→, Rating (1–10), Comment?, CreatedAt, UpdatedAt? | |
 | **Friendship** | RequesterId→, AddresseeId→, Status ("Pending"/"Accepted"), CreatedAt, RespondedAt? | índice único en (Requester, Addressee); ambos FK cascade-delete |
@@ -221,14 +221,15 @@ encontrada, parámetro interno ausente...).
 
 - **Cascade delete** configurado en `OnModelCreating`: borrar un `User` borra sus `Review`,
   `TrackingEvent`, `Friendship` y `RefreshToken`.
-- **Dedup de Media** (`MediaService.FindOrCreateAsync`): prioridad ISBN → Title+Author → Title →
-  `AltTitle` (siempre dentro del mismo `Type`).
+- **Dedup de Media** (`MediaService.FindOrCreateAsync`): prioridad ISBN → título+Author → título; el
+  título se compara con `TitleEN` y `TitleES` (siempre dentro del mismo `Type`).
 - **Enriquecimiento de libros** (`OpenLibraryService`): busca por ISBN o por título/autor (similitud de
   tokens, umbral 0.75 configurable) y rellena Author / PosterUrl / Isbn si faltan.
   Portadas: `covers.openlibrary.org`.
 - **Enriquecimiento de películas/series** (`TmdbService`, requiere env `TMDB_API_KEY`): busca en TMDB por
   título (con el mismo matching por similitud), y si encuentra coincidencia rellena `PosterUrl`,
-  `Length` (runtime) y `AltTitle` (traducción al otro idioma vía `append_to_response=translations`).
+  `Length` (runtime, solo películas), `SeasonEpisodeCounts` (series) y el título en el otro idioma
+  (`TitleEN`/`TitleES`, vía `append_to_response=translations`).
   Solo se activa si el request trae `Language` ("es"/"en" — lo manda la extensión de Netflix leyendo
   `<html lang>`); sin API key configurada, o sin `Language`, no hace nada y no rompe el flujo normal.
 
@@ -279,7 +280,8 @@ Se leen de `../.env` (repo root).
   `AuthFlowTests`, `TrackingSplitTests` (movies/series, upsert, progreso monótono), `BookTrackingFlowTests`,
   `TmdbTrackingFlowTests` (dedup entre usuarios, enriquecimiento), `ReviewFlowTests`, `FriendFlowTests`,
   `LibraryFlowTests`, `ActivityFlowTests` (privacidad, amigos), `UserProfileFlowTests`, `SessionsFlowTests`,
-  `StatsFlowTests`.
+  `StatsFlowTests`. `MediaConstraintsTests` comprueba las check constraints de `Media` directamente
+  contra la BD.
 - Correr: `dotnet test ../TaleTrackApp.Tests`
 
 ---

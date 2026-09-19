@@ -62,7 +62,7 @@ public class LibraryService
             .Select(te =>
             {
                 var media = te.Media!;
-                var isSeries = media.Type == "Series";
+                var isSeries = media.Type == Model.MediaType.Series;
 
                 var progress = isSeries
                     ? SeriesProgressService.Calculate(media.SeasonEpisodeCounts, te.Season, te.Episode) ?? te.Progress
@@ -73,7 +73,7 @@ public class LibraryService
                     MediaId: media.Id,
                     TitleEN: media.TitleEN,
                     TitleES: media.TitleES,
-                    Type: media.Type,
+                    Type: media.Type.ToString(),
                     Author: media.Author,
                     PosterUrl: media.PosterUrl,
                     Length: media.Length,
@@ -120,9 +120,9 @@ public class LibraryService
             .ToListAsync();
 
         return (
-            types.Count(t => t.Type == "Book"),
-            types.Count(t => t.Type == "Movie"),
-            types.Count(t => t.Type == "Series"),
+            types.Count(t => t.Type == Model.MediaType.Book),
+            types.Count(t => t.Type == Model.MediaType.Movie),
+            types.Count(t => t.Type == Model.MediaType.Series),
             types.Count);
     }
 
