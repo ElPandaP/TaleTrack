@@ -146,7 +146,7 @@ entran con código por email y se ponen contraseña nueva desde el perfil.
 |---|---|---|---|
 | GET | `/users/me` | JWT | perfil completo (avatar, privacidad) del usuario autenticado |
 | PUT | `/users/{id}` | JWT | edita username y `privacy{...}`; el email es fijo tras el registro; solo uno mismo (403 si no) |
-| POST | `/users/me/avatar` | JWT | sube la foto de perfil (multipart `file`, máx. 5 MB); la recorta a 256×256 WebP y devuelve `avatarUrl` |
+| PUT | `/users/me/avatar` | JWT | sube la foto de perfil (multipart `file`, máx. 5 MB); la recorta a 256×256 WebP y devuelve `avatarUrl` |
 | DELETE | `/users/me/avatar` | JWT | borra la foto de perfil |
 | GET | `/users/{id}` | JWT | perfil público: `{ id, username, avatarUrl, createdAt, relationship, counts{book,movie,series,total} }` |
 | GET | `/users/{id}/avatar` | anónimo | sirve la foto de perfil (WebP 256×256) desde la BD |
@@ -187,7 +187,8 @@ tener ningún consumidor real.)
 |---|---|---|
 | GET | `/friends` | `{ friends, incoming, outgoing }` (amigos aceptados + solicitudes) |
 | POST | `/friends/requests` `{userId}` | envía solicitud a ese usuario (responde con `code` estable para mapear el error en el frontend) |
-| POST | `/friends/requests/{id}` `{accept}` | acepta / rechaza una entrante |
+| PUT | `/friends/requests/{id}` | acepta una solicitud entrante |
+| DELETE | `/friends/requests/{id}` | rechaza una solicitud entrante (borra la fila) |
 | DELETE | `/friends/{userId}` | elimina amistad o cancela solicitud |
 | GET | `/activity?scope=all\|mine\|friends&limit=` | feed derivado de TrackingEvent + Review: `started`/`finished`/`reviewed`. Filtra por la privacidad **por tipo de media** de cada usuario (`Share{Book,Movie,Series}{Progress,Reviews}`) |
 | GET | `/activity?userId=N&limit=` | actividad de un solo usuario (para su perfil público); vacío salvo que seas tú o su amigo |

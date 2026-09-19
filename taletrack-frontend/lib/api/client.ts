@@ -201,10 +201,6 @@ export class ApiClient {
     return this.request<T>(endpoint, { method: 'POST', body: JSON.stringify(body) }, requireAuth);
   }
 
-  async postForm<T>(endpoint: string, form: FormData, requireAuth: boolean = false): Promise<T> {
-    return this.request<T>(endpoint, { method: 'POST', body: form }, requireAuth);
-  }
-
   async put<T>(endpoint: string, body: unknown, requireAuth: boolean = false): Promise<T> {
     return this.request<T>(endpoint, { method: 'PUT', body: JSON.stringify(body) }, requireAuth);
   }
