@@ -27,7 +27,7 @@ public class UserProfileFlowTests(CustomWebApplicationFactory factory)
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", body.GetProperty("token").GetString());
 
-        var me = await client.GetAsync("/api/user/me");
+        var me = await client.GetAsync("/api/users/me");
         var meBody = await me.Content.ReadFromJsonAsync<JsonElement>();
         return (client, meBody.GetProperty("data").GetProperty("id").GetGuid());
     }
@@ -37,10 +37,10 @@ public class UserProfileFlowTests(CustomWebApplicationFactory factory)
     {
         var (client, id) = await AuthedClientAsync("profile-edit@test.com", "profileeditold");
 
-        var res = await client.PutAsJsonAsync($"/api/user/{id}", new { Username = "profileeditnew" });
+        var res = await client.PutAsJsonAsync($"/api/users/{id}", new { Username = "profileeditnew" });
         Assert.True(res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
 
-        var me = await client.GetAsync("/api/user/me");
+        var me = await client.GetAsync("/api/users/me");
         var meBody = await me.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("profileeditnew", meBody.GetProperty("data").GetProperty("username").GetString());
     }
@@ -51,7 +51,7 @@ public class UserProfileFlowTests(CustomWebApplicationFactory factory)
         var (a, _) = await AuthedClientAsync("profile-edit-a@test.com", "profileedita");
         var (_, bId) = await AuthedClientAsync("profile-edit-b@test.com", "profileeditb");
 
-        var res = await a.PutAsJsonAsync($"/api/user/{bId}", new { Username = "hijacked" });
+        var res = await a.PutAsJsonAsync($"/api/users/{bId}", new { Username = "hijacked" });
         Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);
     }
 

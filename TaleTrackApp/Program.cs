@@ -28,7 +28,6 @@ using TaleTrackApp.Features.User.DeleteAvatar;
 using TaleTrackApp.Features.User.GetMe;
 using TaleTrackApp.Features.User.SearchUsers;
 using TaleTrackApp.Features.User.GetUserProfile;
-using TaleTrackApp.Features.Media.AddMedia;
 using TaleTrackApp.Features.Media.GetMediaById;
 using TaleTrackApp.Features.TrackingEvent.TrackMovie;
 using TaleTrackApp.Features.TrackingEvent.TrackSeries;
@@ -51,7 +50,8 @@ using TaleTrackApp.Features.Library.GetLibrary;
 using TaleTrackApp.Features.Friend;
 using TaleTrackApp.Features.Friend.GetFriends;
 using TaleTrackApp.Features.Friend.SendRequest;
-using TaleTrackApp.Features.Friend.RespondRequest;
+using TaleTrackApp.Features.Friend.AcceptRequest;
+using TaleTrackApp.Features.Friend.DeclineRequest;
 using TaleTrackApp.Features.Friend.RemoveFriend;
 using TaleTrackApp.Features.Activity;
 using TaleTrackApp.Features.Activity.GetActivity;
@@ -307,7 +307,6 @@ void configurePipeline()
     GetUserProfileEndpoint.Map(apiGroup);
 
     // Media & tracking (JWT)
-    AddMediaEndpoint.Map(apiGroup);
     GetMediaByIdEndpoint.Map(apiGroup);
     TrackMovieEndpoint.Map(apiGroup);
     TrackSeriesEndpoint.Map(apiGroup);
@@ -329,7 +328,8 @@ void configurePipeline()
     // Friends & activity (JWT)
     GetFriendsEndpoint.Map(apiGroup);
     SendFriendRequestEndpoint.Map(apiGroup);
-    RespondFriendRequestEndpoint.Map(apiGroup);
+    AcceptFriendRequestEndpoint.Map(apiGroup);
+    DeclineFriendRequestEndpoint.Map(apiGroup);
     RemoveFriendEndpoint.Map(apiGroup);
     GetActivityEndpoint.Map(apiGroup);
 }

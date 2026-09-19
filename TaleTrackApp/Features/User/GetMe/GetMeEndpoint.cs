@@ -8,7 +8,7 @@ public static class GetMeEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapGet("/user/me", HandleAsync)
+        group.MapGet("/users/me", HandleAsync)
             .WithName("GetMe")
             .WithDescription("The authenticated user's full profile (avatar, privacy, etc.)")
             .RequireAuthorization(Policies.UserPolicy);

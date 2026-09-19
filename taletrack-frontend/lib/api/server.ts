@@ -84,5 +84,5 @@ export async function getUserProfile(id: string): Promise<PublicProfileResponse>
 
 // Deduped per request — called by both the root layout and page components.
 export const getMe = cache((): Promise<UserProfileResponse> =>
-  serverFetch<UserProfileResponse>('/user/me'),
+  serverFetch<UserProfileResponse>('/users/me'),
 );

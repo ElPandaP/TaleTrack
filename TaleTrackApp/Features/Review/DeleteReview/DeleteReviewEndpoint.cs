@@ -8,7 +8,7 @@ public static class DeleteReviewEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapDelete("/review/{id:guid}", HandleAsync)
+        group.MapDelete("/reviews/{id:guid}", HandleAsync)
             .WithName("DeleteReview")
             .WithDescription("Deletes a review")
             .RequireAuthorization(Policies.UserPolicy);

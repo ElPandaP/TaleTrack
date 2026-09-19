@@ -63,7 +63,7 @@ export default function FriendsClient({
   const respond = async (requestId: string, accept: boolean) => {
     setBusy(requestId);
     try {
-      await friendService.respond(requestId, accept);
+      await (accept ? friendService.accept(requestId) : friendService.decline(requestId));
       router.refresh();
     } finally {
       setBusy(null);

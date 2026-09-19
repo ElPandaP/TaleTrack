@@ -7,7 +7,7 @@ public static class DeleteAvatarEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapDelete("/user/avatar", HandleAsync)
+        group.MapDelete("/users/me/avatar", HandleAsync)
             .WithName("DeleteAvatar")
             .WithDescription("Removes the authenticated user's profile photo (requires JWT)")
             .RequireAuthorization(Policies.UserPolicy);

@@ -2,31 +2,28 @@ using System.Security.Claims;
 using TaleTrackApp.Features.Friend;
 using TaleTrackApp.Security;
 
-namespace TaleTrackApp.Features.Friend.RespondRequest;
+namespace TaleTrackApp.Features.Friend.DeclineRequest;
 
-public static class RespondFriendRequestEndpoint
+public static class DeclineFriendRequestEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapPost("/friends/requests/{id:guid}", HandleAsync)
-            .WithName("RespondFriendRequest")
-            .WithDescription("Accept or decline an incoming friend request")
-            .AddEndpointFilter<ValidationFilter>()
+        group.MapDelete("/friends/requests/{id:guid}", HandleAsync)
+            .WithName("DeclineFriendRequest")
+            .WithDescription("Decline an incoming friend request")
             .RequireAuthorization(Policies.UserPolicy);
     }
 
     private static async Task<IResult> HandleAsync(
         Guid id,
-        RespondFriendRequestRequest request,
         FriendService friendService,
-        ClaimsPrincipal user,
-        ILogger<RespondFriendRequestRequest> logger)
+        ClaimsPrincipal user)
     {
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
             return Results.Unauthorized();
 
-        var result = await friendService.RespondAsync(userId, id, request.Accept!.Value);
+        var result = await friendService.DeclineAsync(userId, id);
         return result switch
         {
             RespondResult.Ok => Results.Ok(new { success = true }),

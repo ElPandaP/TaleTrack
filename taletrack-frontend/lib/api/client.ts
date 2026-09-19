@@ -61,6 +61,25 @@ export class ApiClient {
     }
   }
 
+  /**
+   * Tells the server to revoke this device's refresh token. Best effort: the caller does not
+   * wait for it, and `keepalive` lets the request outlive a page navigation right after logout.
+   */
+  public async revokeRefreshToken(): Promise<void> {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) return;
+    try {
+      await fetch(`${this.baseURL}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+        keepalive: true,
+      });
+    } catch {
+      // Offline: the session simply expires on its own.
+    }
+  }
+
   public clearToken(): void {
     if (typeof window === 'undefined') return;
     localStorage.removeItem(TOKEN_KEY);
@@ -188,6 +207,10 @@ export class ApiClient {
 
   async put<T>(endpoint: string, body: unknown, requireAuth: boolean = false): Promise<T> {
     return this.request<T>(endpoint, { method: 'PUT', body: JSON.stringify(body) }, requireAuth);
+  }
+
+  async putForm<T>(endpoint: string, form: FormData, requireAuth: boolean = false): Promise<T> {
+    return this.request<T>(endpoint, { method: 'PUT', body: form }, requireAuth);
   }
 
   async delete<T>(endpoint: string, requireAuth: boolean = false): Promise<T> {

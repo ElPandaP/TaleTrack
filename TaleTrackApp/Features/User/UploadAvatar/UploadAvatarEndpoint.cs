@@ -9,7 +9,7 @@ public static class UploadAvatarEndpoint
 
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapPost("/user/avatar", HandleAsync)
+        group.MapPut("/users/me/avatar", HandleAsync)
             .WithName("UploadAvatar")
             .WithDescription("Uploads a profile photo; it is cropped to a 256x256 square (requires JWT)")
             .DisableAntiforgery()

@@ -43,7 +43,7 @@ public class ReviewFlowTests(CustomWebApplicationFactory factory)
 
     private static async Task<Guid> AddReviewAsync(HttpClient client, Guid mediaId, int rating, string? comment = null)
     {
-        var res = await client.PostAsJsonAsync("/api/review", new { MediaId = mediaId, Rating = rating, Comment = comment });
+        var res = await client.PostAsJsonAsync("/api/reviews", new { MediaId = mediaId, Rating = rating, Comment = comment });
         Assert.True(res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
         var body = await res.Content.ReadFromJsonAsync<JsonElement>();
         return body.GetProperty("data").GetProperty("id").GetGuid();
@@ -80,7 +80,7 @@ public class ReviewFlowTests(CustomWebApplicationFactory factory)
         var mediaId = await TrackFinishedMovieAsync(client, "Copper Skyline");
         var reviewId = await AddReviewAsync(client, mediaId, 5);
 
-        var editRes = await client.PutAsJsonAsync($"/api/review/{reviewId}", new { Rating = 9, Comment = "Actually great" });
+        var editRes = await client.PutAsJsonAsync($"/api/reviews/{reviewId}", new { Rating = 9, Comment = "Actually great" });
         Assert.True(editRes.IsSuccessStatusCode, await editRes.Content.ReadAsStringAsync());
 
         var mine = await client.GetAsync("/api/reviews");
@@ -97,7 +97,7 @@ public class ReviewFlowTests(CustomWebApplicationFactory factory)
         var mediaId = await TrackFinishedMovieAsync(client, "Faded Marquee");
         var reviewId = await AddReviewAsync(client, mediaId, 6);
 
-        var deleteRes = await client.DeleteAsync($"/api/review/{reviewId}");
+        var deleteRes = await client.DeleteAsync($"/api/reviews/{reviewId}");
         Assert.True(deleteRes.IsSuccessStatusCode, await deleteRes.Content.ReadAsStringAsync());
 
         var mine = await client.GetAsync("/api/reviews");
@@ -113,7 +113,7 @@ public class ReviewFlowTests(CustomWebApplicationFactory factory)
         var reviewId = await AddReviewAsync(owner, mediaId, 7);
 
         var stranger = await AuthedClientAsync("review-stranger-edit@test.com", "reviewstrangeredit");
-        var editRes = await stranger.PutAsJsonAsync($"/api/review/{reviewId}", new { Rating = 1 });
+        var editRes = await stranger.PutAsJsonAsync($"/api/reviews/{reviewId}", new { Rating = 1 });
         Assert.Equal(HttpStatusCode.Forbidden, editRes.StatusCode);
     }
 
@@ -125,7 +125,7 @@ public class ReviewFlowTests(CustomWebApplicationFactory factory)
         var reviewId = await AddReviewAsync(owner, mediaId, 4);
 
         var stranger = await AuthedClientAsync("review-stranger-del@test.com", "reviewstrangerdel");
-        var deleteRes = await stranger.DeleteAsync($"/api/review/{reviewId}");
+        var deleteRes = await stranger.DeleteAsync($"/api/reviews/{reviewId}");
         Assert.Equal(HttpStatusCode.Forbidden, deleteRes.StatusCode);
     }
 
@@ -135,7 +135,7 @@ public class ReviewFlowTests(CustomWebApplicationFactory factory)
         var client = await AuthedClientAsync("review-invalid@test.com", "reviewinvalid");
         var mediaId = await TrackFinishedMovieAsync(client, "Wandering Ember");
 
-        var res = await client.PostAsJsonAsync("/api/review", new { MediaId = mediaId, Rating = 99 });
+        var res = await client.PostAsJsonAsync("/api/reviews", new { MediaId = mediaId, Rating = 99 });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
 }

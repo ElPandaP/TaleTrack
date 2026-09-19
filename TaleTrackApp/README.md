@@ -144,9 +144,10 @@ entran con código por email y se ponen contraseña nueva desde el perfil.
 ### User
 | Método | Ruta | Auth | Qué hace |
 |---|---|---|---|
-| GET | `/user/me` | JWT | perfil completo (avatar, privacidad) del usuario autenticado |
-| PUT | `/user/{id}` | JWT | edita username/password/avatarUrl + `privacy{...}`; el email es fijo tras el registro; solo uno mismo (403 si no) |
-| DELETE | `/user/{id}` | JWT | borra la cuenta; solo uno mismo. Cascade borra Reviews + TrackingEvents |
+| GET | `/users/me` | JWT | perfil completo (avatar, privacidad) del usuario autenticado |
+| PUT | `/users/{id}` | JWT | edita username y `privacy{...}`; el email es fijo tras el registro; solo uno mismo (403 si no) |
+| POST | `/users/me/avatar` | JWT | sube la foto de perfil (multipart `file`, máx. 5 MB); la recorta a 256×256 WebP y devuelve `avatarUrl` |
+| DELETE | `/users/me/avatar` | JWT | borra la foto de perfil |
 | GET | `/users/{id}` | JWT | perfil público: `{ id, username, avatarUrl, createdAt, relationship, counts{book,movie,series,total} }` |
 | GET | `/users/{id}/avatar` | anónimo | sirve la foto de perfil (WebP 256×256) desde la BD |
 | GET | `/users/search?username=` | JWT | busca usuario por username exacto (quita `@` inicial) |
@@ -154,7 +155,6 @@ entran con código por email y se ponen contraseña nueva desde el perfil.
 ### Media
 | Método | Ruta | Auth | Qué hace |
 |---|---|---|---|
-| POST | `/media` | JWT | crea Media suelto vía `MediaService.CreateAsync` (**sin dedup**) |
 | GET | `/media/{id}` | JWT | ficha de un media: datos + tu progreso/reseña + todas las reseñas + nota media |
 
 ### Tracking (`Features/TrackingEvent/`)
@@ -195,9 +195,9 @@ tener ningún consumidor real.)
 ### Review
 | Método | Ruta | Auth | Qué hace |
 |---|---|---|---|
-| POST | `/review` | JWT | crea reseña (mediaId, rating 1–10, comment opcional) |
-| PUT | `/review/{id}` | JWT | edita; solo el dueño (403 si no) |
-| DELETE | `/review/{id}` | JWT | borra; solo el dueño (403 si no) |
+| POST | `/reviews` | JWT | crea reseña (mediaId, rating 1–10, comment opcional) |
+| PUT | `/reviews/{id}` | JWT | edita; solo el dueño (403 si no) |
+| DELETE | `/reviews/{id}` | JWT | borra; solo el dueño (403 si no) |
 
 **Validación de entrada**: `ValidationFilter` (IEndpointFilter) recorre los argumentos y valida sus
 DataAnnotations; si falla devuelve `400 { message: "err1; err2" }`. El texto de esos mensajes está en

@@ -9,7 +9,7 @@ public static class EditUserEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapPut("/user/{id:guid}", HandleAsync)
+        group.MapPut("/users/{id:guid}", HandleAsync)
             .WithName("EditUser")
             .WithDescription("Edit a user (requires JWT)")
             .AddEndpointFilter<ValidationFilter>()
@@ -47,7 +47,7 @@ public static class EditUserEndpoint
                 request.Privacy.SeriesProgress, request.Privacy.SeriesReviews);
 
             var updatedUser = await userService.UpdateUserAsync(
-                id, request.Username, request.Password, request.AvatarUrl, privacy);
+                id, request.Username, privacy);
             
             if (updatedUser == null)
             {

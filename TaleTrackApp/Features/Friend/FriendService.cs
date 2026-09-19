@@ -95,23 +95,35 @@ public class FriendService
         return (SendRequestResult.Ok, target);
     }
 
-    public async Task<RespondResult> RespondAsync(Guid userId, Guid requestId, bool accept)
+    /// <summary>Accepts a pending request addressed to the user.</summary>
+    public async Task<RespondResult> AcceptAsync(Guid userId, Guid requestId)
     {
-        var req = await _context.Friendships.FindAsync(requestId);
-        if (req == null || req.Status != "Pending") return RespondResult.NotFound;
-        if (req.AddresseeId != userId) return RespondResult.Forbidden;
+        var (req, error) = await FindPendingForAsync(userId, requestId);
+        if (req == null) return error;
 
-        if (accept)
-        {
-            req.Status = "Accepted";
-            req.RespondedAt = DateTime.UtcNow;
-        }
-        else
-        {
-            _context.Friendships.Remove(req);
-        }
+        req.Status = "Accepted";
+        req.RespondedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
         return RespondResult.Ok;
+    }
+
+    /// <summary>Declines a pending request addressed to the user; the row is deleted.</summary>
+    public async Task<RespondResult> DeclineAsync(Guid userId, Guid requestId)
+    {
+        var (req, error) = await FindPendingForAsync(userId, requestId);
+        if (req == null) return error;
+
+        _context.Friendships.Remove(req);
+        await _context.SaveChangesAsync();
+        return RespondResult.Ok;
+    }
+
+    private async Task<(Model.Friendship? Request, RespondResult Error)> FindPendingForAsync(Guid userId, Guid requestId)
+    {
+        var req = await _context.Friendships.FindAsync(requestId);
+        if (req == null || req.Status != "Pending") return (null, RespondResult.NotFound);
+        if (req.AddresseeId != userId) return (null, RespondResult.Forbidden);
+        return (req, RespondResult.Ok);
     }
 
     /// <summary>Removes any friendship or pending request between the two users.</summary>

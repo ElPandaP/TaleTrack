@@ -8,7 +8,7 @@ public static class AddReviewEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapPost("/review", HandleAsync)
+        group.MapPost("/reviews", HandleAsync)
             .WithName("AddReview")
             .WithDescription("Adds a review")
             .AddEndpointFilter<ValidationFilter>()

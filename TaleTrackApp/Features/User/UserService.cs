@@ -74,8 +74,6 @@ public class UserService
     public async Task<Model.User?> UpdateUserAsync(
         Guid id,
         string? username,
-        string? password,
-        string? avatarUrl = null,
         FeedPrivacy? privacy = null)
     {
         var user = await _context.Users.FindAsync(id);
@@ -87,17 +85,6 @@ public class UserService
         if (!string.IsNullOrEmpty(username))
         {
             user.Username = username;
-        }
-
-        if (!string.IsNullOrEmpty(password))
-        {
-            user.PasswordHash = HashPassword(user, password);
-        }
-
-        // Empty string clears the avatar; null leaves it unchanged.
-        if (avatarUrl != null)
-        {
-            user.AvatarUrl = avatarUrl.Length == 0 ? null : avatarUrl;
         }
 
         if (privacy != null)

@@ -1,7 +1,6 @@
 import { apiClient } from '../client';
 import type {
   AddReviewResponse,
-  GetReviewsResponse,
   EditReviewRequest,
 } from '../../types';
 
@@ -9,7 +8,7 @@ export const reviewService = {
   /** Create a review. */
   async addReview(mediaId: string, rating: number, comment?: string): Promise<AddReviewResponse> {
     return apiClient.post<AddReviewResponse>(
-      '/review',
+      '/reviews',
       { mediaId, rating, comment },
       true,
     );
@@ -17,7 +16,7 @@ export const reviewService = {
 
   async editReview(id: string, rating: number, comment?: string): Promise<AddReviewResponse> {
     return apiClient.put<AddReviewResponse>(
-      `/review/${id}`,
+      `/reviews/${id}`,
       { rating, comment } as EditReviewRequest,
       true,
     );
@@ -25,13 +24,8 @@ export const reviewService = {
 
   async deleteReview(id: string): Promise<{ success: boolean; message: string }> {
     return apiClient.delete<{ success: boolean; message: string }>(
-      `/review/${id}`,
+      `/reviews/${id}`,
       true,
     );
-  },
-
-  /** Reviews written by the current user. Backend policy: JWT only. */
-  async getMine(): Promise<GetReviewsResponse> {
-    return apiClient.get<GetReviewsResponse>('/reviews', true);
   },
 };

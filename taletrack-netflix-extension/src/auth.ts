@@ -161,7 +161,7 @@ export async function getAuthState(): Promise<AuthState> {
   if (!token) return { authenticated: false };
 
   try {
-    const res = await apiFetch('/api/user/me', { method: 'GET' });
+    const res = await apiFetch('/api/users/me', { method: 'GET' });
     if (res && res.ok) {
       const body = (await res.json()) as { data?: { username: string; email: string } };
       if (body.data) return { authenticated: true, user: body.data };

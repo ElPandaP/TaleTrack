@@ -113,12 +113,9 @@ export const authService = {
     return apiClient.post('/auth/revoke-signup', { token });
   },
 
+  /** Revokes this device's session on the server (best effort) and drops the local tokens. */
   logout(): void {
+    void apiClient.revokeRefreshToken();
     apiClient.clearToken();
-  },
-
-  isAuthenticated(): boolean {
-    if (typeof window === 'undefined') return false;
-    return !!localStorage.getItem('token');
   },
 };

@@ -32,7 +32,7 @@ public class AvatarFlowTests(CustomWebApplicationFactory factory)
         var jwt = (await login.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString()!;
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwt);
 
-        var me = await (await client.GetAsync("/api/user/me")).Content.ReadFromJsonAsync<JsonElement>();
+        var me = await (await client.GetAsync("/api/users/me")).Content.ReadFromJsonAsync<JsonElement>();
         return (client, me.GetProperty("data").GetProperty("id").GetGuid());
     }
 
@@ -57,14 +57,14 @@ public class AvatarFlowTests(CustomWebApplicationFactory factory)
     {
         var (client, userId) = await AuthedAsync("avatar-ok@test.com", "avatarok");
 
-        var upload = await client.PostAsync("/api/user/avatar", FilePart(MakePng(600, 400), "image/png"));
+        var upload = await client.PutAsync("/api/users/me/avatar", FilePart(MakePng(600, 400), "image/png"));
         Assert.True(upload.IsSuccessStatusCode, await upload.Content.ReadAsStringAsync());
         var body = await upload.Content.ReadFromJsonAsync<JsonElement>();
         var url = body.GetProperty("avatarUrl").GetString()!;
         Assert.StartsWith($"/api/users/{userId}/avatar?v=", url);
 
         // it's also reflected on the profile
-        var me = await (await client.GetAsync("/api/user/me")).Content.ReadFromJsonAsync<JsonElement>();
+        var me = await (await client.GetAsync("/api/users/me")).Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(url, me.GetProperty("data").GetProperty("avatarUrl").GetString());
 
         var getRes = await _factory.CreateClient().GetAsync(url);
@@ -80,7 +80,7 @@ public class AvatarFlowTests(CustomWebApplicationFactory factory)
     public async Task Upload_NonImage_Returns400()
     {
         var (client, _) = await AuthedAsync("avatar-junk@test.com", "avatarjunk");
-        var res = await client.PostAsync("/api/user/avatar",
+        var res = await client.PutAsync("/api/users/me/avatar",
             FilePart(Encoding.UTF8.GetBytes("definitely not an image"), "image/png"));
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
@@ -89,7 +89,7 @@ public class AvatarFlowTests(CustomWebApplicationFactory factory)
     public async Task Upload_TooLarge_Returns400()
     {
         var (client, _) = await AuthedAsync("avatar-big@test.com", "avatarbig");
-        var res = await client.PostAsync("/api/user/avatar",
+        var res = await client.PutAsync("/api/users/me/avatar",
             FilePart(new byte[6 * 1024 * 1024], "image/png"));
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
@@ -97,7 +97,7 @@ public class AvatarFlowTests(CustomWebApplicationFactory factory)
     [Fact]
     public async Task Upload_WithoutAuth_Rejected()
     {
-        var res = await _factory.CreateClient().PostAsync("/api/user/avatar",
+        var res = await _factory.CreateClient().PutAsync("/api/users/me/avatar",
             FilePart(MakePng(100, 100), "image/png"));
         Assert.True(res.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden);
     }
@@ -115,17 +115,17 @@ public class AvatarFlowTests(CustomWebApplicationFactory factory)
     {
         var (client, userId) = await AuthedAsync("avatar-del@test.com", "avatardel");
 
-        await client.PostAsync("/api/user/avatar", FilePart(MakePng(300, 300), "image/png"));
+        await client.PutAsync("/api/users/me/avatar", FilePart(MakePng(300, 300), "image/png"));
         Assert.Equal(HttpStatusCode.OK,
             (await _factory.CreateClient().GetAsync($"/api/users/{userId}/avatar")).StatusCode);
 
-        var del = await client.DeleteAsync("/api/user/avatar");
+        var del = await client.DeleteAsync("/api/users/me/avatar");
         Assert.True(del.IsSuccessStatusCode, await del.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.NotFound,
             (await _factory.CreateClient().GetAsync($"/api/users/{userId}/avatar")).StatusCode);
 
-        var me = await (await client.GetAsync("/api/user/me")).Content.ReadFromJsonAsync<JsonElement>();
+        var me = await (await client.GetAsync("/api/users/me")).Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(JsonValueKind.Null, me.GetProperty("data").GetProperty("avatarUrl").ValueKind);
     }
 }

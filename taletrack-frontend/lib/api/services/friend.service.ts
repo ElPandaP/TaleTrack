@@ -1,11 +1,7 @@
 import { apiClient } from '../client';
-import type { FriendsResponse, ActivityResponse, UserSearchResponse } from '../../types';
+import type { UserSearchResponse } from '../../types';
 
 export const friendService = {
-  async getFriends(): Promise<FriendsResponse> {
-    return apiClient.get<FriendsResponse>('/friends', true);
-  },
-
   async searchByUsername(username: string): Promise<UserSearchResponse> {
     return apiClient.get<UserSearchResponse>(
       `/users/search?username=${encodeURIComponent(username)}`,
@@ -17,17 +13,15 @@ export const friendService = {
     return apiClient.post('/friends/requests', { userId }, true);
   },
 
-  async respond(requestId: string, accept: boolean): Promise<{ success: boolean }> {
-    return apiClient.post(`/friends/requests/${requestId}`, { accept }, true);
+  async accept(requestId: string): Promise<{ success: boolean }> {
+    return apiClient.put(`/friends/requests/${requestId}`, undefined, true);
+  },
+
+  async decline(requestId: string): Promise<{ success: boolean }> {
+    return apiClient.delete(`/friends/requests/${requestId}`, true);
   },
 
   async remove(userId: string): Promise<{ success: boolean }> {
     return apiClient.delete(`/friends/${userId}`, true);
-  },
-};
-
-export const activityService = {
-  async getFeed(scope: 'all' | 'mine' | 'friends' = 'all', limit = 200): Promise<ActivityResponse> {
-    return apiClient.get<ActivityResponse>(`/activity?scope=${scope}&limit=${limit}`, true);
   },
 };

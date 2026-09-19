@@ -17,12 +17,5 @@ public class EditUserRequest
     [StringLength(50, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 50 characters")]
     public string? Username { get; set; }
 
-    [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be between 6 and 100 characters")]
-    public string? Password { get; set; }
-
-    [StringLength(2048, ErrorMessage = "Avatar URL cannot exceed 2048 characters")]
-    [Url(ErrorMessage = "Avatar URL must be valid")]
-    public string? AvatarUrl { get; set; }
-
     public FeedPrivacyRequest? Privacy { get; set; }
 }

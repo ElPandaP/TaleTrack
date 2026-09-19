@@ -8,7 +8,7 @@ public static class EditReviewEndpoint
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapPut("/review/{id:guid}", HandleAsync)
+        group.MapPut("/reviews/{id:guid}", HandleAsync)
             .WithName("EditReview")
             .WithDescription("Edits a review")
             .AddEndpointFilter<ValidationFilter>()

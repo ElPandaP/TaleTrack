@@ -28,7 +28,7 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", body.GetProperty("token").GetString());
 
-        var me = await client.GetAsync("/api/user/me");
+        var me = await client.GetAsync("/api/users/me");
         var meBody = await me.Content.ReadFromJsonAsync<JsonElement>();
         return (client, meBody.GetProperty("data").GetProperty("id").GetGuid());
     }
@@ -41,7 +41,7 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
         var requestId = bFriendsBody.GetProperty("incoming").EnumerateArray()
             .First(r => r.GetProperty("userId").GetGuid() == aId)
             .GetProperty("requestId").GetGuid();
-        await b.PostAsJsonAsync($"/api/friends/requests/{requestId}", new { Accept = true });
+        await b.PutAsync($"/api/friends/requests/{requestId}", null);
     }
 
     private static async Task<JsonElement> ActivityAsync(HttpClient client, string query)
@@ -53,7 +53,7 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
 
     private static async Task<Guid> AddReviewAsync(HttpClient client, Guid mediaId, int rating)
     {
-        var res = await client.PostAsJsonAsync("/api/review", new { MediaId = mediaId, Rating = rating });
+        var res = await client.PostAsJsonAsync("/api/reviews", new { MediaId = mediaId, Rating = rating });
         Assert.True(res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
         var body = await res.Content.ReadFromJsonAsync<JsonElement>();
         return body.GetProperty("data").GetProperty("id").GetGuid();
@@ -61,7 +61,7 @@ public class ActivityFlowTests(CustomWebApplicationFactory factory)
 
     private static async Task SetMoviePrivacyAsync(HttpClient client, Guid userId, bool? progress = null, bool? reviews = null)
     {
-        var res = await client.PutAsJsonAsync($"/api/user/{userId}",
+        var res = await client.PutAsJsonAsync($"/api/users/{userId}",
             new { Privacy = new { MovieProgress = progress, MovieReviews = reviews } });
         Assert.True(res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
     }

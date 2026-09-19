@@ -27,7 +27,7 @@ public class FriendFlowTests(CustomWebApplicationFactory factory)
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", body.GetProperty("token").GetString());
 
-        var me = await client.GetAsync("/api/user/me");
+        var me = await client.GetAsync("/api/users/me");
         var meBody = await me.Content.ReadFromJsonAsync<JsonElement>();
         return (client, meBody.GetProperty("data").GetProperty("id").GetGuid());
     }
@@ -64,7 +64,7 @@ public class FriendFlowTests(CustomWebApplicationFactory factory)
             .First(r => r.GetProperty("userId").GetGuid() == aId)
             .GetProperty("requestId").GetGuid();
 
-        var respondRes = await b.PostAsJsonAsync($"/api/friends/requests/{requestId}", new { Accept = true });
+        var respondRes = await b.PutAsync($"/api/friends/requests/{requestId}", null);
         Assert.True(respondRes.IsSuccessStatusCode, await respondRes.Content.ReadAsStringAsync());
 
         var aFriends = await FriendsAsync(a);
@@ -85,7 +85,7 @@ public class FriendFlowTests(CustomWebApplicationFactory factory)
             .First(r => r.GetProperty("userId").GetGuid() == aId)
             .GetProperty("requestId").GetGuid();
 
-        await b.PostAsJsonAsync($"/api/friends/requests/{requestId}", new { Accept = false });
+        await b.DeleteAsync($"/api/friends/requests/{requestId}");
 
         var aFriends = await FriendsAsync(a);
         var bFriends = await FriendsAsync(b);
@@ -105,7 +105,7 @@ public class FriendFlowTests(CustomWebApplicationFactory factory)
         var requestId = bFriendsBefore.GetProperty("incoming").EnumerateArray()
             .First(r => r.GetProperty("userId").GetGuid() == aId)
             .GetProperty("requestId").GetGuid();
-        await b.PostAsJsonAsync($"/api/friends/requests/{requestId}", new { Accept = true });
+        await b.PutAsync($"/api/friends/requests/{requestId}", null);
 
         var removeRes = await a.DeleteAsync($"/api/friends/{bId}");
         Assert.True(removeRes.IsSuccessStatusCode, await removeRes.Content.ReadAsStringAsync());
