@@ -67,7 +67,7 @@ jobs:
         run: bun run build
 
   netflix-extension-build:
-    name: Netflix Extension — Build
+    name: Netflix Extension — Type check & Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -80,6 +80,10 @@ jobs:
       - name: Install dependencies
         working-directory: taletrack-netflix-extension
         run: bun install --frozen-lockfile
+
+      - name: Type check
+        working-directory: taletrack-netflix-extension
+        run: bunx tsc --noEmit
 
       - name: Build
         working-directory: taletrack-netflix-extension
