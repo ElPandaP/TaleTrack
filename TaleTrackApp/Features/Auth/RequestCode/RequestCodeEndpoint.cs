@@ -20,12 +20,9 @@ public static class RequestCodeEndpoint
         EmailService emailService,
         ILogger<RequestCodeRequest> logger)
     {
-        var user = await userService.GetByEmailAsync(request.Email);
-        if (user == null)
+        var issued = await userService.IssueEmailCodeAsync(request.Email);
+        if (issued is not var (user, code))
             return Results.Ok(new { success = true, message = "If the email exists, a verification code has been sent" });
-
-        var code = Random.Shared.Next(100000, 999999).ToString();
-        await userService.SetEmailCodeAsync(user.Id, code);
 
         try
         {

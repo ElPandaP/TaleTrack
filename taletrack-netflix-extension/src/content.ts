@@ -3,7 +3,7 @@
 // re-reads the live <video> position. The service worker throttles the writes.
 // Page-reading logic (what's on this Netflix page) lives in ./netflix-extract.
 
-import type { NetflixMedia, ExtractDataMessage } from './types';
+import type { NetflixMedia } from './types';
 import {
   NO_TITLE,
   extractNetflixData,
@@ -12,36 +12,6 @@ import {
   CREDITS_MARGIN_SECONDS,
 } from './netflix-extract';
 import { AUTO_POLL_MS } from './config';
-
-chrome.runtime.onMessage.addListener((message: ExtractDataMessage, _sender, sendResponse) => {
-  if (message.action === 'extractData') {
-    (async () => {
-      // Share the auto-tracker's resolution (retries + per-video cache) on a
-      // /watch/ page, so this reports exactly what real tracking would see.
-      const videoId = getCurrentVideoId();
-      if (videoId) {
-        await resolveMediaFor(videoId);
-        if (trackedVideoId === videoId && trackedMedia) {
-          sendResponse({ success: true, data: trackedMedia });
-          return;
-        }
-      }
-
-      // Not on a /watch/ page (e.g. a title/browse page) — one-shot read.
-      await requestNetflixData();
-      const data = extractNetflixData();
-      if (data) {
-        sendResponse({ success: true, data });
-      } else {
-        sendResponse({ success: false, error: 'No se pudieron extraer los datos' });
-      }
-    })();
-
-    return true; // Keep the channel open
-  }
-
-  return true;
-});
 
 function getCurrentVideoId(): string | null {
   const match = window.location.href.match(/\/watch\/(\d+)/);

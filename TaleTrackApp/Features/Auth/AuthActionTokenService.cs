@@ -22,17 +22,20 @@ public class AuthActionTokenService
     private readonly AppDbContext _context;
     private readonly UserService _users;
     private readonly EmailService _email;
+    private readonly SessionService _sessions;
     private readonly ILogger<AuthActionTokenService> _logger;
 
     public AuthActionTokenService(
         AppDbContext context,
         UserService users,
         EmailService email,
+        SessionService sessions,
         ILogger<AuthActionTokenService> logger)
     {
         _context = context;
         _users = users;
         _email = email;
+        _sessions = sessions;
         _logger = logger;
     }
 
@@ -78,6 +81,22 @@ public class AuthActionTokenService
         token.ConsumedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
         return token.User;
+    }
+
+    /// <summary>
+    /// Sets a new password from a password-reset token and ends all of the user's sessions.
+    /// Returns false if the token is unknown, expired or already used.
+    /// </summary>
+    public async Task<bool> ResetPasswordAsync(string rawToken, string newPassword)
+    {
+        var user = await ConsumeAsync(rawToken, AuthActionToken.PasswordReset);
+        if (user is null) return false;
+
+        await _users.SetPasswordAsync(user.Id, newPassword);
+        await _sessions.RevokeAllForUserAsync(user.Id);
+
+        _logger.LogInformation("Password reset completed for user {UserId}", user.Id);
+        return true;
     }
 
     /// <summary>Sent to every newly created account: a 7-day link that deletes the account, for

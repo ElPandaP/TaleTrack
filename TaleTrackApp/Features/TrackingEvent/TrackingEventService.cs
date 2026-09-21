@@ -116,4 +116,22 @@ public class TrackingEventService
             progress, userId, mediaId);
         return existing;
     }
+
+    /// <summary>
+    /// Manually corrects the user's progress on a media. A series episode is logged as fully
+    /// watched at the given (season, episode); otherwise the percentage is set outright, and can
+    /// go down. Null if there is no tracking to set the percentage on, or nothing to set.
+    /// </summary>
+    public async Task<Model.TrackingEvent?> EditProgressAsync(
+        Guid userId, Guid mediaId, int? progress, int? season, int? episode)
+    {
+        // Earlier episodes are assumed watched too — the overall % is derived from the furthest
+        // one reached at read time.
+        if (season.HasValue && episode.HasValue)
+            return await UpsertAsync(userId, mediaId, progress: 100, season, episode);
+
+        return progress.HasValue
+            ? await SetProgressAsync(userId, mediaId, progress.Value)
+            : null;
+    }
 }

@@ -220,6 +220,63 @@ public class AuthFlowTests(CustomWebApplicationFactory factory)
     }
 
     [Fact]
+    public async Task LoginByCode_FiveWrongGuesses_DiscardTheCode()
+    {
+        var client = NewClient();
+        await client.PostAsJsonAsync("/api/register",
+            new { Email = "code-brute@test.com", Username = "codebrute", Password = "Password1!" });
+        await client.PostAsJsonAsync("/api/auth/request-code", new { Email = "code-brute@test.com" });
+
+        string code;
+        using (_factory.NewDbScope(out var db))
+        {
+            code = (await db.Users.SingleAsync(u => u.Email == "code-brute@test.com")).EmailCode!;
+        }
+
+        for (var i = 0; i < 5; i++)
+        {
+            var wrong = await client.PostAsJsonAsync("/api/auth/verify-code",
+                new { Email = "code-brute@test.com", Code = "000000" });
+            Assert.Equal(HttpStatusCode.Unauthorized, wrong.StatusCode);
+        }
+
+        // Even the right code no longer works: a new one has to be requested.
+        var late = await client.PostAsJsonAsync("/api/auth/verify-code",
+            new { Email = "code-brute@test.com", Code = code });
+        Assert.Equal(HttpStatusCode.Unauthorized, late.StatusCode);
+
+        using (_factory.NewDbScope(out var db))
+        {
+            Assert.Null((await db.Users.SingleAsync(u => u.Email == "code-brute@test.com")).EmailCode);
+        }
+    }
+
+    [Fact]
+    public async Task LoginByCode_FewWrongGuesses_StillAcceptTheRightCode()
+    {
+        var client = NewClient();
+        await client.PostAsJsonAsync("/api/register",
+            new { Email = "code-few@test.com", Username = "codefew", Password = "Password1!" });
+        await client.PostAsJsonAsync("/api/auth/request-code", new { Email = "code-few@test.com" });
+
+        string code;
+        using (_factory.NewDbScope(out var db))
+        {
+            code = (await db.Users.SingleAsync(u => u.Email == "code-few@test.com")).EmailCode!;
+        }
+
+        for (var i = 0; i < 4; i++)
+        {
+            await client.PostAsJsonAsync("/api/auth/verify-code",
+                new { Email = "code-few@test.com", Code = "000000" });
+        }
+
+        var verify = await client.PostAsJsonAsync("/api/auth/verify-code",
+            new { Email = "code-few@test.com", Code = code });
+        Assert.True(verify.IsSuccessStatusCode, $"Verify failed: {await verify.Content.ReadAsStringAsync()}");
+    }
+
+    [Fact]
     public async Task RevokeSession_NotOwned_Returns404()
     {
         var owner = NewClient();

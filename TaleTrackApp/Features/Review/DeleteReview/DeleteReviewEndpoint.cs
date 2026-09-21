@@ -30,25 +30,13 @@ public static class DeleteReviewEndpoint
 
         try
         {
-            var review = await reviewService.GetByIdAsync(id);
-            
-            if (review == null)
+            var result = await reviewService.DeleteAsync(userId, id);
+            switch (result)
             {
-                return Results.NotFound(new { success = false, message = "Review not found" });
-            }
-
-            // Only the review's owner may delete it
-            if (review.UserId != userId)
-            {
-                logger.LogWarning($"User {userId} tried to delete review {id} owned by {review.UserId}");
-                return Results.Forbid();
-            }
-
-            var success = await reviewService.DeleteAsync(id);
-
-            if (!success)
-            {
-                return Results.NotFound(new { success = false, message = "Review not found" });
+                case ReviewResult.NotFound:
+                    return Results.NotFound(new { success = false, message = "Review not found" });
+                case ReviewResult.Forbidden:
+                    return Results.Forbid();
             }
 
             logger.LogInformation($"Review {id} deleted by user {userId}");

@@ -37,17 +37,10 @@ public class User
     public string? EmailCode { get; set; }
 
     public DateTime? EmailCodeExpiry { get; set; }
-    
-    [StringLength(512, ErrorMessage = "Refresh token cannot exceed 512 characters")]
-    public string? RefreshToken { get; set; }
-    
-    public DateTime? RefreshTokenExpiry { get; set; }
-    
-    public DateTime? LastLogin { get; set; }
-    
-    [Required]
-    public bool IsActive { get; set; } = true;
-    
+
+    /// <summary>Wrong guesses against the current email code; the code is discarded after too many.</summary>
+    public int EmailCodeFailedAttempts { get; set; }
+
     [Required]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     

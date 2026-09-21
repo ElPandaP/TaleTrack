@@ -33,7 +33,6 @@ public static class GetReviewsEndpoint
             var reviews = await reviewService.GetByUserIdAsync(userId);
 
             var data = reviews
-                .OrderByDescending(r => r.CreatedAt)
                 .Select(r => new ReviewWithMediaItem
                 {
                     Id = r.Id,

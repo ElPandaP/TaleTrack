@@ -20,23 +20,9 @@ public static class VerifyCodeEndpoint
         SessionService sessions,
         ILogger<VerifyCodeRequest> logger)
     {
-        var user = await userService.GetByEmailAsync(request.Email);
-        if (user == null || user.EmailCode == null || user.EmailCodeExpiry == null)
+        var user = await userService.VerifyEmailCodeAsync(request.Email, request.Code);
+        if (user == null)
             return Results.Unauthorized();
-
-        if (user.EmailCodeExpiry < DateTime.UtcNow)
-        {
-            logger.LogWarning("Expired email code attempt for {Email}", request.Email);
-            return Results.Unauthorized();
-        }
-
-        if (user.EmailCode != request.Code)
-        {
-            logger.LogWarning("Invalid email code attempt for {Email}", request.Email);
-            return Results.Unauthorized();
-        }
-
-        await userService.ClearEmailCodeAsync(user.Id);
 
         var device = string.IsNullOrWhiteSpace(request.Device) ? "KOReader" : request.Device;
         var session = await sessions.StartAsync(user, device);

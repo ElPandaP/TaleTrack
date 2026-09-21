@@ -30,22 +30,11 @@ public static class EditTrackingProgressEndpoint
 
         try
         {
-            Model.TrackingEvent? updated;
-            if (request.Season.HasValue && request.Episode.HasValue)
-            {
-                // Series: log the furthest episode reached as fully watched. Earlier episodes
-                // are assumed watched too — the overall % is derived from this at read time.
-                updated = await trackingEventService.UpsertAsync(
-                    userId, mediaId, progress: 100, request.Season, request.Episode);
-            }
-            else if (request.Progress.HasValue)
-            {
-                updated = await trackingEventService.SetProgressAsync(userId, mediaId, request.Progress.Value);
-            }
-            else
-            {
+            if (!(request.Season.HasValue && request.Episode.HasValue) && !request.Progress.HasValue)
                 return Results.BadRequest(new { success = false, message = "Provide either progress or season and episode" });
-            }
+
+            var updated = await trackingEventService.EditProgressAsync(
+                userId, mediaId, request.Progress, request.Season, request.Episode);
 
             if (updated == null)
                 return Results.NotFound(new { success = false, message = "No tracking found for this media" });

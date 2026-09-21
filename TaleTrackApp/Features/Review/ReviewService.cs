@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace TaleTrackApp.Features.Review;
 
+/// <summary>Outcome of editing or deleting a review.</summary>
+public enum ReviewResult { Ok, NotFound, Forbidden }
+
 public class ReviewService
 {
     private readonly AppDbContext _context;
@@ -36,6 +39,7 @@ public class ReviewService
         return await _context.Reviews
             .Where(r => r.UserId == userId)
             .Include(r => r.Media)
+            .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
     }
 
@@ -75,12 +79,21 @@ public class ReviewService
         return review;
     }
 
-    public async Task<Model.Review?> UpdateAsync(Guid id, int rating, string? comment = null)
+    /// <summary>Edits a review; only its author can.</summary>
+    public async Task<(ReviewResult Result, Model.Review? Review)> UpdateAsync(
+        Guid userId, Guid id, int rating, string? comment = null)
     {
         var review = await _context.Reviews.FindAsync(id);
         if (review == null)
         {
-            return null;
+            return (ReviewResult.NotFound, null);
+        }
+
+        if (review.UserId != userId)
+        {
+            _logger.LogWarning("User {UserId} tried to edit review {ReviewId} owned by {OwnerId}",
+                userId, id, review.UserId);
+            return (ReviewResult.Forbidden, null);
         }
 
         review.Rating = rating;
@@ -94,21 +107,29 @@ public class ReviewService
         await _context.SaveChangesAsync();
 
         _logger.LogInformation($"Review {id} updated successfully");
-        return review;
+        return (ReviewResult.Ok, review);
     }
 
-    public async Task<bool> DeleteAsync(Guid id)
+    /// <summary>Deletes a review; only its author can.</summary>
+    public async Task<ReviewResult> DeleteAsync(Guid userId, Guid id)
     {
         var review = await _context.Reviews.FindAsync(id);
         if (review == null)
         {
-            return false;
+            return ReviewResult.NotFound;
+        }
+
+        if (review.UserId != userId)
+        {
+            _logger.LogWarning("User {UserId} tried to delete review {ReviewId} owned by {OwnerId}",
+                userId, id, review.UserId);
+            return ReviewResult.Forbidden;
         }
 
         _context.Reviews.Remove(review);
         await _context.SaveChangesAsync();
 
         _logger.LogInformation($"Review {id} deleted successfully");
-        return true;
+        return ReviewResult.Ok;
     }
 }

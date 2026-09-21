@@ -38,7 +38,7 @@ public static class TrackBookEndpoint
             logger.LogInformation("Book tracking for user {UserId}, '{Title}'", userId, media.Title);
 
             // Fire-and-forget enrichment — KOReader does not wait for this.
-            if (string.IsNullOrWhiteSpace(media.PosterUrl) || string.IsNullOrWhiteSpace(media.Author))
+            if (MediaService.NeedsOpenLibraryEnrichment(media))
             {
                 var (mediaId, title, author, isbn) = (media.Id, request.Title, request.Author, request.Isbn);
                 background.Run<MediaService>($"OpenLibrary enrichment for media {mediaId}",

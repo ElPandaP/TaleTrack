@@ -130,23 +130,6 @@
       cursor: not-allowed;
     }
 
-    #result {
-      margin-top: 16px;
-      padding: 16px;
-      background: var(--card);
-      color: var(--card-foreground);
-      border: 1px solid var(--border);
-      border-radius: calc(var(--radius) * 1.8);
-      box-shadow: 0 1px 2px oklch(0 0 0 / 0.05);
-      font-size: 13px;
-      max-height: 460px;
-      overflow-y: auto;
-    }
-
-    #result:empty {
-      display: none;
-    }
-
     .status {
       display: flex;
       align-items: center;
@@ -155,8 +138,6 @@
     }
 
     .status.error { color: var(--destructive); }
-    .status.success { color: var(--success); }
-    .status.loading { color: var(--warning); }
 
     .spinner {
       width: 13px;
@@ -169,31 +150,6 @@
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    .media-info {
-      display: flex;
-      flex-direction: column;
-      gap: 11px;
-      margin-top: 14px;
-    }
-
-    .info-row {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-
-    .info-label {
-      font-weight: 600;
-      color: var(--muted-foreground);
-      font-size: 10px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-
-    .info-value {
-      color: var(--foreground);
-    }
 
     /* ─── Auth view ─────────────────────────────────────────── */
     .auth {
@@ -245,38 +201,6 @@
       background: color-mix(in oklab, var(--secondary) 80%, var(--foreground) 6%);
     }
 
-    details {
-      margin-top: 16px;
-      border-top: 1px solid var(--border);
-      padding-top: 12px;
-    }
-
-    summary {
-      cursor: pointer;
-      color: var(--primary);
-      font-weight: 600;
-      user-select: none;
-      list-style: none;
-    }
-
-    summary::-webkit-details-marker { display: none; }
-
-    summary:hover {
-      color: color-mix(in oklab, var(--primary) 82%, black);
-    }
-
-    pre {
-      margin: 10px 0 0;
-      padding: 12px;
-      background: var(--secondary);
-      border-radius: calc(var(--radius) * 0.8);
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
-      font-size: 12px;
-      line-height: 1.55;
-      color: var(--muted-foreground);
-    }
   </style>
 </head>
 
@@ -296,13 +220,6 @@
   <div id="authView" class="auth">
     <div class="auth-loading"><span class="spinner"></span></div>
   </div>
-
-  <details id="manual">
-    <summary id="manualTitle"></summary>
-    <p id="manualHint" class="auth-sub" style="margin: 8px 0 12px;"></p>
-    <button id="extractBtn"></button>
-    <div id="result"></div>
-  </details>
 
   <script src="popup.js"></script>
 </body>

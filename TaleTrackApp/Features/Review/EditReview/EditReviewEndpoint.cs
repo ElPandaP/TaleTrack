@@ -32,21 +32,14 @@ public static class EditReviewEndpoint
 
         try
         {
-            var review = await reviewService.GetByIdAsync(id);
-            
-            if (review == null)
+            var (result, updatedReview) = await reviewService.UpdateAsync(userId, id, request.Rating, request.Comment);
+            switch (result)
             {
-                return Results.NotFound(new { success = false, message = "Review not found" });
+                case ReviewResult.NotFound:
+                    return Results.NotFound(new { success = false, message = "Review not found" });
+                case ReviewResult.Forbidden:
+                    return Results.Forbid();
             }
-
-            // Only the review's owner may edit it
-            if (review.UserId != userId)
-            {
-                logger.LogWarning($"User {userId} tried to edit review {id} owned by {review.UserId}");
-                return Results.Forbid();
-            }
-
-            var updatedReview = await reviewService.UpdateAsync(id, request.Rating, request.Comment);
 
             logger.LogInformation($"Review {id} updated by user {userId}");
             return Results.Ok(new 

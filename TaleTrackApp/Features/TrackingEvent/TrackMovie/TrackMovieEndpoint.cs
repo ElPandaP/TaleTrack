@@ -37,9 +37,7 @@ public static class TrackMovieEndpoint
             logger.LogInformation("Movie tracking for user {UserId}, '{Title}'", userId, media.Title);
 
             // Fire-and-forget TMDB enrichment — the extension doesn't wait for this.
-            if (!string.IsNullOrWhiteSpace(request.Language) &&
-                (string.IsNullOrWhiteSpace(media.PosterUrl) ||
-                 string.IsNullOrWhiteSpace(media.TitleEN) || string.IsNullOrWhiteSpace(media.TitleES)))
+            if (MediaService.NeedsTmdbEnrichment(media, request.Language))
             {
                 var (mediaId, title, language) = (media.Id, request.Title, request.Language);
                 background.Run<MediaService>($"TMDB enrichment for media {mediaId}",

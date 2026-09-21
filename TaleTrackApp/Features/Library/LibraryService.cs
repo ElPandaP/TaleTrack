@@ -64,9 +64,7 @@ public class LibraryService
                 var media = te.Media!;
                 var isSeries = media.Type == Model.MediaType.Series;
 
-                var progress = isSeries
-                    ? SeriesProgressService.Calculate(media.SeasonEpisodeCounts, te.Season, te.Episode) ?? te.Progress
-                    : te.Progress;
+                var progress = SeriesProgressService.ProgressFor(media, te);
 
                 reviewByMedia.TryGetValue(te.MediaId, out var review);
                 return new LibraryItem(

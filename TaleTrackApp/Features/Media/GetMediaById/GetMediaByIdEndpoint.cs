@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using TaleTrackApp.Features.Review;
+using TaleTrackApp.Features.TrackingEvent;
 using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Media.GetMediaById;
@@ -16,6 +18,8 @@ public static class GetMediaByIdEndpoint
     private static async Task<IResult> HandleAsync(
         Guid id,
         MediaService mediaService,
+        ReviewService reviewService,
+        TrackingEventService trackingEventService,
         ClaimsPrincipal user,
         ILoggerFactory loggerFactory)
     {
@@ -27,10 +31,15 @@ public static class GetMediaByIdEndpoint
 
         try
         {
-            var detail = await mediaService.GetDetailAsync(id, userId);
-            if (detail == null)
+            var media = await mediaService.GetByIdAsync(id);
+            if (media == null)
                 return Results.NotFound(new { success = false, message = "Media not found" });
 
+            var reviews = await reviewService.GetByMediaIdAsync(id);
+            var myTracking = await trackingEventService.GetForMediaAsync(userId, id);
+            var myProgress = SeriesProgressService.ProgressFor(media, myTracking);
+
+            var detail = new MediaDetail(media, reviews, reviews.FirstOrDefault(r => r.UserId == userId), myTracking, myProgress);
             return Results.Ok(GetMediaByIdResponse.From(detail, userId));
         }
         catch (Exception ex)

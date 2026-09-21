@@ -19,6 +19,19 @@ public abstract record GoogleLoginResult
     public sealed record ExistingUser(Model.User User, bool LinkedExistingAccount) : GoogleLoginResult;
 }
 
+/// <summary>Outcome of finishing a Google sign-up.</summary>
+public abstract record GoogleSignupResult
+{
+    /// <summary>The pending token is invalid, tampered with or expired.</summary>
+    public sealed record InvalidToken : GoogleSignupResult;
+
+    /// <summary>The chosen username already belongs to someone else.</summary>
+    public sealed record UsernameTaken : GoogleSignupResult;
+
+    /// <summary>The account is ready: just created, or one that already existed.</summary>
+    public sealed record Completed(Model.User User, bool Created) : GoogleSignupResult;
+}
+
 /// <summary>Verifies a Google id token and decides whether it belongs to an existing account,
 /// should be linked to one, or starts a new sign-up.</summary>
 public class GoogleAuthService
@@ -79,5 +92,32 @@ public class GoogleAuthService
         // Brand new signup — don't create the account yet, the user needs to pick a
         // username first. Nothing is persisted until /auth/google/complete.
         return new GoogleLoginResult.NewUser(_signupTokens.Issue(googleId, email, name), email, name);
+    }
+
+    /// <summary>Finishes a sign-up started by <see cref="LoginAsync"/> once the user has picked a username.</summary>
+    public async Task<GoogleSignupResult> CompleteSignupAsync(string pendingToken, string username)
+    {
+        var identity = _signupTokens.Validate(pendingToken);
+        if (identity == null)
+            return new GoogleSignupResult.InvalidToken();
+
+        var (googleId, email, _) = identity.Value;
+
+        // Defensive re-check: a double-submit (or a normal signup / another Google login for
+        // the same person in the meantime) may have created the account already — use it
+        // instead of failing.
+        var user = await _users.GetByGoogleIdAsync(googleId) ?? await _users.GetByEmailAsync(email);
+        if (user != null)
+        {
+            if (user.GoogleId == null)
+                await _users.LinkGoogleIdAsync(user.Id, googleId);
+            return new GoogleSignupResult.Completed(user, Created: false);
+        }
+
+        if (await _users.UsernameExistsAsync(username))
+            return new GoogleSignupResult.UsernameTaken();
+
+        user = await _users.CreateGoogleUserAsync(email, username, googleId);
+        return new GoogleSignupResult.Completed(user, Created: true);
     }
 }

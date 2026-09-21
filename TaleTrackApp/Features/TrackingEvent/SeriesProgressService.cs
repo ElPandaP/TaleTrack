@@ -6,6 +6,16 @@ namespace TaleTrackApp.Features.TrackingEvent;
 /// </summary>
 public static class SeriesProgressService
 {
+    /// <summary>
+    /// The progress to show for a media given the user's tracking of it: for a series it is derived
+    /// from the furthest (season, episode) reached, falling back to the stored progress when it can't
+    /// be derived; for movies and books it is the stored progress.
+    /// </summary>
+    public static int? ProgressFor(Model.Media media, Model.TrackingEvent? tracking) =>
+        media.Type == Model.MediaType.Series
+            ? Calculate(media.SeasonEpisodeCounts, tracking?.Season, tracking?.Episode) ?? tracking?.Progress
+            : tracking?.Progress;
+
     public static int? Calculate(int[]? seasonEpisodeCounts, int? season, int? episode)
     {
         if (seasonEpisodeCounts is not { Length: > 0 } || season is not int s || s < 1 || episode is not int e)

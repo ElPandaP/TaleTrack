@@ -20,17 +20,6 @@ export interface NetflixMedia {
   runtimeSeconds?: number;    // total length of the movie / episode
 }
 
-// Popup ⇆ content script (manual "extract data" flow).
-export interface ExtractDataMessage {
-  action: 'extractData';
-}
-
-export interface ExtractDataResponse {
-  success: boolean;
-  data?: NetflixMedia;
-  error?: string;
-}
-
 // Popup / content ⇆ background service worker.
 export interface AuthState {
   authenticated: boolean;

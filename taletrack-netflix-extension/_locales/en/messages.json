@@ -3,15 +3,6 @@
     "message": "Extracts Netflix info for your TaleTrack library",
     "description": "Extension description shown on the Chrome Web Store and extensions page"
   },
-  "manualDetectionTitle": {
-    "message": "Manual detection"
-  },
-  "manualDetectionHint": {
-    "message": "Extracts data from the open Netflix page without sending it to your account."
-  },
-  "extractButton": {
-    "message": "Extract Netflix data"
-  },
   "authConnectTitle": {
     "message": "Connect your TaleTrack account"
   },
@@ -30,7 +21,10 @@
   "authSyncingSubtitle": {
     "message": "Syncing your Netflix — $WHO$",
     "placeholders": {
-      "who": { "content": "$1", "example": "alice · alice@example.com" }
+      "who": {
+        "content": "$1",
+        "example": "alice · alice@example.com"
+      }
     }
   },
   "signOutButton": {
@@ -44,68 +38,5 @@
   },
   "authSignInError": {
     "message": "Could not complete sign-in."
-  },
-  "extracting": {
-    "message": "Extracting data…"
-  },
-  "noActiveTab": {
-    "message": "Could not get the active tab"
-  },
-  "noTabId": {
-    "message": "The tab has no ID"
-  },
-  "noTabUrl": {
-    "message": "The tab has no URL"
-  },
-  "openNetflixFirst": {
-    "message": "Open a Netflix page first."
-  },
-  "errorPrefix": {
-    "message": "Error: $MESSAGE$",
-    "placeholders": {
-      "message": { "content": "$1", "example": "Something went wrong" }
-    }
-  },
-  "unknownError": {
-    "message": "Unknown error"
-  },
-  "dataExtractedSuccess": {
-    "message": "Data extracted successfully"
-  },
-  "labelTitle": {
-    "message": "Title"
-  },
-  "labelYear": {
-    "message": "Year"
-  },
-  "labelType": {
-    "message": "Type"
-  },
-  "typeSeries": {
-    "message": "Series"
-  },
-  "typeMovie": {
-    "message": "Movie"
-  },
-  "labelSeason": {
-    "message": "Season"
-  },
-  "labelEpisode": {
-    "message": "Episode"
-  },
-  "labelProgress": {
-    "message": "Progress"
-  },
-  "labelTotalDuration": {
-    "message": "Total duration"
-  },
-  "labelGenres": {
-    "message": "Genres"
-  },
-  "labelDescription": {
-    "message": "Description"
-  },
-  "viewJson": {
-    "message": "View JSON"
   }
 }

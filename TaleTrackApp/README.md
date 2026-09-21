@@ -212,7 +212,7 @@ encontrada, parámetro interno ausente...).
 
 | Entidad | Campos clave | Notas |
 |---|---|---|
-| **User** | Email, Username, PasswordHash?, GoogleId?, EmailCode?/Expiry?, AvatarUrl?, IsActive, CreatedAt, 6 flags `Share{Book,Movie,Series}{Progress,Reviews}` | password/google opcionales → un user puede ser solo-Google |
+| **User** | Email, Username, PasswordHash?, GoogleId?, EmailCode?/Expiry?/FailedAttempts, AvatarUrl?, CreatedAt, 6 flags `Share{Book,Movie,Series}{Progress,Reviews}` | password/google opcionales → un user puede ser solo-Google |
 | **Media** | TitleEN?, TitleES?, Type, Length, Description?, PosterUrl?, Author?, Isbn?, SeasonEpisodeCounts?, FirstTrackedAt, UpdatedAt? | Tabla única para los tres tipos. `Type` es el enum `MediaType` (Movie, Series, Book), guardado como texto. Al menos uno de `TitleEN`/`TitleES`; el otro lo rellena TMDB. Check constraints: `Author` e `Isbn` solo en Book, `SeasonEpisodeCounts` solo en Series, `Type` limitado a los tres valores. Índices no únicos en `Isbn` (parcial), `TitleEN` y `TitleES` |
 | **TrackingEvent** | UserId→, MediaId→, Progress? (0–100), Season?, Episode?, EpisodeTitle?, EventDate | `EventDate` = `DateTime.UtcNow` al crear/actualizar |
 | **Review** | UserId→, MediaId→, Rating (1–10), Comment?, CreatedAt, UpdatedAt? | |

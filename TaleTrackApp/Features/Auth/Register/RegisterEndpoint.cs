@@ -21,23 +21,19 @@ public static class RegisterEndpoint
         BackgroundRunner background,
         ILogger<RegisterRequest> logger)
     {
-        if (await userService.EmailExistsAsync(request.Email))
+        var (result, user) = await userService.RegisterAsync(request.Email, request.Username, request.Password);
+        switch (result)
         {
-            logger.LogWarning($"Registration attempt with existing email: {request.Email}");
-            return Results.BadRequest(new { code = "email_taken", message = "Email already registered" });
+            case RegisterResult.EmailTaken:
+                return Results.BadRequest(new { code = "email_taken", message = "Email already registered" });
+            case RegisterResult.UsernameTaken:
+                return Results.BadRequest(new { code = "username_taken", message = "Username already taken" });
         }
 
-        if (await userService.UsernameExistsAsync(request.Username))
-        {
-            logger.LogWarning($"Registration attempt with existing username: {request.Username}");
-            return Results.BadRequest(new { code = "username_taken", message = "Username already taken" });
-        }
-
-        var user = await userService.CreateUserAsync(request.Email, request.Username, request.Password);
         background.Run<AuthActionTokenService>("welcome email",
-            tokens => tokens.SendWelcomeAsync(user.Id, user.Email, request.Locale));
+            tokens => tokens.SendWelcomeAsync(user!.Id, user.Email, request.Locale));
 
-        logger.LogInformation($"User {user.Username} registered successfully");
+        logger.LogInformation("User {Username} registered successfully", user!.Username);
         return Results.Ok(new { success = true, message = "Registration successful" });
     }
 }

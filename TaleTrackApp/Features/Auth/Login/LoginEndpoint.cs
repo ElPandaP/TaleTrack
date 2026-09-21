@@ -20,11 +20,10 @@ public static class LoginEndpoint
         SessionService sessions,
         ILogger<LoginRequest> logger)
     {
-        var user = await userService.GetByEmailAsync(request.Email);
+        var user = await userService.AuthenticateAsync(request.Email, request.Password);
 
-        if (user == null || !userService.VerifyPassword(request.Password, user))
+        if (user == null)
         {
-            logger.LogWarning($"Failed login attempt for email: {request.Email}");
             return Results.Json(new { code = "invalid_credentials", message = "Invalid email or password." }, statusCode: 401);
         }
 

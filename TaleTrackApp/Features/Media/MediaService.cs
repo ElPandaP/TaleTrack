@@ -1,41 +1,25 @@
 using TaleTrackApp.Data;
-using TaleTrackApp.Features.Review;
-using TaleTrackApp.Features.TrackingEvent;
 using TaleTrackApp.Model;
 using Microsoft.EntityFrameworkCore;
 
 namespace TaleTrackApp.Features.Media;
 
-/// <summary>What a media detail page needs: the media, all its reviews and the viewer's own tracking.</summary>
-public record MediaDetail(
-    Model.Media Media,
-    List<Model.Review> Reviews,
-    Model.Review? MyReview,
-    Model.TrackingEvent? MyTracking,
-    int? MyProgress);
-
 public class MediaService
 {
     private readonly AppDbContext _context;
-    private readonly ReviewService _reviews;
     private readonly TmdbService _tmdb;
     private readonly OpenLibraryService _openLibrary;
-    private readonly TrackingEventService _tracking;
     private readonly ILogger<MediaService> _logger;
 
     public MediaService(
         AppDbContext context,
-        ReviewService reviews,
         TmdbService tmdb,
         OpenLibraryService openLibrary,
-        TrackingEventService tracking,
         ILogger<MediaService> logger)
     {
         _context = context;
-        _reviews = reviews;
         _tmdb = tmdb;
         _openLibrary = openLibrary;
-        _tracking = tracking;
         _logger = logger;
     }
 
@@ -44,20 +28,15 @@ public class MediaService
         return await _context.Medias.FindAsync(id);
     }
 
-    /// <summary>The detail page for one media as seen by one user; null if the media doesn't exist.</summary>
-    public async Task<MediaDetail?> GetDetailAsync(Guid id, Guid userId)
-    {
-        var media = await GetByIdAsync(id);
-        if (media == null) return null;
+    /// <summary>Whether a movie/series still lacks what TMDB can fill in (poster or either title). TMDB needs a language to search.</summary>
+    public static bool NeedsTmdbEnrichment(Model.Media media, string? language) =>
+        !string.IsNullOrWhiteSpace(language) &&
+        (string.IsNullOrWhiteSpace(media.PosterUrl) ||
+         string.IsNullOrWhiteSpace(media.TitleEN) || string.IsNullOrWhiteSpace(media.TitleES));
 
-        var reviews = await _reviews.GetByMediaIdAsync(id);
-        var myTracking = await _tracking.GetForMediaAsync(userId, id);
-        var myProgress = media.Type == MediaType.Series
-            ? SeriesProgressService.Calculate(media.SeasonEpisodeCounts, myTracking?.Season, myTracking?.Episode) ?? myTracking?.Progress
-            : myTracking?.Progress;
-
-        return new MediaDetail(media, reviews, reviews.FirstOrDefault(r => r.UserId == userId), myTracking, myProgress);
-    }
+    /// <summary>Whether a book still lacks what OpenLibrary can fill in (cover or author).</summary>
+    public static bool NeedsOpenLibraryEnrichment(Model.Media media) =>
+        string.IsNullOrWhiteSpace(media.PosterUrl) || string.IsNullOrWhiteSpace(media.Author);
 
     public async Task<Model.Media> CreateAsync(string title, MediaType type, int length,
         string? author = null, string? isbn = null, string? language = null)
