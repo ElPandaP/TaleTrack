@@ -132,4 +132,17 @@ public class FriendFlowTests(CustomWebApplicationFactory factory)
         var second = await a.PostAsJsonAsync("/api/friends/requests", new { UserId = bId });
         Assert.False(second.IsSuccessStatusCode);
     }
+
+    [Fact]
+    public async Task ReverseRow_ForSamePair_IsRejectedByTheDatabase()
+    {
+        var (a, aId) = await AuthedClientAsync("friend-pair-a@test.com", "friendpaira");
+        var (_, bId) = await AuthedClientAsync("friend-pair-b@test.com", "friendpairb");
+        await a.PostAsJsonAsync("/api/friends/requests", new { UserId = bId });
+
+        // What a simultaneous B→A request would write once past the service's own check.
+        using var scope = _factory.NewDbScope(out var db);
+        db.Friendships.Add(new Model.Friendship { RequesterId = bId, AddresseeId = aId });
+        await Assert.ThrowsAsync<Microsoft.EntityFrameworkCore.DbUpdateException>(() => db.SaveChangesAsync());
+    }
 }

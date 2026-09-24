@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.Library;
 using TaleTrackApp.Security;
@@ -10,7 +11,10 @@ public static class GetPendingReviewsEndpoint
     {
         group.MapGet("/reviews/pending", HandleAsync)
             .WithName("GetPendingReviews")
-            .WithDescription("Media the user has finished but not yet reviewed")
+            .WithTags("Reviews")
+            .WithSummary("List finished media awaiting a review")
+            .WithDescription("Media the caller has finished (100% progress) but not reviewed yet, most recent first.")
+            .Responds<GetPendingReviewsResponse>("The media to review.")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

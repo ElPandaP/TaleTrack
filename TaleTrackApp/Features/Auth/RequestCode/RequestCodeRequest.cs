@@ -4,6 +4,7 @@ namespace TaleTrackApp.Features.Auth.RequestCode;
 
 public class RequestCodeRequest
 {
+    /// <summary>Email of the account to sign in to.</summary>
     [Required(ErrorMessage = "Email is required")]
     [EmailAddress(ErrorMessage = "Email must be valid")]
     public required string Email { get; set; }

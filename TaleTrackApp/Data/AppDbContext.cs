@@ -110,8 +110,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(x => x.AddresseeId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // One row per ordered pair.
-            f.HasIndex(x => new { x.RequesterId, x.AddresseeId }).IsUnique();
+            f.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+
+            // One row per pair of users whichever of them sent the request, so A→B and B→A
+            // can't coexist even when both are sent at the same time. The pair is normalized
+            // into two stored generated columns because EF can't index an expression directly.
+            // The functions are named differently on SQLite, which the tests run on.
+            var (least, greatest) = Database.IsNpgsql() ? ("LEAST", "GREATEST") : ("min", "max");
+            f.Property<Guid>("UserLowId")
+                .HasComputedColumnSql($"{least}(\"RequesterId\", \"AddresseeId\")", stored: true);
+            f.Property<Guid>("UserHighId")
+                .HasComputedColumnSql($"{greatest}(\"RequesterId\", \"AddresseeId\")", stored: true);
+            f.HasIndex("UserLowId", "UserHighId").IsUnique();
         });
     }
 }

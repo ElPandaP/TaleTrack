@@ -7,6 +7,8 @@ namespace TaleTrackApp.Features.Media;
 public class TmdbResult
 {
     public string? PosterUrl { get; set; }
+    /// <summary>Synopsis in the detected language, or in the other one if TMDB has none in it.</summary>
+    public string? Description { get; set; }
     public int? RuntimeMinutes { get; set; }
     /// <summary>Title translated to English, when the source was Spanish and TMDB has that translation.</summary>
     public string? TitleEN { get; set; }
@@ -17,7 +19,7 @@ public class TmdbResult
 }
 
 /// <summary>
-/// Looks up a movie/series on TMDB to fill in the poster, runtime and the title in
+/// Looks up a movie/series on TMDB to fill in the poster, synopsis, runtime and the title in
 /// the "other" language (en/es) — the latter lets us recognise the same content again
 /// after a Netflix UI language switch changes the title text we scrape.
 /// Only handles "es"/"en" as the detected language; anything else is skipped, per plan.
@@ -46,17 +48,9 @@ public class TmdbService(HttpClient http, ILogger<TmdbService> logger, IConfigur
                 $"https://api.themoviedb.org/3/search/{mediaPath}?api_key={_apiKey}&language={locale}&query={Uri.EscapeDataString(title)}";
             var search = await http.GetFromJsonAsync<TmdbSearchResponse>(searchUrl);
 
-            TmdbSearchResult? best = null;
-            double bestScore = 0;
-            foreach (var candidate in search?.Results ?? [])
-            {
-                var candidateTitle = isMovie ? candidate.Title : candidate.Name;
-                if (string.IsNullOrWhiteSpace(candidateTitle)) continue;
-                var score = OpenLibraryService.NormalizedTokenSimilarity(title, candidateTitle);
-                if (score > bestScore) { bestScore = score; best = candidate; }
-            }
-
-            if (best == null || bestScore < 0.5)
+            // Titles come straight from Netflix, so TMDB's top-ranked result is trusted as-is.
+            var best = search?.Results?.FirstOrDefault(c => !string.IsNullOrWhiteSpace(isMovie ? c.Title : c.Name));
+            if (best == null)
             {
                 logger.LogInformation("TMDB: no match for '{Title}' ({Type})", title, type);
                 return null;
@@ -87,14 +81,18 @@ public class TmdbService(HttpClient http, ILogger<TmdbService> logger, IConfigur
                     .ToArray()
                 : null;
 
-            logger.LogInformation("TMDB: matched '{Found}' ({Score:P0}) for '{Query}'",
-                isMovie ? detail.Title : detail.Name, bestScore, title);
+            logger.LogInformation("TMDB: matched '{Found}' for '{Query}'",
+                isMovie ? detail.Title : detail.Name, title);
 
             var cleanAltTitle = string.IsNullOrWhiteSpace(altTitle) ? null : altTitle;
+
+            // TMDB returns an empty overview when the requested language has no translation.
+            var overview = !string.IsNullOrWhiteSpace(detail.Overview) ? detail.Overview : altTranslation?.Data?.Overview;
 
             return new TmdbResult
             {
                 PosterUrl = posterUrl,
+                Description = string.IsNullOrWhiteSpace(overview) ? null : overview,
                 RuntimeMinutes = runtime is > 0 ? runtime : null,
                 TitleEN = otherLang == "en" ? cleanAltTitle : null,
                 TitleES = otherLang == "es" ? cleanAltTitle : null,
@@ -126,6 +124,7 @@ public class TmdbService(HttpClient http, ILogger<TmdbService> logger, IConfigur
         [JsonPropertyName("title")] public string? Title { get; set; }
         [JsonPropertyName("name")] public string? Name { get; set; }
         [JsonPropertyName("poster_path")] public string? PosterPath { get; set; }
+        [JsonPropertyName("overview")] public string? Overview { get; set; }
         [JsonPropertyName("runtime")] public int? Runtime { get; set; }                    // movies, minutes
         [JsonPropertyName("episode_run_time")] public int[]? EpisodeRunTime { get; set; }  // tv, minutes
         [JsonPropertyName("translations")] public TmdbTranslations? Translations { get; set; }
@@ -153,5 +152,6 @@ public class TmdbService(HttpClient http, ILogger<TmdbService> logger, IConfigur
     {
         [JsonPropertyName("title")] public string? Title { get; set; } // movies
         [JsonPropertyName("name")] public string? Name { get; set; }   // tv
+        [JsonPropertyName("overview")] public string? Overview { get; set; }
     }
 }

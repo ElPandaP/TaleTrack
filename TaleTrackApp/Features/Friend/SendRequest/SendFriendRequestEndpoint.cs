@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.Friend;
 using TaleTrackApp.Security;
@@ -10,7 +11,12 @@ public static class SendFriendRequestEndpoint
     {
         group.MapPost("/friends/requests", HandleAsync)
             .WithName("SendFriendRequest")
-            .WithDescription("Send a friend request to a user by id")
+            .WithTags("Friends")
+            .WithSummary("Send a friend request")
+            .WithDescription("Find the target's id with `GET /api/users/search`.")
+            .Responds<ApiResult>("Request sent (code `sent`).")
+            .RespondsBadRequest("Code `self`, `already_friends`, `already_pending` (you already asked) or `reverse_pending` (they already asked you).")
+            .RespondsNotFound("The target user does not exist (code `target_not_found`).")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy);
     }

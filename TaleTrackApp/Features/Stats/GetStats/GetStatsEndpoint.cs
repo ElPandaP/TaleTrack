@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Security;
 
@@ -9,7 +10,11 @@ public static class GetStatsEndpoint
     {
         group.MapGet("/stats", HandleAsync)
             .WithName("GetStats")
-            .WithDescription("The authenticated user's consumption summary for a year (defaults to the current one)")
+            .WithTags("Stats")
+            .WithSummary("Get the caller's yearly summary")
+            .WithDescription("Counts distinct media with tracking activity in the year, bucketed by the month of their latest activity. Defaults to the current year.")
+            .Responds<GetStatsResponse>("The yearly summary.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy);
     }

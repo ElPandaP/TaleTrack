@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using TaleTrackApp.Security;
 using TaleTrackApp.Features.User;
 using TaleTrackApp.Model;
@@ -10,7 +11,11 @@ public static class RevokeSignupEndpoint
     {
         group.MapPost("/auth/revoke-signup", HandleAsync)
             .WithName("RevokeSignup")
-            .WithDescription("Deletes an account created by someone who did not own the email address")
+            .WithTags("Auth")
+            .WithSummary("Delete an account you did not create")
+            .WithDescription("Linked from the welcome email: lets the real owner of an email address delete an account someone else registered with it. The token is single-use and valid for 7 days.")
+            .Responds<ApiResult>("Account deleted.")
+            .RespondsBadRequest("Validation failed, or the code is `invalid_or_expired` (the token is unknown, already used, expired or meant for another action).")
             .AddEndpointFilter<ValidationFilter>()
             .AllowAnonymous();
     }

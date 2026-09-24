@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using TaleTrackApp.Security;
 using TaleTrackApp.Features.User;
 
@@ -9,7 +10,12 @@ public static class RequestCodeEndpoint
     {
         group.MapPost("/auth/request-code", HandleAsync)
             .WithName("RequestEmailCode")
-            .WithDescription("Sends a verification code to the given email")
+            .WithTags("Auth")
+            .WithSummary("Email a one-time sign-in code")
+            .WithDescription("Passwordless sign-in (used by the KOReader plugin). The answer is the same whether or not an account exists for the email, so it cannot be used to discover accounts. Redeem the code, valid for 10 minutes, with `POST /api/auth/verify-code`.")
+            .Responds<ApiResult>("Accepted; a code was sent if the account exists.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
+            .Responds(StatusCodes.Status500InternalServerError, "The email could not be sent.")
             .AddEndpointFilter<ValidationFilter>()
             .AllowAnonymous();
     }

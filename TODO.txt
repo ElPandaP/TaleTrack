@@ -17,3 +17,4 @@ Quitar secretos y connection string de appsettings.Development
 Quitar Environment.GetEnvironmentVariable() y usar builder.Configuration
 
 poner guia de como hacer la migracion en caso de querer cambiar algo en la bd
+

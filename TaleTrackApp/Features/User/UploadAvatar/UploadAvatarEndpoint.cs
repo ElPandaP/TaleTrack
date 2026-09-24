@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Security;
 
@@ -11,7 +12,11 @@ public static class UploadAvatarEndpoint
     {
         group.MapPut("/users/me/avatar", HandleAsync)
             .WithName("UploadAvatar")
-            .WithDescription("Uploads a profile photo; it is cropped to a 256x256 square (requires JWT)")
+            .WithTags("Users")
+            .WithSummary("Upload the caller's profile photo")
+            .WithDescription("Multipart form with a `file` field: an image up to 5 MB. It is cropped to a 256x256 square and stored as WebP.")
+            .Responds<UploadAvatarResponse>("Photo saved; `avatarUrl` is cache-busted.")
+            .RespondsBadRequest("Code `no_file`, `too_large` (over 5 MB) or `invalid_image`.")
             .DisableAntiforgery()
             .RequireAuthorization(Policies.UserPolicy);
     }

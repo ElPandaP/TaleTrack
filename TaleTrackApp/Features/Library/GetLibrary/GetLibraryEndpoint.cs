@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Security;
 
@@ -9,7 +10,11 @@ public static class GetLibraryEndpoint
     {
         group.MapGet("/library", HandleAsync)
             .WithName("GetLibrary")
-            .WithDescription("The authenticated user's library (one row per media) with type/status/sort/year/limit filters")
+            .WithTags("Library")
+            .WithSummary("List the caller's library")
+            .WithDescription("Everything the caller tracks, one row per media, with their progress and rating. `total` counts the matches before `limit` is applied, `count` what was returned.")
+            .Responds<GetLibraryResponse>("The matching library rows.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy);
     }

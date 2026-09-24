@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.Activity;
 using TaleTrackApp.Security;
@@ -10,7 +11,11 @@ public static class GetActivityEndpoint
     {
         group.MapGet("/activity", HandleAsync)
             .WithName("GetActivity")
-            .WithDescription("Activity feed (yours and your friends'): started / finished / reviewed")
+            .WithTags("Activity")
+            .WithSummary("Get the activity feed")
+            .WithDescription("What people started, finished and reviewed, newest first. Friends' entries respect their feed-privacy settings. `scope` picks whose activity to show (default `all`, the caller and their friends); `userId` overrides it to show a single user, as on a public profile: the result is empty unless the caller is that user or one of their friends.")
+            .Responds<GetActivityResponse>("The feed.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy);
     }

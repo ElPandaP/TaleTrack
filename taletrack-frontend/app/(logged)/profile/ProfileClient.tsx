@@ -12,7 +12,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { useAuth, notifyAuthChange } from '@/lib/auth-context';
-import { apiClient } from '@/lib/api/client';
+import { apiClient, ApiError } from '@/lib/api/client';
 import { userService, authService } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -150,19 +150,23 @@ export default function ProfileClient({
     e.preventDefault();
     setSaving(true);
     setSaveMsg(null);
+    // Set once the profile itself has been saved, so a failure from here on is the photo's alone.
+    let uploadingAvatar = false;
     try {
-      if (avatarFile) {
-        await userService.uploadAvatar(avatarFile);
-      } else if (avatarRemoved) {
-        await userService.removeAvatar();
-      }
-
+      // Profile first: a rejected change (e.g. a taken username) must not leave the photo already swapped.
       const res = await userService.updateProfile(profile.id, { username, privacy });
       // The access token carries username/email as claims — swap it in so the header/menu
       // and everything else driven by useAuth() stops showing the pre-edit values.
       if (res.token) {
         apiClient.setToken(res.token);
         notifyAuthChange();
+      }
+
+      if (avatarFile) {
+        uploadingAvatar = true;
+        await userService.uploadAvatar(avatarFile);
+      } else if (avatarRemoved) {
+        await userService.removeAvatar();
       }
 
       if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
@@ -172,8 +176,21 @@ export default function ProfileClient({
 
       setSaveMsg({ ok: true, text: t('profile.saved') });
       router.refresh();
-    } catch {
-      setSaveMsg({ ok: false, text: t('profile.saveError') });
+    } catch (err) {
+      const code = err instanceof ApiError ? err.code : undefined;
+      if (uploadingAvatar) {
+        // The file passed the client-side checks, so these come from the server's own look at it
+        // (e.g. a corrupt file or one renamed to .png).
+        const key =
+          code === 'invalid_image'
+            ? 'profile.avatar.invalidType'
+            : code === 'too_large'
+              ? 'profile.avatar.tooLarge'
+              : 'profile.avatar.uploadError';
+        setAvatarError(t(key));
+      } else {
+        setSaveMsg({ ok: false, text: t(code === 'username_taken' ? 'auth.register.usernameTaken' : 'profile.saveError') });
+      }
     } finally {
       setSaving(false);
     }

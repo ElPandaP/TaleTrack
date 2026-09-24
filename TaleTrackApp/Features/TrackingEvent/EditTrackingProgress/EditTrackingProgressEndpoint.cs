@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Security;
 
@@ -9,7 +10,12 @@ public static class EditTrackingProgressEndpoint
     {
         group.MapPut("/tracking/{mediaId:guid}", HandleAsync)
             .WithName("EditTrackingProgress")
-            .WithDescription("Updates the progress of the user's most recent tracking event for a media")
+            .WithTags("Tracking")
+            .WithSummary("Correct the caller's progress on a media")
+            .WithDescription("Manual correction, so unlike the track endpoints it can lower progress. Send either `progress` (a percentage) or, for a series, `season` and `episode` to mark that episode as reached.")
+            .Responds<EditTrackingProgressResponse>("Progress updated.")
+            .RespondsBadRequest("Neither `progress` nor both `season` and `episode` were given, or validation failed.")
+            .RespondsNotFound("The caller has no tracking for this media.")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy);
     }
@@ -40,11 +46,11 @@ public static class EditTrackingProgressEndpoint
                 return Results.NotFound(new { success = false, message = "No tracking found for this media" });
 
             logger.LogInformation("Progress for media {MediaId} updated by user {UserId}", mediaId, userId);
-            return Results.Ok(new
+            return Results.Ok(new EditTrackingProgressResponse
             {
-                success = true,
-                message = "Progress updated successfully",
-                data = new { progress = updated.Progress }
+                Success = true,
+                Message = "Progress updated successfully",
+                Data = new EditedProgressData { Progress = updated.Progress },
             });
         }
         catch (Exception ex)

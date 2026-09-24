@@ -54,7 +54,7 @@ lib/
 (`lib/api/client.ts`) reintenta una vez con refresh automático si una petición devuelve 401.
 
 Tres formas de entrar: email+contraseña, Google (`@react-oauth/google`), o código OTP por email
-(`RequestCode` → `VerifyCode`). `proxy.ts` protege `/dashboard /library /reviews /activity /friends
+(`RequestCode` → `VerifyCode`). `proxy.ts` protege `/library /reviews /activity /friends
 /profile /media /u` y redirige a `/login` sin sesión (y al revés: si ya tienes sesión, `/login` y
 `/register` te mandan a `/`).
 

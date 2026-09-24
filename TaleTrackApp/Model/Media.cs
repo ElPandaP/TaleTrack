@@ -1,7 +1,6 @@
 namespace TaleTrackApp.Model;
 
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 public class Media
 {
@@ -18,10 +17,6 @@ public class Media
     /// Netflix UI) or later via TMDB translation once the other language is known.</summary>
     [StringLength(255, MinimumLength = 1, ErrorMessage = "TitleES must be between 1 and 255 characters")]
     public string? TitleES { get; set; }
-
-    /// <summary>Display fallback for logging — the frontend picks EN/ES itself per viewer locale.</summary>
-    [NotMapped]
-    public string Title => TitleEN ?? TitleES ?? string.Empty;
 
     [StringLength(1000, ErrorMessage = "Description cannot exceed 1000 characters")]
     public string? Description { get; set; }

@@ -1,14 +1,29 @@
 using TaleTrackApp.Data;
+using TaleTrackApp.Model;
 using Microsoft.EntityFrameworkCore;
 
 namespace TaleTrackApp.Features.Activity;
 
+/// <summary>One entry of the activity feed: someone started, finished or reviewed a media.</summary>
+/// <param name="Id">Stable id of the entry, unique within a feed.</param>
+/// <param name="UserId">Who did it.</param>
+/// <param name="Username">Public username of that user.</param>
+/// <param name="AvatarUrl">Profile photo URL of that user. Null when they have none.</param>
+/// <param name="Kind">`started`, `finished` (progress reached 100%) or `reviewed`.</param>
+/// <param name="Date">When it happened: the latest progress report for started and finished, the review date for reviewed.</param>
+/// <param name="MediaId">The media involved.</param>
+/// <param name="MediaTitleEN">English title of the media, if known.</param>
+/// <param name="MediaTitleES">Spanish title of the media, if known.</param>
+/// <param name="MediaType">`Movie`, `Series` or `Book`.</param>
+/// <param name="MediaPosterUrl">Poster or cover image URL of the media.</param>
+/// <param name="Rating">Rating 1-10. Only for `reviewed`.</param>
+/// <param name="Comment">Review comment. Only for `reviewed`.</param>
 public record ActivityItem(
     string Id,
     Guid UserId,
     string Username,
     string? AvatarUrl,
-    string Kind,          // "started" | "finished" | "reviewed"
+    string Kind,
     DateTime Date,
     Guid MediaId,
     string? MediaTitleEN,
@@ -76,7 +91,7 @@ public class ActivityService
 
     private async Task<List<Guid>> FriendIdsAsync(Guid userId) =>
         await _context.Friendships
-            .Where(f => f.Status == "Accepted" && (f.RequesterId == userId || f.AddresseeId == userId))
+            .Where(f => f.Status == FriendshipStatus.Accepted && (f.RequesterId == userId || f.AddresseeId == userId))
             .Select(f => f.RequesterId == userId ? f.AddresseeId : f.RequesterId)
             .ToListAsync();
 

@@ -8,8 +8,6 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",
-    "jsx": "react-jsx",
-    "allowJs": true,
     // Chrome Extension specific
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": false,
@@ -19,8 +17,7 @@
     "rootDir": "./src",
     // Type definitions
     "types": [
-      "chrome",
-      "bun"
+      "chrome"
     ],
     "typeRoots": [
       "./node_modules/@types"
@@ -35,8 +32,8 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     // Some stricter flags
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noPropertyAccessFromIndexSignature": false
   },
   "include": [

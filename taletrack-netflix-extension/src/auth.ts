@@ -108,35 +108,17 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   return res;
 }
 
-// Resolves the in-flight signIn() promise once the /extension-auth tab messages us
-// back (see handleExternalAuthMessage, wired up from background.ts's
-// onMessageExternal listener — that's the only path that calls this).
-let pendingSignIn: ((ok: boolean) => void) | null = null;
-const SIGN_IN_TIMEOUT_MS = 5 * 60 * 1000;
-
-/** Opens the web app's confirm-and-issue-tokens page and waits for it to message us back. */
-export function signIn(): Promise<boolean> {
-  return new Promise((resolve) => {
-    pendingSignIn?.(false); // a stale attempt (tab closed without finishing) loses the race
-    pendingSignIn = resolve;
-
-    chrome.tabs.create({ url: `${FRONTEND_URL}/extension-auth` });
-
-    setTimeout(() => {
-      if (pendingSignIn === resolve) {
-        pendingSignIn = null;
-        resolve(false);
-      }
-    }, SIGN_IN_TIMEOUT_MS);
-  });
+/** Opens the web app's confirm-and-issue-tokens page. The tokens come back through
+ *  handleExternalAuthMessage; nothing waits for them here, because the popup closes as soon
+ *  as the tab takes focus and the service worker may be asleep by the time they arrive. */
+export function openSignInTab(): void {
+  chrome.tabs.create({ url: `${FRONTEND_URL}/extension-auth` });
 }
 
-/** Called only from background.ts after it has verified the sender's origin and the
- *  message shape — never trust token values from anywhere else. */
+/** Called only from background.ts (its onMessageExternal listener) after it has verified the
+ *  sender's origin and the message shape — never trust token values from anywhere else. */
 export async function handleExternalAuthMessage(access: string, refresh: string, expiresIn = 3600): Promise<void> {
   await writeTokens({ access, refresh, expiresAt: Date.now() + expiresIn * 1000 });
-  pendingSignIn?.(true);
-  pendingSignIn = null;
 }
 
 /** Revoke this device's session server-side (best effort), then drop local tokens. */

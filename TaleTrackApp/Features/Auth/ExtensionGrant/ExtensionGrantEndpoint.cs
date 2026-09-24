@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Security;
 using TaleTrackApp.Features.User;
@@ -16,7 +17,10 @@ public static class ExtensionGrantEndpoint
     {
         group.MapPost("/auth/extension-grant", HandleAsync)
             .WithName("ExtensionGrant")
-            .WithDescription("Issues an access + refresh token pair for the browser extension")
+            .WithTags("Auth")
+            .WithSummary("Issue tokens for the browser extension")
+            .WithDescription("Called by the web app with the user's own token to hand the Netflix extension an independent session, listed as `Netflix extension` in the sessions list.")
+            .Responds<ExtensionGrantResponse>("New access and refresh tokens for the extension.")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

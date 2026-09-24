@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Security;
 using TaleTrackApp.Features.User;
@@ -11,7 +12,11 @@ public static class RequestAccountDeletionEndpoint
     {
         group.MapPost("/auth/request-account-deletion", HandleAsync)
             .WithName("RequestAccountDeletion")
-            .WithDescription("Emails a link that confirms and performs account deletion (requires JWT)")
+            .WithTags("Auth")
+            .WithSummary("Email an account-deletion confirmation link")
+            .WithDescription("Nothing is deleted until the emailed link, valid for 1 hour, is opened (`POST /api/auth/confirm-delete`).")
+            .Responds<ApiResult>("Confirmation email sent.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy);
     }

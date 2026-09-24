@@ -13,7 +13,7 @@ amigos.
 | `TaleTrackApp.Tests/` | Tests de integración del backend (xUnit) | ver sección de tests en el README del backend |
 | `taletrack-frontend/` | Frontend — Next.js 16, App Router | [`taletrack-frontend/README.md`](taletrack-frontend/README.md) |
 | `taletrack-netflix-extension/` | Extensión de Chrome que trackea Netflix automáticamente | [`taletrack-netflix-extension/README.md`](taletrack-netflix-extension/README.md) |
-| `taletrack.koplugin/` | Plugin de KOReader que trackea libros leídos (submódulo git aparte) | [`taletrack.koplugin/README.md`](taletrack.koplugin/README.md) |
+| `taletrack.koplugin/` | Plugin de KOReader que trackea libros leídos | [`taletrack.koplugin/README.md`](taletrack.koplugin/README.md) |
 
 Todo gira alrededor del backend: los otros tres son distintas puertas de entrada de datos (web,
 Netflix, lector de libros) sobre la misma API.

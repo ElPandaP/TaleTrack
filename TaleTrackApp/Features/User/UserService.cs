@@ -17,6 +17,9 @@ public record FeedPrivacy(
 /// <summary>Outcome of <see cref="UserService.RegisterAsync"/>.</summary>
 public enum RegisterResult { Ok, EmailTaken, UsernameTaken }
 
+/// <summary>Outcome of <see cref="UserService.UpdateUserAsync"/>.</summary>
+public enum UpdateUserResult { Ok, NotFound, UsernameTaken }
+
 public class UserService
 {
     // PBKDF2 (HMAC-SHA512) with a per-hash random salt, via ASP.NET Core Identity's hasher.
@@ -111,7 +114,15 @@ public class UserService
         return user;
     }
 
-    public async Task<Model.User?> UpdateUserAsync(
+    /// <summary>True if a user other than <paramref name="userId"/> already has this username (case-insensitive).</summary>
+    private async Task<bool> UsernameTakenByOtherAsync(Guid userId, string username)
+    {
+        var u = username.Trim().ToLower();
+        return await _context.Users.AnyAsync(x => x.Id != userId && x.Username.ToLower() == u);
+    }
+
+    /// <summary>Applies a partial profile update. Unless the username is taken, the user comes back as well.</summary>
+    public async Task<(UpdateUserResult Result, Model.User? User)> UpdateUserAsync(
         Guid id,
         string? username,
         FeedPrivacy? privacy = null)
@@ -119,12 +130,19 @@ public class UserService
         var user = await _context.Users.FindAsync(id);
         if (user == null)
         {
-            return null;
+            return (UpdateUserResult.NotFound, null);
         }
 
-        if (!string.IsNullOrEmpty(username))
+        var changesUsername = !string.IsNullOrEmpty(username) && username != user.Username;
+        if (changesUsername)
         {
-            user.Username = username;
+            if (await UsernameTakenByOtherAsync(id, username!))
+            {
+                _logger.LogWarning("User {UserId} tried to take an existing username: {Username}", id, username);
+                return (UpdateUserResult.UsernameTaken, null);
+            }
+
+            user.Username = username!;
         }
 
         if (privacy != null)
@@ -139,10 +157,22 @@ public class UserService
 
         user.UpdatedAt = DateTime.UtcNow;
         _context.Users.Update(user);
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException) when (changesUsername)
+        {
+            // Someone may have taken the name between the check above and the write, which the
+            // unique index catches. Any other write failure is not ours to swallow.
+            _context.ChangeTracker.Clear();
+            if (await UsernameTakenByOtherAsync(id, username!))
+                return (UpdateUserResult.UsernameTaken, null);
+            throw;
+        }
 
         _logger.LogInformation($"User {id} updated successfully");
-        return user;
+        return (UpdateUserResult.Ok, user);
     }
 
     public async Task<bool> DeleteUserAsync(Guid id)

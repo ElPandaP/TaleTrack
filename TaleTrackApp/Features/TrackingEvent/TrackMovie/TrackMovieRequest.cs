@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 
 public class TrackMovieRequest
 {
+    /// <summary>Film title.</summary>
     [Required(ErrorMessage = "Title is required")]
     [StringLength(255, MinimumLength = 1)]
     public required string Title { get; set; }
@@ -12,6 +13,7 @@ public class TrackMovieRequest
     [Range(1, int.MaxValue)]
     public int? Minutes { get; set; }
 
+    /// <summary>Percentage watched, 0-100.</summary>
     [Range(0, 100)]
     public int? Progress { get; set; }
 

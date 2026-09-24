@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 namespace TaleTrackApp.Features.User.GetAvatar;
 
 public static class GetAvatarEndpoint
@@ -6,7 +7,12 @@ public static class GetAvatarEndpoint
     {
         group.MapGet("/users/{id:guid}/avatar", HandleAsync)
             .WithName("GetAvatar")
-            .WithDescription("Serves a user's profile photo (public — an <img> tag can't send a token)")
+            .WithTags("Users")
+            .WithSummary("Get a user's profile photo")
+            .WithDescription("Anonymous because an `img` tag cannot send an Authorization header. Cached for a year; the `avatarUrl` of a user changes whenever the photo does.")
+            .Produces(StatusCodes.Status200OK, typeof(byte[]), "image/webp")
+            .WithMetadata(new ResponseDescription(StatusCodes.Status200OK, "The photo, a 256x256 WebP image."))
+            .Responds(StatusCodes.Status404NotFound, "The user has no photo.")
             .AllowAnonymous();
     }
 

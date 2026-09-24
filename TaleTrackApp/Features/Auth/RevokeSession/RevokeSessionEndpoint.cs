@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Security;
 
@@ -10,7 +11,11 @@ public static class RevokeSessionEndpoint
     {
         group.MapDelete("/auth/sessions/{id:guid}", HandleAsync)
             .WithName("RevokeSession")
-            .WithDescription("Revokes one of the authenticated user's sessions")
+            .WithTags("Auth")
+            .WithSummary("Revoke one of the caller's sessions")
+            .WithDescription("Signs that device out, e.g. after losing it. Its access token keeps working until it expires.")
+            .Responds<ApiResult>("Session revoked.")
+            .RespondsNotFound("There is no such session for the caller.")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

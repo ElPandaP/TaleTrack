@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using TaleTrackApp.Features.User;
 using TaleTrackApp.Security;
 
@@ -9,7 +10,11 @@ public static class LoginEndpoint
     {
         group.MapPost("/login", HandleAsync)
             .WithName("Login")
-            .WithDescription("Signs in with email and password")
+            .WithTags("Auth")
+            .WithSummary("Sign in with email and password")
+            .Responds<LoginResponse>("Signed in: access token, refresh token and access-token lifetime.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
+            .Responds<ApiError>(StatusCodes.Status401Unauthorized, "Wrong email or password (code `invalid_credentials`).")
             .AddEndpointFilter<ValidationFilter>()
             .AllowAnonymous();
     }

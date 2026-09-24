@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.Review;
 using TaleTrackApp.Security;
@@ -10,7 +11,12 @@ public static class EditReviewEndpoint
     {
         group.MapPut("/reviews/{id:guid}", HandleAsync)
             .WithName("EditReview")
-            .WithDescription("Edits a review")
+            .WithTags("Reviews")
+            .WithSummary("Edit a review")
+            .Responds<EditReviewResponse>("Review updated.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
+            .Responds(StatusCodes.Status403Forbidden, "The review belongs to someone else.")
+            .RespondsNotFound("The review does not exist.")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy);
     }
@@ -42,18 +48,18 @@ public static class EditReviewEndpoint
             }
 
             logger.LogInformation($"Review {id} updated by user {userId}");
-            return Results.Ok(new 
-            { 
-                success = true, 
-                message = "Review updated successfully",
-                data = new
+            return Results.Ok(new EditReviewResponse
+            {
+                Success = true,
+                Message = "Review updated successfully",
+                Data = new EditedReviewData
                 {
-                    id = updatedReview!.Id,
-                    userId = updatedReview.UserId,
-                    mediaId = updatedReview.MediaId,
-                    rating = updatedReview.Rating,
-                    comment = updatedReview.Comment,
-                    updatedAt = updatedReview.UpdatedAt
+                    Id = updatedReview!.Id,
+                    UserId = updatedReview.UserId,
+                    MediaId = updatedReview.MediaId,
+                    Rating = updatedReview.Rating,
+                    Comment = updatedReview.Comment,
+                    UpdatedAt = updatedReview.UpdatedAt,
                 }
             });
         }

@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.Review;
 using TaleTrackApp.Security;
@@ -10,7 +11,9 @@ public static class GetReviewsEndpoint
     {
         group.MapGet("/reviews", HandleAsync)
             .WithName("GetReviews")
-            .WithDescription("Reviews written by the authenticated user, with their associated media")
+            .WithTags("Reviews")
+            .WithSummary("List the caller's reviews")
+            .Responds<GetReviewsResponse>("The caller's reviews with a summary of each media.")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Auth.GoogleLogin;
@@ -8,7 +9,13 @@ public static class GoogleLoginEndpoint
     {
         group.MapPost("/auth/google", HandleAsync)
             .WithName("GoogleLogin")
-            .WithDescription("Signs in with Google OAuth")
+            .WithTags("Auth")
+            .WithSummary("Sign in with a Google ID token")
+            .WithDescription("Two outcomes. An existing account (or one whose email matches, which gets linked) receives its tokens. An unknown Google account receives `needsUsername: true` plus a `pendingToken` to send, with the chosen username, to `POST /api/auth/google/complete`.")
+            .Responds<GoogleLoginResponse>("Signed in, or the sign-up must be completed with a username.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
+            .Responds(StatusCodes.Status401Unauthorized, "The Google ID token is invalid.")
+            .Responds(StatusCodes.Status500InternalServerError, "Google sign-in is not configured on the server.")
             .AddEndpointFilter<ValidationFilter>()
             .AllowAnonymous();
     }

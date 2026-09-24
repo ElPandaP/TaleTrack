@@ -1,5 +1,4 @@
 using System.Net;
-using System.Reflection;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -55,6 +54,7 @@ using TaleTrackApp.Features.Friend.DeclineRequest;
 using TaleTrackApp.Features.Friend.RemoveFriend;
 using TaleTrackApp.Features.Activity;
 using TaleTrackApp.Features.Activity.GetActivity;
+using TaleTrackApp.OpenApi;
 using TaleTrackApp.Security;
 using TaleTrackApp.Services;
 
@@ -151,15 +151,7 @@ void configureApi()
 {
     builder.Services.AddProblemDetails();
     builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen(options =>
-    {
-        var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-        var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
-        if (File.Exists(xmlPath))
-        {
-            options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
-        }
-    });
+    builder.Services.AddSwaggerGen(OpenApiConfiguration.Configure);
 
     // Register Shared Services (REPR pattern)
     builder.Services.AddScoped<UserService>();
@@ -174,6 +166,8 @@ void configureApi()
     builder.Services.AddHttpClient<OpenLibraryService>(client =>
     {
         client.Timeout = TimeSpan.FromSeconds(10);
+        // Open Library asks API clients to identify themselves.
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("TaleTrack/1.0 (+https://taletrack.app)");
     });
     builder.Services.AddHttpClient<TmdbService>(client =>
     {

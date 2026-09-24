@@ -127,6 +127,18 @@ entran con código por email y se ponen contraseña nueva desde el perfil.
 
 ## 4. Endpoints (todos bajo `/api`)
 
+### Documentación OpenAPI (`/swagger`)
+La configuración vive en `OpenApi/` (info, esquema Bearer, tags con su descripción y un filtro que añade
+el candado, el `401` de los endpoints protegidos y el `429` global). Al crear un endpoint:
+- En `Map`: `.WithTags(...)` (uno de los de `OpenApiConfiguration.Tags`), `.WithSummary(...)` y, si hay
+  comportamiento no obvio, `.WithDescription(...)`.
+- Cada respuesta con `.Responds<T>("qué significa")` / `.RespondsBadRequest(...)` / `.RespondsNotFound(...)`
+  / `.Responds(código, "...")` (sin cuerpo). Los cuerpos de error/confirmación se describen con
+  `ApiError` y `ApiResult`; las respuestas con datos, con una clase `*Response` propia (no objetos anónimos,
+  que Swagger no puede describir).
+- Cada propiedad de un DTO lleva `/// <summary>`; los `record` documentan con `<param>`.
+- `OpenApiDocumentationTests` falla si falta cualquiera de estas piezas.
+
 ### Auth / sesiones
 | Método | Ruta | Auth | Qué hace |
 |---|---|---|---|
@@ -216,7 +228,7 @@ encontrada, parámetro interno ausente...).
 | **Media** | TitleEN?, TitleES?, Type, Length, Description?, PosterUrl?, Author?, Isbn?, SeasonEpisodeCounts?, FirstTrackedAt, UpdatedAt? | Tabla única para los tres tipos. `Type` es el enum `MediaType` (Movie, Series, Book), guardado como texto. Al menos uno de `TitleEN`/`TitleES`; el otro lo rellena TMDB. Check constraints: `Author` e `Isbn` solo en Book, `SeasonEpisodeCounts` solo en Series, `Type` limitado a los tres valores. Índices no únicos en `Isbn` (parcial), `TitleEN` y `TitleES` |
 | **TrackingEvent** | UserId→, MediaId→, Progress? (0–100), Season?, Episode?, EpisodeTitle?, EventDate | `EventDate` = `DateTime.UtcNow` al crear/actualizar |
 | **Review** | UserId→, MediaId→, Rating (1–10), Comment?, CreatedAt, UpdatedAt? | |
-| **Friendship** | RequesterId→, AddresseeId→, Status ("Pending"/"Accepted"), CreatedAt, RespondedAt? | índice único en (Requester, Addressee); ambos FK cascade-delete |
+| **Friendship** | RequesterId→, AddresseeId→, Status, CreatedAt, RespondedAt? | `Status` es el enum `FriendshipStatus` (Pending, Accepted), guardado como texto. Una sola fila por pareja de usuarios en cualquier sentido: índice único sobre las columnas generadas `UserLowId`/`UserHighId` (`LEAST`/`GREATEST` de Requester y Addressee), que no existen en la entidad. Ambos FK cascade-delete |
 | **RefreshToken** | UserId→, TokenHash, Device, CreatedAt, LastUsedAt, ExpiresAt, RevokedAt?, ReplacedByTokenHash? | una fila por sesión/dispositivo; rotación con ventana de gracia de 60s |
 
 - **Cascade delete** configurado en `OnModelCreating`: borrar un `User` borra sus `Review`,
@@ -227,7 +239,7 @@ encontrada, parámetro interno ausente...).
   tokens, umbral 0.75 configurable) y rellena Author / PosterUrl / Isbn si faltan.
   Portadas: `covers.openlibrary.org`.
 - **Enriquecimiento de películas/series** (`TmdbService`, requiere env `TMDB_API_KEY`): busca en TMDB por
-  título (con el mismo matching por similitud), y si encuentra coincidencia rellena `PosterUrl`,
+  título y toma el primer resultado (los títulos llegan tal cual de Netflix), y rellena `PosterUrl`,
   `Length` (runtime, solo películas), `SeasonEpisodeCounts` (series) y el título en el otro idioma
   (`TitleEN`/`TitleES`, vía `append_to_response=translations`).
   Solo se activa si el request trae `Language` ("es"/"en" — lo manda la extensión de Netflix leyendo
@@ -312,7 +324,7 @@ Para meter un usuario de prueba con datos: `../scripts/seed-demo.ps1` (registra 
 | Cliente | Cómo llama |
 |---|---|
 | `taletrack-frontend` (Next.js) | navegador → `/api/*` (rewrite a `backend:8080`). SSR usa `lib/api/server.ts` con la cookie `tt-token` |
-| `taletrack.koplugin` (KOReader, Lua, submódulo git) | login por OTP (`/api/auth/request-code` + `/verify-code`), luego `POST /api/tracking/books` con `Authorization: Bearer` al terminar un libro |
+| `taletrack.koplugin` (KOReader, Lua) | login por OTP (`/api/auth/request-code` + `/verify-code`), luego `POST /api/tracking/books` con `Authorization: Bearer` al terminar un libro |
 | `taletrack-netflix-extension` | detecta reproducción en Netflix, extrae título/temporada/episodio/progreso/idioma y postea a `/api/tracking/movies` o `/api/tracking/series` cada ~15s (con throttle por % de avance) vía el service worker |
 
 > El koplugin y la extensión apuntan por defecto al servidor de producción hardcodeado

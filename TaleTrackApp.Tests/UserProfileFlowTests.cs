@@ -46,6 +46,32 @@ public class UserProfileFlowTests(CustomWebApplicationFactory factory)
     }
 
     [Fact]
+    public async Task EditUser_UsernameTakenByAnotherUser_Returns400WithCode()
+    {
+        var (client, id) = await AuthedClientAsync("profile-taken-a@test.com", "profiletakena");
+        await AuthedClientAsync("profile-taken-b@test.com", "profiletakenb");
+
+        // Case-insensitive, like registration.
+        var res = await client.PutAsJsonAsync($"/api/users/{id}", new { Username = "ProfileTakenB" });
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        var body = await res.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("username_taken", body.GetProperty("code").GetString());
+
+        // The rejected change left the username as it was.
+        var me = await (await client.GetAsync("/api/users/me")).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("profiletakena", me.GetProperty("data").GetProperty("username").GetString());
+    }
+
+    [Fact]
+    public async Task EditUser_ChangingOnlyTheCaseOfOwnUsername_Succeeds()
+    {
+        var (client, id) = await AuthedClientAsync("profile-case@test.com", "profilecase");
+
+        var res = await client.PutAsJsonAsync($"/api/users/{id}", new { Username = "ProfileCase" });
+        Assert.True(res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task EditUser_AnotherUsersAccount_Returns403()
     {
         var (a, _) = await AuthedClientAsync("profile-edit-a@test.com", "profileedita");

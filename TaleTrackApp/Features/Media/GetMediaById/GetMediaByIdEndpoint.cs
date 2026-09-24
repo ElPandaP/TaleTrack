@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.Review;
 using TaleTrackApp.Features.TrackingEvent;
@@ -11,7 +12,11 @@ public static class GetMediaByIdEndpoint
     {
         group.MapGet("/media/{id:guid}", HandleAsync)
             .WithName("GetMediaById")
-            .WithDescription("A media's detail page: data, the user's progress and review, and every review")
+            .WithTags("Media")
+            .WithSummary("Get a media's detail page")
+            .WithDescription("Media data, the caller's own progress and review, and every user's reviews. Fields prefixed `my` are absent when the caller has not tracked or reviewed it.")
+            .Responds<GetMediaByIdResponse>("The media detail.")
+            .RespondsNotFound("The media does not exist.")
             .RequireAuthorization(Policies.UserPolicy);
     }
 
@@ -37,7 +42,7 @@ public static class GetMediaByIdEndpoint
 
             var reviews = await reviewService.GetByMediaIdAsync(id);
             var myTracking = await trackingEventService.GetForMediaAsync(userId, id);
-            var myProgress = SeriesProgressService.ProgressFor(media, myTracking);
+            var myProgress = SeriesProgressCalculator.ProgressFor(media, myTracking);
 
             var detail = new MediaDetail(media, reviews, reviews.FirstOrDefault(r => r.UserId == userId), myTracking, myProgress);
             return Results.Ok(GetMediaByIdResponse.From(detail, userId));

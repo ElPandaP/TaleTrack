@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.Friend;
 using TaleTrackApp.Security;
@@ -10,7 +11,9 @@ public static class GetFriendsEndpoint
     {
         group.MapGet("/friends", HandleAsync)
             .WithName("GetFriends")
-            .WithDescription("The user's accepted friends plus incoming and outgoing requests")
+            .WithTags("Friends")
+            .WithSummary("List friends and pending requests")
+            .Responds<GetFriendsResponse>("Accepted friends plus incoming and outgoing requests.")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

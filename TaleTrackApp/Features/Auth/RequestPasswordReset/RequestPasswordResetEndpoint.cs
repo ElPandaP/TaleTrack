@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using TaleTrackApp.Security;
 using TaleTrackApp.Services;
 
@@ -9,7 +10,11 @@ public static class RequestPasswordResetEndpoint
     {
         group.MapPost("/auth/request-password-reset", HandleAsync)
             .WithName("RequestPasswordReset")
-            .WithDescription("Emails a password-reset link if the account exists and has a password")
+            .WithTags("Auth")
+            .WithSummary("Email a password-reset link")
+            .WithDescription("The answer is the same whether or not an account exists, and accounts without a password (Google-only) get no email. The emailed link is valid for 1 hour.")
+            .Responds<ApiResult>("Accepted; an email was sent if the account exists.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
             .AddEndpointFilter<ValidationFilter>()
             .AllowAnonymous();
     }

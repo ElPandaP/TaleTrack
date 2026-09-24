@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Security;
 
@@ -9,7 +10,11 @@ public static class DeleteTrackingEndpoint
     {
         group.MapDelete("/tracking/{mediaId:guid}", HandleAsync)
             .WithName("DeleteTracking")
-            .WithDescription("Deletes all of the user's tracking for a media (removes it from their library)")
+            .WithTags("Tracking")
+            .WithSummary("Stop tracking a media")
+            .WithDescription("Deletes the caller's tracking, which takes the media out of their library. The media and any review stay.")
+            .Responds<ApiResult>("Tracking deleted.")
+            .RespondsNotFound("The caller has no tracking for this media.")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

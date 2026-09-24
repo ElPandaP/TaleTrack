@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.User;
 using TaleTrackApp.Features.Friend;
@@ -12,7 +13,11 @@ public static class GetUserProfileEndpoint
     {
         group.MapGet("/users/{id:guid}", HandleAsync)
             .WithName("GetUserProfile")
-            .WithDescription("A user's public profile (avatar, counts, relationship to the caller)")
+            .WithTags("Users")
+            .WithSummary("Get a user's public profile")
+            .WithDescription("Avatar, how many media of each type they track, and how they relate to the caller.")
+            .Responds<GetUserProfileResponse>("The public profile.")
+            .RespondsNotFound("The user does not exist.")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

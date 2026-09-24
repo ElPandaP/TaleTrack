@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Auth.Refresh;
@@ -8,7 +9,12 @@ public static class RefreshEndpoint
     {
         group.MapPost("/auth/refresh", HandleAsync)
             .WithName("RefreshToken")
-            .WithDescription("Exchanges a valid refresh token for a new access + refresh token pair")
+            .WithTags("Auth")
+            .WithSummary("Exchange a refresh token for new tokens")
+            .WithDescription("The refresh token is rotated: store the new one and discard the old one. A just-rotated token keeps returning the same replacement for 60 seconds, so two callers refreshing at once do not invalidate each other.")
+            .Responds<RefreshResponse>("New access and refresh tokens.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
+            .Responds<ApiError>(StatusCodes.Status401Unauthorized, "The refresh token is unknown, revoked or expired. The user must sign in again.")
             .AddEndpointFilter<ValidationFilter>()
             .AllowAnonymous();
     }

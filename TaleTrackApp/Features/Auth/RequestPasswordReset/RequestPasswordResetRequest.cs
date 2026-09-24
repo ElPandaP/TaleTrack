@@ -4,6 +4,7 @@ namespace TaleTrackApp.Features.Auth.RequestPasswordReset;
 
 public class RequestPasswordResetRequest
 {
+    /// <summary>Email of the account to reset.</summary>
     [Required(ErrorMessage = "Email is required")]
     [EmailAddress(ErrorMessage = "Email must be valid")]
     public required string Email { get; set; }

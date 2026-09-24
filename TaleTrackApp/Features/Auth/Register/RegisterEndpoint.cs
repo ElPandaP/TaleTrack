@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using TaleTrackApp.Features.User;
 using TaleTrackApp.Security;
 using TaleTrackApp.Services;
@@ -10,7 +11,11 @@ public static class RegisterEndpoint
     {
         group.MapPost("/register", HandleAsync)
             .WithName("Register")
-            .WithDescription("Register a new user")
+            .WithTags("Auth")
+            .WithSummary("Create an account with email and password")
+            .WithDescription("Creates the account and sends a welcome email in the background, in the given locale. It does not sign the user in: call the login endpoint afterwards.")
+            .Responds<ApiResult>("The account was created.")
+            .RespondsBadRequest("Validation failed, or the code is `email_taken` / `username_taken`.")
             .AddEndpointFilter<ValidationFilter>()
             .AllowAnonymous();
     }

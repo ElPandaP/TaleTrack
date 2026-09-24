@@ -1,6 +1,7 @@
 using TaleTrackApp.Data;
 using TaleTrackApp.Model;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace TaleTrackApp.Features.Media;
 
@@ -9,17 +10,23 @@ public class MediaService
     private readonly AppDbContext _context;
     private readonly TmdbService _tmdb;
     private readonly OpenLibraryService _openLibrary;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<MediaService> _logger;
+
+    /// <summary>How long after an Open Library lookup the same book is not looked up again.</summary>
+    private static readonly TimeSpan OpenLibraryRetryDelay = TimeSpan.FromHours(12);
 
     public MediaService(
         AppDbContext context,
         TmdbService tmdb,
         OpenLibraryService openLibrary,
+        IMemoryCache cache,
         ILogger<MediaService> logger)
     {
         _context = context;
         _tmdb = tmdb;
         _openLibrary = openLibrary;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -28,15 +35,29 @@ public class MediaService
         return await _context.Medias.FindAsync(id);
     }
 
-    /// <summary>Whether a movie/series still lacks what TMDB can fill in (poster or either title). TMDB needs a language to search.</summary>
+    /// <summary>Whether a movie/series still lacks what TMDB can fill in (poster, synopsis or either title). TMDB needs a language to search.</summary>
     public static bool NeedsTmdbEnrichment(Model.Media media, string? language) =>
         !string.IsNullOrWhiteSpace(language) &&
-        (string.IsNullOrWhiteSpace(media.PosterUrl) ||
+        (string.IsNullOrWhiteSpace(media.PosterUrl) || string.IsNullOrWhiteSpace(media.Description) ||
          string.IsNullOrWhiteSpace(media.TitleEN) || string.IsNullOrWhiteSpace(media.TitleES));
 
-    /// <summary>Whether a book still lacks what OpenLibrary can fill in (cover or author).</summary>
+    /// <summary>Whether a book still lacks what OpenLibrary can fill in (cover, author or synopsis).</summary>
     public static bool NeedsOpenLibraryEnrichment(Model.Media media) =>
-        string.IsNullOrWhiteSpace(media.PosterUrl) || string.IsNullOrWhiteSpace(media.Author);
+        string.IsNullOrWhiteSpace(media.PosterUrl) || string.IsNullOrWhiteSpace(media.Author) ||
+        string.IsNullOrWhiteSpace(media.Description);
+
+    private const int MaxDescriptionLength = 1000; // matches Media.Description's StringLength
+
+    /// <summary>Trims a synopsis to what Media.Description can hold, ending in an ellipsis when it is cut.</summary>
+    private static string ClipDescription(string text)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.Length <= MaxDescriptionLength) return trimmed;
+
+        var cut = MaxDescriptionLength - 1;
+        if (char.IsHighSurrogate(trimmed[cut - 1])) cut--; // don't split an emoji in half
+        return trimmed[..cut].TrimEnd() + "…";
+    }
 
     public async Task<Model.Media> CreateAsync(string title, MediaType type, int length,
         string? author = null, string? isbn = null, string? language = null)
@@ -58,7 +79,7 @@ public class MediaService
         _context.Medias.Add(media);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Media created: {Title}", media.Title);
+        _logger.LogInformation("Media created: {Title}", media.TitleEN ?? media.TitleES);
         return media;
     }
 
@@ -72,7 +93,7 @@ public class MediaService
                 .FirstOrDefaultAsync(m => m.Isbn == isbn && m.Type == type);
             if (byIsbn != null)
             {
-                _logger.LogInformation("Media found by ISBN: {Title} (ID: {Id})", byIsbn.Title, byIsbn.Id);
+                _logger.LogInformation("Media found by ISBN: {Title} (ID: {Id})", byIsbn.TitleEN ?? byIsbn.TitleES, byIsbn.Id);
                 return byIsbn;
             }
         }
@@ -84,7 +105,7 @@ public class MediaService
                 .FirstOrDefaultAsync(m => (m.TitleEN == title || m.TitleES == title) && m.Author == author && m.Type == type);
             if (byTitleAuthor != null)
             {
-                _logger.LogInformation("Media found by title+author: {Title} (ID: {Id})", byTitleAuthor.Title, byTitleAuthor.Id);
+                _logger.LogInformation("Media found by title+author: {Title} (ID: {Id})", byTitleAuthor.TitleEN ?? byTitleAuthor.TitleES, byTitleAuthor.Id);
                 return byTitleAuthor;
             }
         }
@@ -96,7 +117,7 @@ public class MediaService
             .FirstOrDefaultAsync(m => (m.TitleEN == title || m.TitleES == title) && m.Type == type);
         if (byTitle != null)
         {
-            _logger.LogInformation("Media found by title: {Title} (ID: {Id})", byTitle.Title, byTitle.Id);
+            _logger.LogInformation("Media found by title: {Title} (ID: {Id})", byTitle.TitleEN ?? byTitle.TitleES, byTitle.Id);
             return byTitle;
         }
 
@@ -114,6 +135,8 @@ public class MediaService
             media.PosterUrl = result.CoverUrl;
         if (!string.IsNullOrWhiteSpace(result.Isbn) && string.IsNullOrWhiteSpace(media.Isbn))
             media.Isbn = result.Isbn;
+        if (!string.IsNullOrWhiteSpace(result.Description) && string.IsNullOrWhiteSpace(media.Description))
+            media.Description = ClipDescription(result.Description);
 
         media.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
@@ -127,6 +150,8 @@ public class MediaService
 
         if (!string.IsNullOrWhiteSpace(result.PosterUrl) && string.IsNullOrWhiteSpace(media.PosterUrl))
             media.PosterUrl = result.PosterUrl;
+        if (!string.IsNullOrWhiteSpace(result.Description) && string.IsNullOrWhiteSpace(media.Description))
+            media.Description = ClipDescription(result.Description);
         // Length is a movie-only concept here — a series' episodes vary in length, so
         // there's no single "length" worth recording for one (see SeasonEpisodeCounts).
         if (media.Type == MediaType.Movie && result.RuntimeMinutes is int minutes && minutes > 0 && media.Length <= 0)
@@ -151,9 +176,17 @@ public class MediaService
             await ApplyTmdbEnrichmentAsync(mediaId, result);
     }
 
-    /// <summary>Looks the book up on OpenLibrary and fills in whatever it is missing. Does nothing if there is no match.</summary>
+    /// <summary>
+    /// Looks the book up on OpenLibrary and fills in whatever it is missing. Does nothing if there is no match.
+    /// Every sync of a book that is still incomplete asks for this, and Open Library asks clients to go
+    /// easy on it, so a book is looked up at most once per <see cref="OpenLibraryRetryDelay"/>.
+    /// </summary>
     public async Task EnrichFromOpenLibraryAsync(Guid mediaId, string title, string? author, string? isbn)
     {
+        var attemptKey = $"openlibrary-lookup:{mediaId}";
+        if (_cache.TryGetValue(attemptKey, out _)) return;
+        _cache.Set(attemptKey, true, OpenLibraryRetryDelay);
+
         var result = await _openLibrary.EnrichAsync(title, author, isbn);
         if (result != null)
             await ApplyEnrichmentAsync(mediaId, result);

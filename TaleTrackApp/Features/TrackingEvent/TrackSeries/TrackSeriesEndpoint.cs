@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.Media;
 using TaleTrackApp.Security;
@@ -11,7 +12,11 @@ public static class TrackSeriesEndpoint
     {
         group.MapPost("/tracking/series", HandleAsync)
             .WithName("TrackSeries")
-            .WithDescription("Records watch progress for a series episode")
+            .WithTags("Tracking")
+            .WithSummary("Record progress on a series episode")
+            .WithDescription("Creates the series on first use. Only the furthest season and episode reached is kept, so re-watching an earlier episode does not move it back. Metadata is filled in later from TMDB, in the background.")
+            .Responds<ApiResult>("Progress recorded.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy);
     }
@@ -39,7 +44,7 @@ public static class TrackSeriesEndpoint
                 request.Season, request.Episode);
 
             logger.LogInformation("Series tracking for user {UserId}, '{Title}' S{Season}E{Episode}",
-                userId, media.Title, request.Season, request.Episode);
+                userId, media.TitleEN ?? media.TitleES, request.Season, request.Episode);
 
             // Fire-and-forget TMDB enrichment — the extension doesn't wait for this.
             if (MediaService.NeedsTmdbEnrichment(media, request.Language))

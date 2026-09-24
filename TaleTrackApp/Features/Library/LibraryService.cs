@@ -5,6 +5,21 @@ using Microsoft.EntityFrameworkCore;
 namespace TaleTrackApp.Features.Library;
 
 /// <summary>One deduplicated media in the user's library, with their progress and rating.</summary>
+/// <param name="MediaId">Media id. Use it with `GET /api/media/{id}` and the review endpoints.</param>
+/// <param name="TitleEN">English title, if known.</param>
+/// <param name="TitleES">Spanish title, if known.</param>
+/// <param name="Type">`Movie`, `Series` or `Book`.</param>
+/// <param name="Author">Author of a book.</param>
+/// <param name="PosterUrl">Poster or cover image URL, once it has been fetched.</param>
+/// <param name="Length">Runtime in minutes for a film, page count for a book, 0 for a series.</param>
+/// <param name="Isbn">ISBN of a book, if known.</param>
+/// <param name="Progress">Percentage 0-100. For a series it is derived from the furthest episode reached when the episode counts are known. Null when nothing was recorded.</param>
+/// <param name="LastEventDate">When the user last reported progress on it.</param>
+/// <param name="MyRating">The user's own rating, 1-10.</param>
+/// <param name="MyReviewId">Id of the user's own review.</param>
+/// <param name="Season">Series only: season of the furthest episode reached.</param>
+/// <param name="Episode">Series only: episode of the furthest episode reached.</param>
+/// <param name="SeasonEpisodeCounts">Series only: number of episodes of each season, in order.</param>
 public record LibraryItem(
     Guid MediaId,
     string? TitleEN,
@@ -64,7 +79,7 @@ public class LibraryService
                 var media = te.Media!;
                 var isSeries = media.Type == Model.MediaType.Series;
 
-                var progress = SeriesProgressService.ProgressFor(media, te);
+                var progress = SeriesProgressCalculator.ProgressFor(media, te);
 
                 reviewByMedia.TryGetValue(te.MediaId, out var review);
                 return new LibraryItem(

@@ -4,9 +4,17 @@ using Microsoft.EntityFrameworkCore;
 namespace TaleTrackApp.Features.Stats;
 
 /// <summary>Per-type consumption counts for a year.</summary>
+/// <param name="Book">Books with activity in the year.</param>
+/// <param name="Movie">Films with activity in the year.</param>
+/// <param name="Series">Series with activity in the year.</param>
 public record TypeBreakdown(int Book, int Movie, int Series);
 
 /// <summary>Yearly consumption summary for a single user.</summary>
+/// <param name="Year">The year summarized.</param>
+/// <param name="Total">Distinct media with activity in the year.</param>
+/// <param name="ByType">The total split by media type.</param>
+/// <param name="ByMonth">Twelve counts, January first. Each media counts in the month of its latest activity that year.</param>
+/// <param name="ReviewCount">Reviews the user has written in total, not only in this year.</param>
 public record YearlyStats(
     int Year,
     int Total,

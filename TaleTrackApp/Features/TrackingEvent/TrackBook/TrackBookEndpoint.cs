@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.Media;
 using TaleTrackApp.Security;
@@ -11,7 +12,11 @@ public static class TrackBookEndpoint
     {
         group.MapPost("/tracking/books", HandleAsync)
             .WithName("TrackBook")
-            .WithDescription("Records reading progress for a book (used by the KOReader plugin)")
+            .WithTags("Tracking")
+            .WithSummary("Record reading progress on a book")
+            .WithDescription("Used by the KOReader plugin. The book is matched by ISBN, then by title and author, then by title alone, and created if unknown. Progress never goes down through this endpoint.")
+            .Responds<ApiResult>("Progress recorded.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy);
     }
@@ -35,7 +40,7 @@ public static class TrackBookEndpoint
 
             await trackingEventService.UpsertAsync(userId, media.Id, request.Progress);
 
-            logger.LogInformation("Book tracking for user {UserId}, '{Title}'", userId, media.Title);
+            logger.LogInformation("Book tracking for user {UserId}, '{Title}'", userId, media.TitleEN ?? media.TitleES);
 
             // Fire-and-forget enrichment — KOReader does not wait for this.
             if (MediaService.NeedsOpenLibraryEnrichment(media))

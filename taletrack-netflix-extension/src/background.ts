@@ -1,14 +1,20 @@
 // Service worker: owns auth, refreshes tokens, and forwards watch progress to the backend.
 
-import { apiFetch, getAuthState, getValidAccessToken, handleExternalAuthMessage, signIn, signOut } from './auth';
-import { FRONTEND_URL } from './config';
-import type { BgMessage, ExtAuthMessage, TrackPayload, TrackResult } from './types';
+import { apiFetch, getAuthState, getValidAccessToken, handleExternalAuthMessage, openSignInTab, signOut } from './auth';
+import { FRONTEND_URL, debug } from './config';
+import type { InternalMessage, WebAuthMessage, TrackPayload, TrackResult } from './types';
 
 const FRONTEND_ORIGIN = new URL(FRONTEND_URL).origin;
 
-const PROGRESS_STEP = 2;          // only report every 2% of movement
+const PROGRESS_STEP = 2;          // only report every 2% of forward movement
 const NEARLY_DONE = 95;           // ...but always report crossing this
 const SENT_PREFIX = 'sent:';      // chrome.storage.session key per videoId
+
+// The tokens live in chrome.storage.local, which content scripts (running inside Netflix's
+// pages) can read by default. Only the extension's own pages and service worker need them.
+chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' }).catch(() => {
+  /* older Chrome without storage access levels */
+});
 
 // Keep the access token warm while the browser is open.
 chrome.runtime.onInstalled.addListener(() => {
@@ -22,18 +28,17 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 // Message router.
-chrome.runtime.onMessage.addListener((message: BgMessage, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: InternalMessage, _sender, sendResponse) => {
   (async () => {
     try {
       switch (message.type) {
         case 'AUTH_STATE':
           sendResponse(await getAuthState());
           break;
-        case 'SIGN_IN': {
-          const ok = await signIn().catch(() => false);
-          sendResponse({ ok, state: ok ? await getAuthState() : { authenticated: false } });
+        case 'SIGN_IN':
+          openSignInTab();
+          sendResponse({ ok: true });
           break;
-        }
         case 'SIGN_OUT':
           await signOut();
           sendResponse({ ok: true });
@@ -61,7 +66,7 @@ chrome.runtime.onMessageExternal.addListener((message: unknown, sender, sendResp
     return false;
   }
 
-  const m = message as Partial<ExtAuthMessage> | null;
+  const m = message as Partial<WebAuthMessage> | null;
   if (
     !m ||
     m.type !== 'TALETRACK_AUTH' ||
@@ -95,7 +100,7 @@ async function rememberSent(videoId: string, progress: number): Promise<void> {
 function shouldSend(prev: number | null, next: number, flush: boolean): boolean {
   if (flush) return true;
   if (prev === null) return true;
-  if (Math.abs(next - prev) >= PROGRESS_STEP) return true;
+  if (next - prev >= PROGRESS_STEP) return true;
   if (prev < NEARLY_DONE && next >= NEARLY_DONE) return true;
   return false;
 }
@@ -135,7 +140,7 @@ async function track(payload: TrackPayload): Promise<TrackResult> {
     body = { Title: media.title, Minutes: minutes, Progress: progressPercent, Language: media.language };
   }
 
-  console.log(`[TaleTrack] Sending tracking event → ${path}`, body);
+  debug(`sending tracking event → ${path}`, body);
 
   const res = await apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
   if (!res) return { ok: false, reason: 'unauthenticated' };

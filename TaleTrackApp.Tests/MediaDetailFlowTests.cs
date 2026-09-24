@@ -3,6 +3,9 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using TaleTrackApp.Features.Media;
+using TaleTrackApp.Model;
 using Xunit;
 
 namespace TaleTrackApp.Tests;
@@ -56,6 +59,72 @@ public class MediaDetailFlowTests(CustomWebApplicationFactory factory)
         Assert.Equal(1, data.GetProperty("reviewCount").GetInt32());
         Assert.Equal(8, data.GetProperty("myRating").GetInt32());
         Assert.Equal(1, data.GetProperty("reviews").GetArrayLength());
+    }
+
+    /// <summary>Registers a media straight through the service and returns its id, as an enrichment would find it.</summary>
+    private async Task<Guid> CreateMediaAsync(string title, MediaType type)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var media = await scope.ServiceProvider.GetRequiredService<MediaService>()
+            .CreateAsync(title, type, length: 100);
+        return media.Id;
+    }
+
+    private async Task<string?> DescriptionAsync(HttpClient client, Guid mediaId)
+    {
+        var res = await client.GetAsync($"/api/media/{mediaId}");
+        var data = (await res.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
+        return data.GetProperty("description").GetString();
+    }
+
+    [Fact]
+    public async Task GetMediaById_ShowsDescriptionFilledByTmdb_AndKeepsTheFirstOne()
+    {
+        var client = await AuthedClientAsync("desc-tmdb@test.com", "desctmdb");
+        var id = await CreateMediaAsync("Description Movie", MediaType.Movie);
+        Assert.Null(await DescriptionAsync(client, id));
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var media = scope.ServiceProvider.GetRequiredService<MediaService>();
+            await media.ApplyTmdbEnrichmentAsync(id, new TmdbResult { Description = "First synopsis." });
+            await media.ApplyTmdbEnrichmentAsync(id, new TmdbResult { Description = "Second synopsis." });
+        }
+
+        Assert.Equal("First synopsis.", await DescriptionAsync(client, id));
+    }
+
+    [Fact]
+    public async Task GetMediaById_ShowsDescriptionFilledByOpenLibrary()
+    {
+        var client = await AuthedClientAsync("desc-ol@test.com", "descol");
+        var id = await CreateMediaAsync("Description Book", MediaType.Book);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<MediaService>()
+                .ApplyEnrichmentAsync(id, new OpenLibraryResult { Description = "  A book synopsis.  " });
+        }
+
+        Assert.Equal("A book synopsis.", await DescriptionAsync(client, id));
+    }
+
+    [Fact]
+    public async Task Enrichment_ClipsALongDescriptionToWhatTheColumnHolds()
+    {
+        var client = await AuthedClientAsync("desc-long@test.com", "desclong");
+        var id = await CreateMediaAsync("Long Description Movie", MediaType.Movie);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<MediaService>()
+                .ApplyTmdbEnrichmentAsync(id, new TmdbResult { Description = new string('x', 1500) });
+        }
+
+        var description = await DescriptionAsync(client, id);
+        Assert.NotNull(description);
+        Assert.Equal(1000, description!.Length);
+        Assert.EndsWith("…", description);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace TaleTrackApp.Features.Media;
@@ -9,6 +10,7 @@ public class OpenLibraryResult
     public string? Author { get; set; }
     public string? CoverUrl { get; set; }
     public string? Isbn { get; set; }
+    public string? Description { get; set; }
 }
 
 public class OpenLibraryService(HttpClient http, ILogger<OpenLibraryService> logger, IConfiguration config)
@@ -46,7 +48,14 @@ public class OpenLibraryService(HttpClient http, ILogger<OpenLibraryService> log
             if (doc.Authors?.Length > 0)
                 authorName = await FetchAuthorNameAsync(doc.Authors[0].Key);
 
-            return new OpenLibraryResult { Title = doc.Title, Author = authorName, CoverUrl = coverUrl, Isbn = clean };
+            // The synopsis lives on the work, shared by every edition; an edition may carry its own.
+            var description = await FetchWorkDescriptionAsync(doc.Works?.FirstOrDefault()?.Key)
+                ?? ReadText(doc.Description);
+
+            return new OpenLibraryResult
+            {
+                Title = doc.Title, Author = authorName, CoverUrl = coverUrl, Isbn = clean, Description = description,
+            };
         }
         catch (Exception ex)
         {
@@ -64,6 +73,30 @@ public class OpenLibraryService(HttpClient http, ILogger<OpenLibraryService> log
         }
         catch { return null; }
     }
+
+    private async Task<string?> FetchWorkDescriptionAsync(string? workKey)
+    {
+        if (string.IsNullOrWhiteSpace(workKey)) return null;
+        try
+        {
+            var work = await http.GetFromJsonAsync<WorkResponse>($"https://openlibrary.org{workKey}.json");
+            return work is null ? null : ReadText(work.Description);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("OpenLibrary work fetch failed for {Key}: {Msg}", workKey, ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>Open Library text fields are either a plain string or an object like { "type": "/type/text", "value": "..." }.</summary>
+    private static string? ReadText(JsonElement field) => field.ValueKind switch
+    {
+        JsonValueKind.String => field.GetString(),
+        JsonValueKind.Object when field.TryGetProperty("value", out var value) && value.ValueKind == JsonValueKind.String
+            => value.GetString(),
+        _ => null,
+    };
 
     private async Task<OpenLibraryResult?> FetchBySearchAsync(string title, string? author)
     {
@@ -101,6 +134,7 @@ public class OpenLibraryService(HttpClient http, ILogger<OpenLibraryService> log
                 Author = best.AuthorName?.FirstOrDefault(),
                 CoverUrl = best.CoverId > 0 ? $"https://covers.openlibrary.org/b/id/{best.CoverId}-L.jpg" : null,
                 Isbn = best.Isbn?.FirstOrDefault(),
+                Description = await FetchWorkDescriptionAsync(best.Key),
             };
         }
         catch (Exception ex)
@@ -110,7 +144,7 @@ public class OpenLibraryService(HttpClient http, ILogger<OpenLibraryService> log
         }
     }
 
-    internal static double NormalizedTokenSimilarity(string a, string b)
+    private static double NormalizedTokenSimilarity(string a, string b)
     {
         var ta = Tokenize(a);
         var tb = Tokenize(b);
@@ -131,13 +165,17 @@ public class OpenLibraryService(HttpClient http, ILogger<OpenLibraryService> log
     {
         [JsonPropertyName("title")]   public string? Title   { get; set; }
         [JsonPropertyName("covers")]  public int[]?  Covers  { get; set; }
-        [JsonPropertyName("authors")] public AuthorRef[]? Authors { get; set; }
+        [JsonPropertyName("authors")] public KeyRef[]? Authors { get; set; }
+        [JsonPropertyName("works")]   public KeyRef[]? Works   { get; set; }
+        [JsonPropertyName("description")] public JsonElement Description { get; set; }
     }
-    private class AuthorRef  { [JsonPropertyName("key")]  public string Key  { get; set; } = ""; }
+    private class KeyRef  { [JsonPropertyName("key")]  public string Key  { get; set; } = ""; }
+    private class WorkResponse { [JsonPropertyName("description")] public JsonElement Description { get; set; } }
     private class AuthorResponse { [JsonPropertyName("name")] public string? Name { get; set; } }
     private class SearchResponse { [JsonPropertyName("docs")] public SearchDoc[]? Docs { get; set; } }
     private class SearchDoc
     {
+        [JsonPropertyName("key")]         public string?   Key        { get; set; } // the work, e.g. /works/OL45804W
         [JsonPropertyName("title")]       public string?   Title      { get; set; }
         [JsonPropertyName("author_name")] public string[]? AuthorName { get; set; }
         [JsonPropertyName("cover_i")]     public int       CoverId    { get; set; }

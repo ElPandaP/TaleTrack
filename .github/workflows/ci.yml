@@ -85,6 +85,10 @@ jobs:
         working-directory: taletrack-netflix-extension
         run: bunx tsc --noEmit
 
+      - name: Test
+        working-directory: taletrack-netflix-extension
+        run: bun test
+
       - name: Build
         working-directory: taletrack-netflix-extension
         run: bun run build.ts

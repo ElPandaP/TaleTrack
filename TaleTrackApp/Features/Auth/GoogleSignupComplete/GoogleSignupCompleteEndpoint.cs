@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using TaleTrackApp.Security;
 using TaleTrackApp.Services;
 
@@ -9,7 +10,11 @@ public static class GoogleSignupCompleteEndpoint
     {
         group.MapPost("/auth/google/complete", HandleAsync)
             .WithName("GoogleSignupComplete")
-            .WithDescription("Finishes a Google sign-up once the user has picked a username")
+            .WithTags("Auth")
+            .WithSummary("Finish a Google sign-up")
+            .WithDescription("Creates the account for the `pendingToken` returned by `POST /api/auth/google` with the chosen username, and signs the user in.")
+            .Responds<GoogleSignupCompleteResponse>("Account created and signed in.")
+            .RespondsBadRequest("Validation failed, or the code is `invalid_or_expired` (pending token) / `username_taken`.")
             .AddEndpointFilter<ValidationFilter>()
             .AllowAnonymous();
     }

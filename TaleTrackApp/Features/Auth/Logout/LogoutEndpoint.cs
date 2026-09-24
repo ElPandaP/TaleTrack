@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using TaleTrackApp.Security;
 
 namespace TaleTrackApp.Features.Auth.Logout;
@@ -10,7 +11,11 @@ public static class LogoutEndpoint
     {
         group.MapPost("/auth/logout", HandleAsync)
             .WithName("Logout")
-            .WithDescription("Revokes the supplied refresh token")
+            .WithTags("Auth")
+            .WithSummary("Sign out one session")
+            .WithDescription("Revokes the given refresh token. It is a no-op, still answering 200, when the token is unknown or already expired.")
+            .Responds<ApiResult>("The session is ended.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
             .AddEndpointFilter<ValidationFilter>()
             .AllowAnonymous();
     }

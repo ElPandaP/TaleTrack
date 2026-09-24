@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.Review;
 using TaleTrackApp.Security;
@@ -10,7 +11,11 @@ public static class DeleteReviewEndpoint
     {
         group.MapDelete("/reviews/{id:guid}", HandleAsync)
             .WithName("DeleteReview")
-            .WithDescription("Deletes a review")
+            .WithTags("Reviews")
+            .WithSummary("Delete a review")
+            .Responds<ApiResult>("Review deleted.")
+            .Responds(StatusCodes.Status403Forbidden, "The review belongs to someone else.")
+            .RespondsNotFound("The review does not exist.")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

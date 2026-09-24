@@ -43,7 +43,4 @@ public class RefreshToken
     public string? ReplacedByTokenHash { get; set; }
 
     public User? User { get; set; }
-
-    [NotMapped]
-    public bool IsActive => RevokedAt == null && ExpiresAt > DateTime.UtcNow;
 }

@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.Friend;
 using TaleTrackApp.Security;
@@ -10,7 +11,12 @@ public static class AcceptFriendRequestEndpoint
     {
         group.MapPut("/friends/requests/{id:guid}", HandleAsync)
             .WithName("AcceptFriendRequest")
-            .WithDescription("Accept an incoming friend request")
+            .WithTags("Friends")
+            .WithSummary("Accept an incoming friend request")
+            .WithDescription("The id is the `requestId` from the incoming list of `GET /api/friends`.")
+            .Responds<ApiResult>("Now friends.")
+            .Responds(StatusCodes.Status403Forbidden, "The request was not addressed to the caller.")
+            .RespondsNotFound("The request does not exist.")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

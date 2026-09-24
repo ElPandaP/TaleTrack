@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Security;
 
@@ -9,7 +10,9 @@ public static class DeleteAvatarEndpoint
     {
         group.MapDelete("/users/me/avatar", HandleAsync)
             .WithName("DeleteAvatar")
-            .WithDescription("Removes the authenticated user's profile photo (requires JWT)")
+            .WithTags("Users")
+            .WithSummary("Remove the caller's profile photo")
+            .Responds<ApiResult>("Photo removed (also when there was none).")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

@@ -60,15 +60,12 @@ async function loadAuth() {
   }
 }
 
+// Opens the web app's authorization tab. The popup closes with it; reopening it after
+// authorizing shows the signed-in state.
 async function doSignIn() {
-  authView.innerHTML = spinner;
   try {
-    const res = (await chrome.runtime.sendMessage({ type: 'SIGN_IN' })) as {
-      ok: boolean;
-      state?: AuthState;
-    };
-    if (res?.ok && res.state?.authenticated) renderSignedIn(res.state);
-    else renderSignedOut();
+    await chrome.runtime.sendMessage({ type: 'SIGN_IN' });
+    window.close();
   } catch {
     renderError(msg('authSignInError'));
   }

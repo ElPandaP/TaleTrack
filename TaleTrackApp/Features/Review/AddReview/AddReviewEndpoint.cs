@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.Review;
 using TaleTrackApp.Security;
@@ -10,7 +11,11 @@ public static class AddReviewEndpoint
     {
         group.MapPost("/reviews", HandleAsync)
             .WithName("AddReview")
-            .WithDescription("Adds a review")
+            .WithTags("Reviews")
+            .WithSummary("Review a media")
+            .WithDescription("One review per user and media: reviewing a media again updates the existing review instead of creating a second one.")
+            .Responds<AddReviewResponse>("Review saved.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy);
     }
@@ -34,18 +39,18 @@ public static class AddReviewEndpoint
             var review = await reviewService.CreateAsync(userId, request.MediaId!.Value, request.Rating, request.Comment);
 
             logger.LogInformation($"Review created by user {userId} for media {request.MediaId}");
-            return Results.Ok(new 
-            { 
-                success = true, 
-                message = "Review added successfully",
-                data = new
+            return Results.Ok(new AddReviewResponse
+            {
+                Success = true,
+                Message = "Review added successfully",
+                Data = new AddedReviewData
                 {
-                    id = review.Id,
-                    userId = review.UserId,
-                    mediaId = review.MediaId,
-                    rating = review.Rating,
-                    comment = review.Comment,
-                    createdAt = review.CreatedAt
+                    Id = review.Id,
+                    UserId = review.UserId,
+                    MediaId = review.MediaId,
+                    Rating = review.Rating,
+                    Comment = review.Comment,
+                    CreatedAt = review.CreatedAt,
                 }
             });
         }

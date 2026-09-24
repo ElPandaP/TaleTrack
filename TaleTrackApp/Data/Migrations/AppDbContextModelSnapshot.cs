@@ -83,11 +83,23 @@ namespace TaleTrackApp.Data.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<Guid>("UserHighId")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("uuid")
+                        .HasComputedColumnSql("GREATEST(\"RequesterId\", \"AddresseeId\")", true);
+
+                    b.Property<Guid>("UserLowId")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("uuid")
+                        .HasComputedColumnSql("LEAST(\"RequesterId\", \"AddresseeId\")", true);
+
                     b.HasKey("Id");
 
                     b.HasIndex("AddresseeId");
 
-                    b.HasIndex("RequesterId", "AddresseeId")
+                    b.HasIndex("RequesterId");
+
+                    b.HasIndex("UserLowId", "UserHighId")
                         .IsUnique();
 
                     b.ToTable("Friendships");

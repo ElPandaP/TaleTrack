@@ -4,6 +4,7 @@ namespace TaleTrackApp.Features.Auth.GoogleLogin;
 
 public class GoogleLoginRequest
 {
+    /// <summary>Google ID token obtained on the client with Google Sign-In.</summary>
     [Required]
     public required string IdToken { get; set; }
 

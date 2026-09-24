@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.Friend;
 using TaleTrackApp.Security;
@@ -10,7 +11,11 @@ public static class RemoveFriendEndpoint
     {
         group.MapDelete("/friends/{userId:guid}", HandleAsync)
             .WithName("RemoveFriend")
-            .WithDescription("Remove a friendship (or cancel a pending request) with another user")
+            .WithTags("Friends")
+            .WithSummary("Remove a friend or cancel a request")
+            .WithDescription("The id is the other user's id. Works on an accepted friendship and on a pending request in either direction.")
+            .Responds<ApiResult>("Friendship or request removed.")
+            .RespondsNotFound("There is no friendship or request with that user.")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

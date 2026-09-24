@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Security;
 
@@ -10,7 +11,10 @@ public static class GetSessionsEndpoint
     {
         group.MapGet("/auth/sessions", HandleAsync)
             .WithName("GetSessions")
-            .WithDescription("The authenticated user's active refresh-token sessions")
+            .WithTags("Auth")
+            .WithSummary("List the caller's active sessions")
+            .WithDescription("One row per signed-in device (one per non-revoked, non-expired refresh token).")
+            .Responds<GetSessionsResponse>("The active sessions.")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

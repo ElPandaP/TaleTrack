@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using TaleTrackApp.Security;
 using TaleTrackApp.Features.User;
 using TaleTrackApp.Model;
@@ -10,7 +11,11 @@ public static class ConfirmDeleteEndpoint
     {
         group.MapPost("/auth/confirm-delete", HandleAsync)
             .WithName("ConfirmDelete")
-            .WithDescription("Deletes the account named by a valid delete-confirmation token")
+            .WithTags("Auth")
+            .WithSummary("Delete the account named by an emailed link")
+            .WithDescription("Anonymous on purpose: the single-use token from the confirmation email is the credential. Deletes the account with its reviews and tracking. The token is single-use and valid for 1 hour.")
+            .Responds<ApiResult>("Account deleted.")
+            .RespondsBadRequest("Validation failed, or the code is `invalid_or_expired` (the token is unknown, already used, expired or meant for another action).")
             .AddEndpointFilter<ValidationFilter>()
             .AllowAnonymous();
     }

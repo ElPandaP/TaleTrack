@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.Media;
 using TaleTrackApp.Security;
@@ -11,7 +12,11 @@ public static class TrackMovieEndpoint
     {
         group.MapPost("/tracking/movies", HandleAsync)
             .WithName("TrackMovie")
-            .WithDescription("Records watch progress for a film")
+            .WithTags("Tracking")
+            .WithSummary("Record progress on a film")
+            .WithDescription("Creates the media on first use, matching by title, and keeps one tracking record per user and film. Progress never goes down through this endpoint; use `PUT /api/tracking/{mediaId}` to lower it. Posters and descriptions are filled in later from TMDB, in the background.")
+            .Responds<ApiResult>("Progress recorded.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy);
     }
@@ -34,7 +39,7 @@ public static class TrackMovieEndpoint
                 language: request.Language);
             await trackingEventService.UpsertAsync(userId, media.Id, request.Progress);
 
-            logger.LogInformation("Movie tracking for user {UserId}, '{Title}'", userId, media.Title);
+            logger.LogInformation("Movie tracking for user {UserId}, '{Title}'", userId, media.TitleEN ?? media.TitleES);
 
             // Fire-and-forget TMDB enrichment — the extension doesn't wait for this.
             if (MediaService.NeedsTmdbEnrichment(media, request.Language))

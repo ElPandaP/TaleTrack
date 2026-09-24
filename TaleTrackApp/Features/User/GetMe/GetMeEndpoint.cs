@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.User;
 using TaleTrackApp.Security;
@@ -10,7 +11,10 @@ public static class GetMeEndpoint
     {
         group.MapGet("/users/me", HandleAsync)
             .WithName("GetMe")
-            .WithDescription("The authenticated user's full profile (avatar, privacy, etc.)")
+            .WithTags("Users")
+            .WithSummary("Get the caller's own profile")
+            .Responds<GetMeResponse>("The profile, including email and feed-privacy settings.")
+            .Responds(StatusCodes.Status404NotFound, "The account no longer exists.")
             .RequireAuthorization(Policies.UserPolicy);
     }
 

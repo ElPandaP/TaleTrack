@@ -1,3 +1,4 @@
+using TaleTrackApp.OpenApi;
 using System.Security.Claims;
 using TaleTrackApp.Features.User;
 using TaleTrackApp.Features.Friend;
@@ -11,7 +12,11 @@ public static class SearchUsersEndpoint
     {
         group.MapGet("/users/search", HandleAsync)
             .WithName("SearchUsers")
-            .WithDescription("Find a user by exact username (for friend requests)")
+            .WithTags("Users")
+            .WithSummary("Find a user by exact username")
+            .WithDescription("Used to send friend requests. A leading @ is ignored. When nobody has that username the call still succeeds and `user` is absent.")
+            .Responds<SearchUsersResponse>("The match and its relationship to the caller, or an empty result.")
+            .RespondsBadRequest("Validation failed: the message lists every violated rule.")
             .AddEndpointFilter<ValidationFilter>()
             .RequireAuthorization(Policies.UserPolicy);
     }

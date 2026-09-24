@@ -4,7 +4,7 @@ namespace TaleTrackApp.Features.TrackingEvent;
 /// A series' overall % watched, from the furthest (season, episode) reached — assumes every
 /// earlier episode was also watched and that every episode runs the same length.
 /// </summary>
-public static class SeriesProgressService
+public static class SeriesProgressCalculator
 {
     /// <summary>
     /// The progress to show for a media given the user's tracking of it: for a series it is derived

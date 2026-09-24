@@ -5,8 +5,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 /// <summary>
 /// A directed friend request that becomes a (still directed on disk, but
-/// symmetric in meaning) friendship once accepted.
-/// Status: "Pending" | "Accepted". A decline just deletes the row.
+/// symmetric in meaning) friendship once accepted. A decline just deletes the row.
+/// There is at most one row per pair of users, in either direction (see <c>AppDbContext</c>).
 /// </summary>
 public class Friendship
 {
@@ -22,9 +22,7 @@ public class Friendship
     public Guid AddresseeId { get; set; }
 
     [Required]
-    [StringLength(20)]
-    [RegularExpression(@"^(Pending|Accepted)$")]
-    public string Status { get; set; } = "Pending";
+    public FriendshipStatus Status { get; set; } = FriendshipStatus.Pending;
 
     [Required]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
