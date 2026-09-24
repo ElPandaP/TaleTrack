@@ -50,7 +50,16 @@ export function notifyAuthChange() {
 
 function subscribeAuth(callback: () => void) {
   authListeners.add(callback);
-  return () => authListeners.delete(callback);
+  // Sign-in, sign-out and token rotation in another tab only reach this one
+  // through the storage event (key is null when the whole storage is cleared).
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === null || e.key === 'token' || e.key === 'tt-refresh') callback();
+  };
+  window.addEventListener('storage', onStorage);
+  return () => {
+    authListeners.delete(callback);
+    window.removeEventListener('storage', onStorage);
+  };
 }
 
 type AuthSnapshot =

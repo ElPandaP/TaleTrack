@@ -7,6 +7,8 @@ import en from '@/messages/en.json';
 import es from '@/messages/es.json';
 import { isLocale, localeFromHeader, type Locale } from './i18n-shared';
 
+const DICTS: Record<Locale, Record<string, string>> = { en, es };
+
 /** The visitor's locale: `tt-locale` cookie, falling back to Accept-Language. */
 export async function getServerLocale(): Promise<Locale> {
   const cookie = (await cookies()).get('tt-locale')?.value;
@@ -16,5 +18,5 @@ export async function getServerLocale(): Promise<Locale> {
 
 /** The message dictionary for the visitor's locale, for static Server Component pages. */
 export async function getServerDict(): Promise<Record<string, string>> {
-  return (await getServerLocale()) === 'es' ? es : en;
+  return DICTS[await getServerLocale()];
 }

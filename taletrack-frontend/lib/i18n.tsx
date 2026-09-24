@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import en from '@/messages/en.json';
 import es from '@/messages/es.json';
-import { type Locale } from './i18n-shared';
+import { DEFAULT_LOCALE, type Locale } from './i18n-shared';
 
 export { LOCALES, DEFAULT_LOCALE, isLocale, localeFromHeader, pickTitle, type Locale } from './i18n-shared';
 
@@ -51,7 +51,7 @@ export function LocaleProvider({
 
   const value = useMemo<I18nContext>(() => {
     const t = (key: string, params?: Params) =>
-      interpolate(DICTS[locale][key] ?? DICTS.en[key] ?? key, params);
+      interpolate(DICTS[locale][key] ?? DICTS[DEFAULT_LOCALE][key] ?? key, params);
     const tp = (key: string, count: number, params?: Params) =>
       t(`${key}.${count === 1 ? 'one' : 'other'}`, { count, ...params });
     return { locale, setLocale, t, tp };

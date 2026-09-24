@@ -26,7 +26,18 @@ function notifyThemeChange() {
 
 function subscribeTheme(callback: () => void) {
   themeListeners.add(callback);
-  return () => themeListeners.delete(callback);
+  // A toggle in another tab only reaches this one through the storage event,
+  // so the <html> class has to be synced here too, not just the React state.
+  const onStorage = (e: StorageEvent) => {
+    if (e.key !== null && e.key !== 'tt-theme') return;
+    document.documentElement.classList.toggle('dark', getThemeSnapshot() === 'dark');
+    callback();
+  };
+  window.addEventListener('storage', onStorage);
+  return () => {
+    themeListeners.delete(callback);
+    window.removeEventListener('storage', onStorage);
+  };
 }
 
 function getThemeSnapshot(): Theme {
