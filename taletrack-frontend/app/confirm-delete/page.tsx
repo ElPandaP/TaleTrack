@@ -23,13 +23,13 @@ function ConfirmDeleteInner() {
       setPhase('done');
     } catch (err) {
       const code = err instanceof ApiError ? err.code : undefined;
-      setError(t(code === 'invalid_or_expired' ? 'auth.confirmDelete.expired' : 'auth.confirmDelete.error'));
+      setError(t(code === 'invalid_or_expired' ? 'auth.confirmDelete.expired' : 'auth.deleteLink.error'));
       setPhase('error');
     }
   };
 
   if (!token) {
-    return <p className="text-sm text-destructive">{t('auth.confirmDelete.noToken')}</p>;
+    return <p className="text-sm text-destructive">{t('auth.deleteLink.noToken')}</p>;
   }
 
   if (phase === 'done') {
@@ -38,9 +38,9 @@ function ConfirmDeleteInner() {
         <span className="flex size-10 items-center justify-center rounded-full bg-primary/15 text-primary">
           <Check className="size-5" />
         </span>
-        <h1 className="font-heading text-xl font-semibold">{t('auth.confirmDelete.doneTitle')}</h1>
+        <h1 className="font-heading text-xl font-semibold">{t('auth.deleteLink.doneTitle')}</h1>
         <p className="text-sm text-muted-foreground">{t('auth.confirmDelete.doneBody')}</p>
-        <Link href="/" className="mt-2 text-sm text-primary hover:underline">{t('auth.confirmDelete.home')}</Link>
+        <Link href="/" className="mt-2 text-sm text-primary hover:underline">{t('auth.deleteLink.home')}</Link>
       </div>
     );
   }
@@ -60,7 +60,7 @@ function ConfirmDeleteInner() {
         disabled={phase === 'working'}
         className="h-auto w-full bg-destructive py-3 text-white hover:bg-destructive/90"
       >
-        {phase === 'working' ? t('auth.confirmDelete.working') : t('auth.confirmDelete.confirm')}
+        {phase === 'working' ? t('auth.deleteLink.working') : t('auth.confirmDelete.confirm')}
       </Button>
       <Link href="/" className="mt-4 inline-block text-sm text-muted-foreground hover:text-foreground">
         {t('auth.confirmDelete.cancel')}

@@ -13,9 +13,9 @@ export function MonthlyStatsCard({ stats }: { stats: YearlyStats | null }) {
     new Date(2000, i, 1).toLocaleDateString(locale, { month: 'short' });
 
   const rows: Array<[string, number]> = [
-    [t('home.stats.books'), stats?.byType.book ?? 0],
-    [t('home.stats.movies'), stats?.byType.movie ?? 0],
-    [t('home.stats.series'), stats?.byType.series ?? 0],
+    [t('typePlural.Book'), stats?.byType.book ?? 0],
+    [t('typePlural.Movie'), stats?.byType.movie ?? 0],
+    [t('typePlural.Series'), stats?.byType.series ?? 0],
   ];
 
   return (

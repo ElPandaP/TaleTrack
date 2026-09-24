@@ -113,7 +113,7 @@ export default function LibraryClient({ items }: { items: LibraryItem[] }) {
   const [pageSize, setPageSize] = useState(PER_PAGE_TARGET);
   const gridRef = useRef<HTMLUListElement>(null);
 
-  const tabLabel = (k: Tab) => (k === 'all' ? t('library.tab.all') : t(`library.tab.${k}`));
+  const tabLabel = (k: Tab) => (k === 'all' ? t('library.tab.all') : t(`typePlural.${k}`));
 
   const counts = useMemo(() => {
     const c: Record<Tab, number> = { all: items.length, Book: 0, Movie: 0, Series: 0 };

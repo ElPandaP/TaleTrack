@@ -198,7 +198,7 @@ export default function PublicProfileClient({
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRemoveDialogOpen(false)}>
-              {t('friends.cancel')}
+              {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"

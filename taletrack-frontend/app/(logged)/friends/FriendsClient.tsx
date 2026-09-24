@@ -279,7 +279,7 @@ export default function FriendsClient({
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRemoveTarget(null)}>
-              {t('friends.cancel')}
+              {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"

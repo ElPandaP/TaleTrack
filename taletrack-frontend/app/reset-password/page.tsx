@@ -102,7 +102,7 @@ function ResetPasswordForm() {
           disabled={submitting || password.length < 6 || password !== confirm}
           className="h-auto w-full py-3"
         >
-          {submitting ? t('auth.reset.saving') : t('auth.reset.submit')}
+          {submitting ? t('common.saving') : t('auth.reset.submit')}
           {!submitting && <ArrowRight className="size-4" />}
         </Button>
       </form>

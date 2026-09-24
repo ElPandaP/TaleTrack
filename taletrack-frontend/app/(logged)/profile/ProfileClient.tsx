@@ -243,9 +243,9 @@ export default function ProfileClient({
           {t('profile.library')}
         </h3>
         <div className="grid grid-cols-3 gap-3">
-          <StatPill label={t('home.stats.books')} value={counts?.book ?? 0} icon={BookOpen} colorClass="text-chart-1" bgClass="bg-chart-1/10" />
-          <StatPill label={t('home.stats.movies')} value={counts?.movie ?? 0} icon={Film} colorClass="text-chart-2" bgClass="bg-chart-2/10" />
-          <StatPill label={t('home.stats.series')} value={counts?.series ?? 0} icon={Tv} colorClass="text-chart-3" bgClass="bg-chart-3/10" />
+          <StatPill label={t('typePlural.Book')} value={counts?.book ?? 0} icon={BookOpen} colorClass="text-chart-1" bgClass="bg-chart-1/10" />
+          <StatPill label={t('typePlural.Movie')} value={counts?.movie ?? 0} icon={Film} colorClass="text-chart-2" bgClass="bg-chart-2/10" />
+          <StatPill label={t('typePlural.Series')} value={counts?.series ?? 0} icon={Tv} colorClass="text-chart-3" bgClass="bg-chart-3/10" />
         </div>
       </div>
 
@@ -319,7 +319,7 @@ export default function ProfileClient({
         <div className="flex justify-end">
           <Button type="submit" disabled={saving || !isDirty} className="h-auto px-5 py-2.5">
             <Save className="size-4" />
-            {saving ? t('profile.saving') : t('profile.save')}
+            {saving ? t('common.saving') : t('profile.save')}
           </Button>
         </div>
       </form>
@@ -363,7 +363,7 @@ export default function ProfileClient({
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              {t('profile.cancel')}
+              {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"

@@ -90,7 +90,7 @@ export function ReviewModal({
           <DialogTitle>{t(isEdit ? 'reviewModal.titleEdit' : 'reviewModal.titleNew')}</DialogTitle>
           <DialogDescription>
             {target
-              ? t('reviewModal.subtitle', { type: t(`type.${target.type}`), title: target.title })
+              ? t('common.mediaSubtitle', { type: t(`type.${target.type}`), title: target.title })
               : ''}
           </DialogDescription>
         </DialogHeader>
@@ -143,12 +143,12 @@ export function ReviewModal({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
-            {t('reviewModal.cancel')}
+            {t('common.cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={submitting || stars < 1}>
             {submitting
-              ? t('reviewModal.saving')
-              : t(isEdit ? 'reviewModal.save' : 'reviewModal.publish')}
+              ? t('common.saving')
+              : t(isEdit ? 'common.save' : 'reviewModal.publish')}
           </Button>
         </DialogFooter>
       </DialogContent>

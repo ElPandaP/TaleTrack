@@ -88,7 +88,7 @@ export function TrackingProgressModal({
           <DialogTitle>{t('trackingModal.title')}</DialogTitle>
           <DialogDescription>
             {target
-              ? t('trackingModal.subtitle', { type: t(`type.${target.type}`), title: target.title })
+              ? t('common.mediaSubtitle', { type: t(`type.${target.type}`), title: target.title })
               : ''}
           </DialogDescription>
         </DialogHeader>
@@ -215,10 +215,10 @@ export function TrackingProgressModal({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
-            {t('trackingModal.cancel')}
+            {t('common.cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting ? t('trackingModal.saving') : t('trackingModal.save')}
+            {submitting ? t('common.saving') : t('common.save')}
           </Button>
         </DialogFooter>
       </DialogContent>
