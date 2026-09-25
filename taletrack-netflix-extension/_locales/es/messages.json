@@ -34,7 +34,7 @@
     "message": "Reintentar"
   },
   "authContactError": {
-    "message": "No se pudo contactar con la extensión. Recarga la página."
+    "message": "No se pudo contactar con la extensión. Vuelve a intentarlo o recarga la extensión."
   },
   "authSignInError": {
     "message": "No se pudo completar el inicio de sesión."

@@ -34,7 +34,7 @@
     "message": "Retry"
   },
   "authContactError": {
-    "message": "Could not reach the extension. Reload the page."
+    "message": "Could not reach the extension. Try again or reload the extension."
   },
   "authSignInError": {
     "message": "Could not complete sign-in."
