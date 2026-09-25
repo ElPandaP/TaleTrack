@@ -1,0 +1,16 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "TaleTrack · TypeScript",
+  "entryPointStrategy": "packages",
+  "entryPoints": ["../taletrack-frontend", "../taletrack-netflix-extension"],
+  "out": "ts",
+  "includeVersion": false,
+  "navigationLinks": {
+    "Volver a la documentación": "../index.html"
+  },
+  "validation": {
+    "notExported": false,
+    "invalidLink": true,
+    "notDocumented": false
+  }
+}

@@ -1,0 +1,6 @@
+# Generated output
+_site/
+ts/
+backend/api/
+koplugin/reference.md
+node_modules/

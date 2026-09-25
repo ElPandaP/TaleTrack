@@ -1,0 +1,7 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["lib/**/*.ts", "lib/**/*.tsx", "components/**/*.tsx", "proxy.ts"],
+  "exclude": ["components/ui/**", "**/*.test.ts"],
+  "tsconfig": "tsconfig.json",
+  "readme": "README.md"
+}
