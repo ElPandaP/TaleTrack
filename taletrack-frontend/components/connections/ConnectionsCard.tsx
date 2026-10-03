@@ -1,0 +1,124 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Monitor, Puzzle, BookOpen, Smartphone, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { sessionsService, type Session } from '@/lib/api/services';
+import { apiClient } from '@/lib/api/client';
+import { useAuth } from '@/lib/auth-context';
+import { useI18n } from '@/lib/i18n';
+
+/** Picks an icon from a session's device label (extension, e-reader, web or other). */
+function deviceIcon(device: string) {
+  const d = device.toLowerCase();
+  if (d.includes('extension')) return Puzzle;
+  if (d.includes('koreader') || d.includes('kindle')) return BookOpen;
+  if (d.includes('web')) return Monitor;
+  return Smartphone;
+}
+
+/**
+ * Card listing the user's active sessions (one per signed-in device), each with a button to
+ * revoke it. Loads the list from the API when mounted.
+ */
+export default function ConnectionsCard() {
+  const { t, locale } = useI18n();
+  const { logout } = useAuth();
+  const [sessions, setSessions] = useState<Session[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [revoking, setRevoking] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    sessionsService
+      .list()
+      .then((s) => alive && setSessions(s))
+      .catch(() => alive && setError(t('connections.sessions.loadError')));
+    return () => {
+      alive = false;
+    };
+    // Mount-only fetch; `t` is only used for the error message.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const handleRevoke = async (id: string) => {
+    setRevoking(id);
+    setError(null);
+    try {
+      await sessionsService.revoke(id);
+      setSessions((prev) => prev?.filter((s) => s.id !== id) ?? null);
+      // The list does not mark which session belongs to this browser, so refresh right away:
+      // if the revoked one was this browser's, the refresh is rejected (clearing the tokens)
+      // and the user is signed out now instead of when the access token expires.
+      if (!(await apiClient.refresh()) && !apiClient.getRefreshToken()) {
+        logout();
+        window.location.assign('/');
+      }
+    } catch {
+      setError(t('connections.sessions.revokeError'));
+    } finally {
+      setRevoking(null);
+    }
+  };
+
+  return (
+    <div className="tt-card p-6">
+      <h3 className="font-heading text-lg font-semibold">{t('connections.sessions.title')}</h3>
+      <p className="mt-1 mb-4 text-xs text-muted-foreground">{t('connections.sessions.hint')}</p>
+
+      {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
+
+      {sessions === null && !error && (
+        <div className="space-y-2">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-14 animate-pulse rounded-xl bg-secondary/40" />
+          ))}
+        </div>
+      )}
+
+      {sessions?.length === 0 && (
+        <p className="text-sm text-muted-foreground">{t('connections.sessions.empty')}</p>
+      )}
+
+      {sessions && sessions.length > 0 && (
+        <ul className="space-y-2">
+          {sessions.map((s) => {
+            const Icon = deviceIcon(s.device);
+            return (
+              <li
+                key={s.id}
+                className="flex items-center gap-3 rounded-xl border border-border bg-secondary/20 p-3"
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Icon className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">{s.device}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {t('connections.sessions.lastUsed', { date: fmt(s.lastUsedAt) })}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  onClick={() => handleRevoke(s.id)}
+                  disabled={revoking === s.id}
+                  className="shrink-0 text-muted-foreground hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <X className="size-3.5" />
+                  {revoking === s.id
+                    ? t('connections.sessions.revoking')
+                    : t('connections.sessions.revoke')}
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}

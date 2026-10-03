@@ -1,0 +1,434 @@
+'use client';
+
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Pencil, Search, Trash2 } from 'lucide-react';
+import { Cover } from '@/components/media/Cover';
+import { StarRating, toStars } from '@/components/media/StarRating';
+import { ReviewModal, type ReviewTarget } from '@/components/media/ReviewModal';
+import { TrackingProgressModal, type TrackingProgressTarget } from '@/components/media/TrackingProgressModal';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ConfirmDialog } from '@/components/layout/ConfirmDialog';
+import { Pagination } from '@/components/ui/pagination';
+import { trackingService } from '@/lib/api/services';
+import { pickTitle, useI18n } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
+import type { LibraryItem, LibraryType } from '@/lib/types';
+
+type Tab = 'all' | LibraryType;
+type SortKey = 'newest' | 'oldest' | 'rating_high' | 'rating_low';
+type StatusKey = 'all' | 'reading' | 'done';
+type ReviewKey = 'all' | 'done' | 'todo';
+
+const PER_PAGE_TARGET = 24; // 4 rows x 6 columns
+const TABS: Tab[] = ['all', 'Book', 'Movie', 'Series'];
+const SORTS: SortKey[] = ['newest', 'oldest', 'rating_high', 'rating_low'];
+
+/** Milliseconds since the epoch for an ISO date, for sorting. */
+const ms = (iso: string) => new Date(iso).getTime();
+
+/** A labelled segmented control (pill buttons) with an animated indicator on the selected option. */
+function Segmented<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: T;
+  onChange: (v: T) => void;
+  options: ReadonlyArray<{ value: T; label: string }>;
+}) {
+  // Unique per instance so the two Segmented groups don't share an indicator.
+  const layoutId = useId();
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[11px] font-medium text-muted-foreground/70">{label}</span>
+      <div className="inline-flex rounded-lg border border-border bg-secondary/40 p-0.5">
+        {options.map((o) => {
+          const active = value === o.value;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => onChange(o.value)}
+              aria-pressed={active}
+              className={cn(
+                'relative cursor-pointer rounded-md px-2 py-1 text-xs font-medium transition-colors',
+                active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {active && (
+                <motion.span
+                  layoutId={layoutId}
+                  aria-hidden="true"
+                  className="absolute inset-0 rounded-md bg-card shadow-sm dark:bg-foreground/15 dark:shadow-none"
+                  transition={
+                    reduceMotion
+                      ? { duration: 0 }
+                      : { type: 'spring', stiffness: 500, damping: 40, mass: 0.6 }
+                  }
+                />
+              )}
+              <span className="relative z-10">{o.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const REVIEW_KEYS: ReviewKey[] = ['all', 'done', 'todo'];
+const STATUS_KEYS: StatusKey[] = ['all', 'reading', 'done'];
+
+/**
+ * Library grid with type tabs, text search, sort and status/review filters, all applied in the
+ * browser. The initial filters can come from the URL (`type`, `status`, `reviews`, `q`). Each
+ * item can open the progress or review dialog, or be removed from the library.
+ */
+export default function LibraryClient({ items }: { items: LibraryItem[] }) {
+  const { t, locale } = useI18n();
+  const router = useRouter();
+  const reduceMotion = useReducedMotion();
+  const params = useSearchParams();
+  const initialTab = (params.get('type') as Tab) ?? 'all';
+  const initialReviews = (params.get('reviews') as ReviewKey) ?? 'all';
+  const initialStatus = (params.get('status') as StatusKey) ?? 'all';
+
+  const [tab, setTab] = useState<Tab>(TABS.includes(initialTab) ? initialTab : 'all');
+  const [sort, setSort] = useState<SortKey>('newest');
+  const [status, setStatus] = useState<StatusKey>(
+    STATUS_KEYS.includes(initialStatus) ? initialStatus : 'all',
+  );
+  const [reviews, setReviews] = useState<ReviewKey>(
+    REVIEW_KEYS.includes(initialReviews) ? initialReviews : 'all',
+  );
+  const [query, setQuery] = useState(params.get('q') ?? '');
+  const [target, setTarget] = useState<ReviewTarget | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [progressTarget, setProgressTarget] = useState<TrackingProgressTarget | null>(null);
+  const [progressModalOpen, setProgressModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<LibraryItem | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  // Target 24 per page (4 rows x 6 columns). With fewer columns the page size drops to
+  // the largest multiple of the column count that is at most 24, so the last row is
+  // never partial (6 cols: 24, 5: 20, 4: 24, 3: 24).
+  const [pageSize, setPageSize] = useState(PER_PAGE_TARGET);
+
+  const tabLabel = (k: Tab) => (k === 'all' ? t('library.tab.all') : t(`typePlural.${k}`));
+
+  const counts = useMemo(() => {
+    const c: Record<Tab, number> = { all: items.length, Book: 0, Movie: 0, Series: 0 };
+    for (const it of items) c[it.type]++;
+    return c;
+  }, [items]);
+
+  const trimmedQuery = query.trim().toLowerCase();
+
+  const visible = useMemo(() => {
+    const list = items.filter((it) => {
+      if (tab !== 'all' && it.type !== tab) return false;
+      if (
+        trimmedQuery &&
+        !`${it.titleEN ?? ''} ${it.titleES ?? ''} ${it.author ?? ''}`.toLowerCase().includes(trimmedQuery)
+      )
+        return false;
+      if (status === 'reading' && it.progress === 100) return false;
+      if (status === 'done' && it.progress !== 100) return false;
+      if (reviews === 'done' && it.myReviewId == null) return false;
+      if (reviews === 'todo' && it.myReviewId != null) return false;
+      return true;
+    });
+
+    list.sort((a, b) => {
+      if (sort === 'oldest') return ms(a.lastEventDate) - ms(b.lastEventDate);
+      if (sort === 'rating_high' || sort === 'rating_low') {
+        const ra = a.myRating;
+        const rb = b.myRating;
+        if (ra == null && rb == null) return ms(b.lastEventDate) - ms(a.lastEventDate);
+        if (ra == null) return 1; // unrated items always go last
+        if (rb == null) return -1;
+        return sort === 'rating_high' ? rb - ra : ra - rb;
+      }
+      return ms(b.lastEventDate) - ms(a.lastEventDate); // newest
+    });
+
+    return list;
+  }, [items, tab, trimmedQuery, status, reviews, sort]);
+
+  // Measures the column count once the grid mounts and sets the page size from it.
+  // A ref callback runs exactly when the node is attached; it is not recalculated on resize.
+  const gridRefCallback = useCallback((grid: HTMLUListElement | null) => {
+    if (!grid) return;
+    const cols =
+      getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length || 6;
+    setPageSize(PER_PAGE_TARGET - (PER_PAGE_TARGET % cols));
+  }, []);
+
+  // Reset to page 1 whenever the filter changes (adjust state during render).
+  const filterKey = `${tab}|${trimmedQuery}|${sort}|${status}|${reviews}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = visible.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const openReview = (it: LibraryItem) => {
+    setTarget({
+      mediaId: it.mediaId,
+      title: pickTitle(it.titleEN, it.titleES, locale),
+      type: it.type,
+      posterUrl: it.posterUrl,
+      reviewId: it.myReviewId,
+      rating: it.myRating,
+    });
+    setModalOpen(true);
+  };
+
+  // Scroll once the new page has rendered: a smooth scroll started before the re-render gets
+  // cut short when the grid's content (and the page height) changes under it.
+  const scrollAfterPageChange = useRef(false);
+  useEffect(() => {
+    if (!scrollAfterPageChange.current) return;
+    scrollAfterPageChange.current = false;
+    window.scrollTo({ top: 0, left: 0, behavior: reduceMotion ? 'instant' : 'smooth' });
+  }, [currentPage, reduceMotion]);
+
+  const goTo = (p: number) => {
+    scrollAfterPageChange.current = true;
+    setPage(p);
+  };
+
+  const openEditProgress = (it: LibraryItem) => {
+    setProgressTarget({
+      mediaId: it.mediaId,
+      title: pickTitle(it.titleEN, it.titleES, locale),
+      type: it.type,
+      posterUrl: it.posterUrl,
+      progress: it.progress,
+      season: it.season,
+      episode: it.episode,
+      seasonEpisodeCounts: it.seasonEpisodeCounts,
+    });
+    setProgressModalOpen(true);
+  };
+
+  const removeTracking = async () => {
+    const it = removeTarget;
+    if (!it) return;
+    setDeleting(it.mediaId);
+    setActionError(null);
+    try {
+      await trackingService.deleteTracking(it.mediaId);
+      router.refresh();
+    } catch {
+      setActionError(t('common.actionError'));
+    } finally {
+      setDeleting(null);
+      setRemoveTarget(null);
+    }
+  };
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-5 gap-y-3">
+        <div className="flex items-center gap-3">
+          <h1 className="font-heading text-2xl font-semibold">{t('library.title')}</h1>
+          <div className="relative">
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground/50"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('nav.search')}
+              aria-label={t('nav.searchAria')}
+              className="h-8 w-40 rounded-lg border border-border bg-secondary/50 pr-3 pl-8 text-sm text-foreground transition-colors placeholder:text-muted-foreground/50 focus:border-primary/60 focus:bg-secondary/70 focus:outline-none sm:w-56"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortKey)}
+            aria-label={t('library.sort.aria')}
+            className="cursor-pointer rounded-lg border border-border bg-secondary/40 px-2.5 py-1.5 text-xs font-medium text-foreground focus:border-primary/50 focus:outline-none"
+          >
+            {SORTS.map((s) => (
+              <option key={s} value={s}>
+                {t(`library.sort.${s}`)}
+              </option>
+            ))}
+          </select>
+
+          <Segmented
+            label={t('library.status.label')}
+            value={status}
+            onChange={setStatus}
+            options={[
+              { value: 'all', label: t('library.status.all') },
+              { value: 'reading', label: t('library.status.reading') },
+              { value: 'done', label: t('library.status.done') },
+            ]}
+          />
+
+          <Segmented
+            label={t('library.reviewsFilter.label')}
+            value={reviews}
+            onChange={setReviews}
+            options={[
+              { value: 'all', label: t('library.reviewsFilter.all') },
+              { value: 'done', label: t('library.reviewsFilter.done') },
+              { value: 'todo', label: t('library.reviewsFilter.todo') },
+            ]}
+          />
+        </div>
+      </div>
+
+      {actionError && <p role="alert" className="mb-4 text-sm text-destructive">{actionError}</p>}
+
+      <div className="mb-6 flex flex-wrap gap-1 border-b border-border">
+        {TABS.map((k) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setTab(k)}
+            className={cn(
+              'cursor-pointer border-b-2 px-3 py-2 text-sm transition-colors',
+              tab === k
+                ? 'border-primary font-semibold text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {tabLabel(k)} · {counts[k]}
+          </button>
+        ))}
+      </div>
+
+      {trimmedQuery && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          {(() => {
+            const [before, after = ''] = t('library.resultsFor').split('{query}');
+            return (
+              <>
+                {before}
+                <span className="font-medium text-foreground">“{query.trim()}”</span>
+                {after}
+              </>
+            );
+          })()}
+        </p>
+      )}
+
+      {visible.length === 0 ? (
+        <EmptyState>{t('library.empty')}</EmptyState>
+      ) : (
+        <>
+          <ul
+            ref={gridRefCallback}
+            className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6"
+          >
+            {pageItems.map((it) => {
+              const finished = it.progress === 100;
+              const rated = it.myRating != null;
+              const title = pickTitle(it.titleEN, it.titleES, locale);
+              return (
+                <li key={it.mediaId} className="group/item relative flex flex-col">
+                  <Link href={`/media/${it.mediaId}`} className="group block">
+                    <Cover
+                      title={title}
+                      type={it.type}
+                      posterUrl={it.posterUrl}
+                      className="transition group-hover:shadow-md group-hover:brightness-[1.03]"
+                    />
+                    <p className="mt-1.5 line-clamp-2 text-xs leading-tight text-foreground group-hover:text-primary">
+                      {title}
+                    </p>
+                  </Link>
+                  <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 transition-opacity group-hover/item:opacity-100 focus-within:opacity-100">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon-xs"
+                      onClick={() => openEditProgress(it)}
+                      aria-label={t('library.editProgressOf', { title })}
+                      className="bg-background/90 text-muted-foreground shadow-sm backdrop-blur hover:bg-background hover:text-foreground"
+                    >
+                      <Pencil aria-hidden="true" className="size-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon-xs"
+                      onClick={() => setRemoveTarget(it)}
+                      disabled={deleting === it.mediaId}
+                      aria-label={t('library.removeFromLibrary', { title })}
+                      className="bg-background/90 text-muted-foreground shadow-sm backdrop-blur hover:bg-[color-mix(in_oklab,var(--destructive)_12%,var(--background))] hover:text-destructive"
+                    >
+                      <Trash2 aria-hidden="true" className="size-3.5" />
+                    </Button>
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">{t(`type.${it.type}`)}</p>
+                  {rated ? (
+                    <button
+                      type="button"
+                      onClick={() => openReview(it)}
+                      className="mt-1 cursor-pointer self-start"
+                      aria-label={t('library.editReviewOf', { title })}
+                    >
+                      <StarRating stars={toStars(it.myRating)} />
+                    </button>
+                  ) : finished ? (
+                    <Button
+                      type="button"
+                      variant="link"
+                      onClick={() => openReview(it)}
+                      className="mt-1 h-auto self-start p-0 text-[11px] font-medium"
+                    >
+                      {t('library.review')}
+                    </Button>
+                  ) : it.progress != null ? (
+                    <span className="mt-1 text-[11px] text-muted-foreground">{it.progress}%</span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+
+          <Pagination page={currentPage} totalPages={totalPages} onChange={goTo} className="mt-8" />
+        </>
+      )}
+
+      <ReviewModal target={target} open={modalOpen} onOpenChange={setModalOpen} />
+      <TrackingProgressModal
+        target={progressTarget}
+        open={progressModalOpen}
+        onOpenChange={setProgressModalOpen}
+      />
+      <ConfirmDialog
+        open={removeTarget != null}
+        title={t('library.removeConfirmTitle')}
+        description={removeTarget ? t('library.removeConfirm', { title: pickTitle(removeTarget.titleEN, removeTarget.titleES, locale) }) : undefined}
+        confirmLabel={t('common.delete')}
+        busy={deleting != null}
+        onConfirm={removeTracking}
+        onCancel={() => setRemoveTarget(null)}
+      />
+    </div>
+  );
+}

@@ -1,0 +1,25 @@
+# Repo-level env files
+.env
+.env.local
+.env.*.local
+
+# Docker overrides
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Workspace
+.vscode
+
+# AI
+CLAUDE.md
+AGENTS.md
+.agents
+.opencode
+.claude
+skills-lock.json
+TFG
+# Local review notes
+review/

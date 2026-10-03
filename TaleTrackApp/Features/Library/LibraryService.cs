@@ -1,0 +1,156 @@
+using TaleTrackApp.Data;
+using TaleTrackApp.Features.TrackingEvent;
+using Microsoft.EntityFrameworkCore;
+
+namespace TaleTrackApp.Features.Library;
+
+/// <summary>One deduplicated media in the user's library, with their progress and rating.</summary>
+/// <param name="MediaId">Media id. Use it with `GET /api/media/{id}` and the review endpoints.</param>
+/// <param name="TitleEN">English title, if known.</param>
+/// <param name="TitleES">Spanish title, if known.</param>
+/// <param name="Type">`Movie`, `Series` or `Book`.</param>
+/// <param name="Author">Author of a book.</param>
+/// <param name="PosterUrl">Poster or cover image URL, once it has been fetched.</param>
+/// <param name="Length">Runtime in minutes for a film, page count for a book, 0 for a series.</param>
+/// <param name="Isbn">ISBN of a book, if known.</param>
+/// <param name="Progress">Percentage 0-100. For a series it is derived from the latest episode reported when the episode counts are known. Null when nothing was recorded.</param>
+/// <param name="LastEventDate">When the user last reported progress on it.</param>
+/// <param name="MyRating">The user's own rating, 1-10.</param>
+/// <param name="MyReviewId">Id of the user's own review.</param>
+/// <param name="Season">Series only: season of the latest episode reported.</param>
+/// <param name="Episode">Series only: episode of the latest episode reported.</param>
+/// <param name="SeasonEpisodeCounts">Series only: number of episodes of each season, in order.</param>
+public record LibraryItem(
+    Guid MediaId,
+    string? TitleEN,
+    string? TitleES,
+    string Type,
+    string? Author,
+    string? PosterUrl,
+    int Length,
+    string? Isbn,
+    int? Progress,
+    DateTime LastEventDate,
+    int? MyRating,
+    Guid? MyReviewId,
+    int? Season = null,
+    int? Episode = null,
+    int[]? SeasonEpisodeCounts = null);
+
+/// <summary>
+/// Reads a user's library: the media they track, with their progress and rating. Also backs the
+/// pending-reviews list and the per-type counts of a public profile.
+/// </summary>
+public class LibraryService
+{
+    /// <summary>Database context used to read tracking and reviews.</summary>
+    private readonly AppDbContext _context;
+
+    /// <summary>Creates the service with its database context.</summary>
+    public LibraryService(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    /// <summary>
+    /// The user's library: one row per tracked media with its progress and the user's own rating.
+    /// </summary>
+    /// <param name="userId">Owner of the library.</param>
+    /// <param name="type">Only this media type (<c>Movie</c>, <c>Series</c> or <c>Book</c>); null for all.</param>
+    /// <param name="status"><c>finished</c> (100%) or <c>in_progress</c> (anything else); null for both.</param>
+    /// <param name="sort"><c>rating</c> (highest first) or, by default, latest activity first.</param>
+    /// <param name="year">Only media whose latest activity was in this year; null for any year.</param>
+    public async Task<List<LibraryItem>> GetForUserAsync(
+        Guid userId,
+        string? type = null,
+        string? status = null,
+        string? sort = null,
+        int? year = null)
+    {
+        var events = await _context.TrackingEvents
+            .Where(te => te.UserId == userId)
+            .Include(te => te.Media)
+            .ToListAsync();
+
+        var myReviews = await _context.Reviews
+            .Where(r => r.UserId == userId)
+            .ToListAsync();
+
+        var reviewByMedia = myReviews
+            .GroupBy(r => r.MediaId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.CreatedAt).First());
+
+        var items = events
+            .Where(te => te.Media != null)
+            .Select(te =>
+            {
+                var media = te.Media!;
+                var isSeries = media.Type == Model.MediaType.Series;
+
+                var progress = SeriesProgressCalculator.ProgressFor(media, te);
+
+                reviewByMedia.TryGetValue(te.MediaId, out var review);
+                return new LibraryItem(
+                    MediaId: media.Id,
+                    TitleEN: media.TitleEN,
+                    TitleES: media.TitleES,
+                    Type: media.Type.ToString(),
+                    Author: media.Author,
+                    PosterUrl: media.PosterUrl,
+                    Length: media.Length,
+                    Isbn: media.Isbn,
+                    Progress: progress,
+                    LastEventDate: te.EventDate,
+                    MyRating: review?.Rating,
+                    MyReviewId: review?.Id,
+                    Season: isSeries ? te.Season : null,
+                    Episode: isSeries ? te.Episode : null,
+                    SeasonEpisodeCounts: isSeries ? media.SeasonEpisodeCounts : null);
+            })
+            .AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(type))
+            items = items.Where(i => i.Type == type);
+
+        if (year is int y)
+            items = items.Where(i => i.LastEventDate.Year == y);
+
+        items = status?.ToLowerInvariant() switch
+        {
+            "finished"    => items.Where(i => i.Progress == 100),
+            "in_progress" => items.Where(i => i.Progress != 100),
+            _             => items,
+        };
+
+        items = sort?.ToLowerInvariant() switch
+        {
+            "rating" => items.OrderByDescending(i => i.MyRating ?? -1).ThenByDescending(i => i.LastEventDate),
+            _        => items.OrderByDescending(i => i.LastEventDate),
+        };
+
+        return items.ToList();
+    }
+
+    /// <summary>How many media of each type the user tracks, plus the total.</summary>
+    public async Task<(int Book, int Movie, int Series, int Total)> CountByTypeAsync(Guid userId)
+    {
+        var types = await _context.TrackingEvents
+            .Where(te => te.UserId == userId && te.Media != null)
+            .Select(te => new { te.MediaId, te.Media!.Type })
+            .Distinct()
+            .ToListAsync();
+
+        return (
+            types.Count(t => t.Type == Model.MediaType.Book),
+            types.Count(t => t.Type == Model.MediaType.Movie),
+            types.Count(t => t.Type == Model.MediaType.Series),
+            types.Count);
+    }
+
+    /// <summary>Finished media (100% progress) the user has not reviewed yet, most recent first.</summary>
+    public async Task<List<LibraryItem>> GetPendingReviewsAsync(Guid userId)
+    {
+        var finished = await GetForUserAsync(userId, status: "finished", sort: "recent");
+        return finished.Where(i => i.MyRating == null).ToList();
+    }
+}

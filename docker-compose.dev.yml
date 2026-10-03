@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: taletrack-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # No published port: only the other services on the Docker network reach the database.
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    container_name: taletrack-backend-dev
+    working_dir: /src
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      JwtSettings__Secret: ${JWT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      TMDB_API_KEY: ${TMDB_API_KEY}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8090}
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
+    volumes:
+      - ./TaleTrackApp:/src
+      # Keep build output container-only: host `dotnet` writes host-specific NuGet
+      # paths into obj/, which breaks the container's build (and vice versa).
+      - /src/obj
+      - /src/bin
+      - nuget_cache:/root/.nuget/packages
+    ports:
+      - "8080:8080"
+    command: dotnet watch run --urls http://0.0.0.0:8080
+
+  frontend:
+    image: oven/bun:1-alpine
+    container_name: taletrack-frontend-dev
+    working_dir: /app
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      INTERNAL_API_URL: http://backend:8080/api
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      # --no-turbopack usa webpack, que sí respeta WATCHPACK_POLLING en Docker/Windows
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./taletrack-frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "8090:3000"
+    command: sh -c "bun install && bun dev --webpack"
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: taletrack-logs
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "127.0.0.1:9999:8080"
+    restart: unless-stopped
+
+volumes:
+  postgres_data_dev:
+  nuget_cache:

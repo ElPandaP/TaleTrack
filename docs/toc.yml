@@ -1,0 +1,8 @@
+- name: Inicio
+  href: index.md
+- name: Backend (.NET)
+  href: backend/
+- name: Frontend y extensión (TypeScript)
+  href: ts/index.html
+- name: Plugin KOReader (Lua)
+  href: koplugin/

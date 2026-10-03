@@ -1,0 +1,39 @@
+{
+  "extDescription": {
+    "message": "Extracts Netflix info for your TaleTrack library",
+    "description": "Extension description shown on the Chrome Web Store and extensions page"
+  },
+  "authConnectTitle": {
+    "message": "Connect your TaleTrack account"
+  },
+  "authConnectSubtitle": {
+    "message": "Sign in so the extension can automatically track what you watch on Netflix."
+  },
+  "signInButton": {
+    "message": "Sign in"
+  },
+  "authActiveTitle": {
+    "message": "TaleTrack active"
+  },
+  "authSyncingSubtitle": {
+    "message": "What you watch on Netflix is added to your library automatically."
+  },
+  "accountLabel": {
+    "message": "Signed in as"
+  },
+  "signOutButton": {
+    "message": "Sign out"
+  },
+  "retryButton": {
+    "message": "Retry"
+  },
+  "authContactError": {
+    "message": "Could not reach the extension. Try again or reload the extension."
+  },
+  "authSignInError": {
+    "message": "Could not complete sign-in."
+  },
+  "toggleThemeAria": {
+    "message": "Toggle theme"
+  }
+}

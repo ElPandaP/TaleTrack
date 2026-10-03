@@ -1,0 +1,77 @@
+'use client';
+
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Cover } from '@/components/media/Cover';
+import type { ReviewTarget } from '@/components/media/ReviewModal';
+import { pickTitle, useI18n } from '@/lib/i18n';
+import type { LibraryItem } from '@/lib/types';
+
+// Show at most this many covers; the button still counts every pending item.
+const MAX_THUMBS = 9;
+
+/** Home card showing covers of finished media without a review; clicking one opens the review dialog. */
+export function PendingReviewsCard({
+  items,
+  onReview,
+}: {
+  items: LibraryItem[];
+  onReview: (target: ReviewTarget) => void;
+}) {
+  const { t, locale } = useI18n();
+
+  const toTarget = (item: LibraryItem): ReviewTarget => ({
+    mediaId: item.mediaId,
+    title: pickTitle(item.titleEN, item.titleES, locale),
+    type: item.type,
+    posterUrl: item.posterUrl,
+  });
+
+  return (
+    <div className="tt-card flex flex-col gap-3 p-4">
+      <div className="flex items-baseline justify-between">
+        <Link
+          href="/library?reviews=todo"
+          className="text-[10px] font-semibold tracking-widest text-muted-foreground/70 uppercase transition-colors hover:text-foreground"
+        >
+          {t('home.toReview')}
+        </Link>
+        {items.length > 0 && (
+          <span className="text-xs font-semibold text-muted-foreground/70">{items.length}</span>
+        )}
+      </div>
+
+      {items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t('home.toReview.empty')}</p>
+      ) : (
+        <>
+          <ul className="grid grid-cols-[repeat(auto-fill,minmax(3.25rem,1fr))] gap-2">
+            {items.slice(0, MAX_THUMBS).map((item) => {
+              const title = pickTitle(item.titleEN, item.titleES, locale);
+              return (
+                <li key={item.mediaId}>
+                  <button
+                    type="button"
+                    onClick={() => onReview(toTarget(item))}
+                    title={t('home.toReview.reviewItem', { title })}
+                    className="block w-full cursor-pointer transition hover:brightness-[1.03] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  >
+                    <Cover
+                      title={title}
+                      type={item.type}
+                      posterUrl={item.posterUrl}
+                      className="rounded-md"
+                    />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <Button size="sm" className="w-full" onClick={() => onReview(toTarget(items[0]))}>
+            {t('home.toReview.cta', { count: items.length })}
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}

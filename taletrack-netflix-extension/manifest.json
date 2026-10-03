@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "TaleTrack for Netflix",
+  "version": "1.0.0",
+  "default_locale": "en",
+  "description": "__MSG_extDescription__",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA/2nqb2ENrCbHQNIbm1eVAvxcHLRHa6DqjRP6gzidBP+2EaYq+c1TlI9L9+t+0+SbQMahThiRCUPocc/GMWrBzIhLklmyqG6fuU5KKeIAW9BpBjm0p57wzXOCjbBJkzKAJDwAV/DrfKOsvp7XyR1j5yBeuG0MmtAqcNuqzvQcYKScVF4AsIjOt2gWsVDMbH4oGVcci58qWUVNVO0BUb8Z7iA2383hqzMAocGHG4sXi2kAtP87k565qBZfuuUWNCL0CfQ79/pr2WLVWt9oHhz9aXR5326OrcsgsYiOz+lHDJmF2NKo9UCWOlXd/zHDhcROT2vJR6TxJ5ysGrOs+Oqo7wIDAQAB",
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://www.netflix.com/*",
+    "https://taletrack.app/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.netflix.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.netflix.com/*"],
+      "js": ["injected.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ]
+}
