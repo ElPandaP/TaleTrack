@@ -72,9 +72,6 @@ pasos manuales). Backend y frontend no publican puertos al host — solo son alc
 Caddy, en el 80/443. Es la única puerta de entrada, tanto para el navegador como para clientes
 externos (la extensión de Netflix, el plugin de KOReader, o cualquier otro cliente de la API).
 
-> Nota: `Caddyfile` tiene el dominio (`taletrack.app` / `www.taletrack.app`) escrito a fuego — si
-> despliegas con otro dominio, cámbialo ahí.
-
 > Necesitas los puertos 80 y 443 abiertos hacia fuera (Security Group / firewall de tu proveedor) —
 > Caddy los usa para servir la web y para que Let's Encrypt valide el dominio.
 
@@ -82,10 +79,12 @@ externos (la extensión de Netflix, el plugin de KOReader, o cualquier otro clie
 cp .env.example .env
 ```
 
-Ajusta esta variable al dominio real de la VM (tiene que ser un dominio que ya resuelva a la IP del
-servidor — Let's Encrypt no emite certificados para IPs sueltas):
+Ajusta estas variables al dominio real de la VM (tiene que ser un dominio que ya resuelva a la IP del
+servidor — Let's Encrypt no emite certificados para IPs sueltas). Sin `SITE_ADDRESS`, Caddy sirve
+`http://localhost`, que es lo que se usa para probar el stack de producción en local:
 
 ```bash
+SITE_ADDRESS=<tu-dominio>, www.<tu-dominio>
 APP_BASE_URL=https://<tu-dominio>
 ```
 

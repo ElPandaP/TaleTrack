@@ -49,13 +49,13 @@ services:
       context: ./taletrack-frontend
       dockerfile: Dockerfile
       args:
-        GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID must be set in .env}
+        GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
     container_name: taletrack-frontend
     restart: unless-stopped
     depends_on:
       - backend
     environment:
-      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID must be set in .env}
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       INTERNAL_API_URL: http://backend:8080/api
     expose:
       - "3000"
@@ -72,7 +72,8 @@ services:
       - "127.0.0.1:9999:8080"
     restart: unless-stopped
 
-  # Reverse proxy with automatic HTTPS (Let's Encrypt)
+  # Reverse proxy. With a real domain in SITE_ADDRESS it gets and renews the HTTPS certificate
+  # from Let's Encrypt; without one it serves plain http://localhost.
   caddy:
     image: caddy:2-alpine
     container_name: taletrack-caddy
@@ -80,6 +81,8 @@ services:
     depends_on:
       - backend
       - frontend
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-http://localhost}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
