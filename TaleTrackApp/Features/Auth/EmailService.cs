@@ -142,6 +142,6 @@ public class EmailService
             throw new Exception("Failed to send email");
         }
 
-        _logger.LogInformation("Email '{Subject}' sent to {Email}", subject, toEmail);
+        _logger.LogInformation("Email '{Subject}' sent", subject);
     }
 }

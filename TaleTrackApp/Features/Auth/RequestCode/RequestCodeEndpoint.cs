@@ -44,7 +44,7 @@ public static class RequestCodeEndpoint
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to send verification email to {Email}", user.Email);
+            logger.LogError(ex, "Failed to send verification email to user {UserId}", user.Id);
             return Results.Problem("Failed to send the email");
         }
 

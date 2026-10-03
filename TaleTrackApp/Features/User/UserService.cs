@@ -94,7 +94,7 @@ public class UserService
     {
         if (await EmailExistsAsync(email))
         {
-            _logger.LogWarning("Registration attempt with existing email: {Email}", email);
+            _logger.LogWarning("Registration attempt with an email that is already registered");
             return (RegisterResult.EmailTaken, null);
         }
 
@@ -111,9 +111,15 @@ public class UserService
     public async Task<Model.User?> AuthenticateAsync(string email, string password)
     {
         var user = await GetByEmailAsync(email);
-        if (user == null || !VerifyPassword(password, user))
+        if (user == null)
         {
-            _logger.LogWarning("Failed login attempt for email: {Email}", email);
+            _logger.LogWarning("Failed login attempt for an unknown email");
+            return null;
+        }
+
+        if (!VerifyPassword(password, user))
+        {
+            _logger.LogWarning("Failed login attempt for user {UserId}", user.Id);
             return null;
         }
 
@@ -294,14 +300,14 @@ public class UserService
 
         if (user.EmailCodeExpiry < DateTime.UtcNow)
         {
-            _logger.LogWarning("Expired email code attempt for {Email}", email);
+            _logger.LogWarning("Expired email code attempt for user {UserId}", user.Id);
             return null;
         }
 
         if (!CryptographicOperations.FixedTimeEquals(
                 Encoding.UTF8.GetBytes(user.EmailCode), Encoding.UTF8.GetBytes(code)))
         {
-            _logger.LogWarning("Invalid email code attempt for {Email}", email);
+            _logger.LogWarning("Invalid email code attempt for user {UserId}", user.Id);
             await RegisterFailedEmailCodeAttemptAsync(user);
             return null;
         }
@@ -344,7 +350,7 @@ public class UserService
         user.EmailCodeFailedAttempts++;
         if (user.EmailCodeFailedAttempts >= MaxEmailCodeAttempts)
         {
-            _logger.LogWarning("Email code for {Email} discarded after too many failed attempts", user.Email);
+            _logger.LogWarning("Email code for user {UserId} discarded after too many failed attempts", user.Id);
             user.EmailCode = null;
             user.EmailCodeExpiry = null;
             user.EmailCodeFailedAttempts = 0;
