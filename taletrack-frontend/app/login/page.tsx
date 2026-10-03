@@ -14,11 +14,21 @@ import { useI18n } from '@/lib/i18n';
 import AuthShell from '@/components/auth/AuthShell';
 import { useGoogleSignIn } from '@/components/auth/useGoogleSignIn';
 
-/** Reads the `next` query parameter, accepting only same-origin relative paths so it cannot be an open redirect. */
+/**
+ * Reads the `next` query parameter, accepting only same-origin paths so it cannot be an open redirect.
+ * The value is resolved the way the browser would (which turns `/\evil.com` into `//evil.com`)
+ * and rejected unless it stays on this origin.
+ */
 function safeNext(): string {
   if (typeof window === 'undefined') return '/';
   const raw = new URLSearchParams(window.location.search).get('next');
-  return raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
+  if (!raw || !raw.startsWith('/')) return '/';
+  try {
+    const url = new URL(raw, window.location.origin);
+    return url.origin === window.location.origin ? url.pathname + url.search + url.hash : '/';
+  } catch {
+    return '/';
+  }
 }
 
 /**
