@@ -1,8 +1,4 @@
 #!/bin/bash
-# Seed the SAME demo data as scripts/seed-demo.ps1, but against a running production
-# deployment over HTTPS (for a final manual smoke test). Delete this script when done —
-# it's not meant to stay in the repo long-term, and there's no "fresh db" undo button here
-# like in the dev script, since this runs against real prod data.
 #
 # What this creates:
 #   - 4 users, all with password "demo1234": demo, alice, bob, carol
