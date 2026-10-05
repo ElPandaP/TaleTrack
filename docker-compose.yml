@@ -8,7 +8,9 @@ services:
       POSTGRES_USER:  ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    # No published port: only the other services on the Docker network reach the database.
+    # Loopback only: reachable from the machine itself (e.g. through an SSH tunnel), never from outside.
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
