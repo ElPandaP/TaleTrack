@@ -48,7 +48,7 @@ export function useGoogleSignIn({ failureMessage, onError, onBusy, onSignedIn }:
     onError(null);
     try {
       const res = await authService.googleLogin(credential);
-      if ('needsUsername' in res) {
+      if (res.needsUsername) {
         setPending({
           pendingToken: res.pendingToken,
           suggestedUsername: res.suggestedUsername,

@@ -24,6 +24,8 @@ export interface LoginResponse {
   expiresIn?: number;
   /** Google login only: an existing email/password account was just linked to this Google identity. */
   linkedExistingAccount?: boolean;
+  /** Google login only: always `false` here (the backend sends the field on every Google response). */
+  needsUsername?: false;
 }
 
 /**
