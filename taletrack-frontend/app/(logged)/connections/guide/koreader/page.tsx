@@ -24,15 +24,12 @@ export default async function KoreaderGuidePage() {
 
       <div className="mb-4">
         <a
-          href="#"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-secondary/40 px-3 py-2 text-sm font-medium text-muted-foreground"
+          href="https://github.com/ElPandaP/TaleTrack/releases/latest/download/taletrack.koplugin.zip"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-secondary/40 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
         >
           <Download className="size-4" />
           {t('connections.guide.koreader.download')}
         </a>
-        <span className="ml-2 text-xs text-muted-foreground/70">
-          {t('connections.guide.downloadPending')}
-        </span>
       </div>
 
       <ol className="flex list-decimal flex-col gap-2 pl-5 text-sm text-foreground/90 marker:text-muted-foreground">
