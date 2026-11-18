@@ -1,40 +1,48 @@
-# Documentación del código
+# Code documentation
 
-Sitio estático con la referencia de los cuatro subproyectos, generado a partir de los comentarios de documentación del código.
+Static site with the reference of the four subprojects, generated from the documentation comments in
+the code. It is published at [elpandap.github.io/TaleTrack](https://elpandap.github.io/TaleTrack/).
 
-| Subproyecto | Comentarios | Generador | Configuración |
+| Subproject | Comments | Generator | Configuration |
 |---|---|---|---|
 | Backend (.NET) | XML (`/// <summary>`) | DocFX | `docfx.json`, `filterConfig.yml` |
-| Frontend (Next.js) | TSDoc (`/** ... */`) | TypeDoc | `typedoc.json` + `taletrack-frontend/typedoc.json` |
-| Extensión de Netflix | TSDoc (`/** ... */`) | TypeDoc | `typedoc.json` + `taletrack-netflix-extension/typedoc.json` |
-| Plugin KOReader | LuaCATS (`---@class`, `---@param`...) | lua-language-server | `build.ts` |
+| Web app (Next.js) | TSDoc (`/** ... */`) | TypeDoc | `typedoc.json` + `taletrack-frontend/typedoc.json` |
+| Netflix extension | TSDoc (`/** ... */`) | TypeDoc | `typedoc.json` + `taletrack-netflix-extension/typedoc.json` |
+| KOReader plugin | LuaCATS (`---@class`, `---@param`...) | lua-language-server | `build.ts` |
 
-DocFX actúa como portal: genera la referencia .NET, renderiza las páginas Markdown de esta carpeta y copia dentro la salida de TypeDoc (`ts/`) y la referencia Lua (`koplugin/reference.md`).
+DocFX works as the portal: it generates the .NET reference, renders the Markdown pages in this
+folder and copies in the TypeDoc output (`ts/`) and the Lua reference (`koplugin/reference.md`).
 
-## Requisitos
+## Requirements
 
-- .NET 10 SDK (DocFX se instala como herramienta local, ver `dotnet-tools.json` en la raíz).
+- .NET 10 SDK (DocFX is installed as a local tool, see `dotnet-tools.json` at the root).
 - Bun.
-- lua-language-server. Se busca en `LUA_LANGUAGE_SERVER`, en el `PATH` o en la extensión de Lua de VS Code (`sumneko.lua`).
-- Dependencias instaladas en `docs/`, `taletrack-frontend/` y `taletrack-netflix-extension/` (`bun install`).
+- lua-language-server. It is looked up in `LUA_LANGUAGE_SERVER`, in the `PATH` or in VS Code's Lua
+  extension (`sumneko.lua`).
+- Dependencies installed in `docs/`, `taletrack-frontend/` and `taletrack-netflix-extension/`
+  (`bun install`).
 
-## Uso
+## Usage
 
-Desde la raíz del repositorio:
+From the repository root:
 
 ```bash
-bun docs/build.ts           # genera docs/_site
-bun docs/build.ts --serve   # genera y sirve en http://localhost:8080
+bun docs/build.ts           # generates docs/_site
+bun docs/build.ts --serve   # generates and serves it at http://localhost:8080
 ```
 
-El workflow `.github/workflows/docs.yml` genera el sitio en cada push a `main` y lo publica en GitHub Pages.
+The `.github/workflows/docs.yml` workflow generates the site on every push to `main` and publishes
+it to GitHub Pages.
 
-## Qué se documenta
+## What gets documented
 
-- Backend: todos los tipos y miembros del proyecto `TaleTrackApp`, privados incluidos, salvo las migraciones de EF Core.
-- Frontend: `lib/`, `components/` (sin los componentes de shadcn/ui en `components/ui/`) y `proxy.ts`. Las páginas de `app/` quedan fuera.
-- Extensión: todos los módulos de `src/`.
-- Plugin: solo lo anotado con `---@class` o `---@alias`. Cada módulo debe declarar su tabla como clase para aparecer:
+- Backend: every type and member of the `TaleTrackApp` project, private ones included, except the
+  EF Core migrations.
+- Web app: `lib/`, `components/` (without the shadcn/ui components in `components/ui/`) and
+  `proxy.ts`. The pages in `app/` are left out.
+- Extension: every module in `src/`.
+- Plugin: only what is annotated with `---@class` or `---@alias`. Each module must declare its table
+  as a class to show up:
 
 ```lua
 --- Offline queue of progress updates.

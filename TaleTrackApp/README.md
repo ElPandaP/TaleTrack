@@ -1,74 +1,75 @@
 # TaleTrack — Backend
 
-ASP.NET Core 10 (.NET 10), Minimal APIs, patrón **REPR** (Request → Endpoint → Response).
-PostgreSQL 15 vía EF Core. Autenticación JWT + refresh tokens.
+ASP.NET Core 10 (.NET 10), Minimal APIs, **REPR** pattern (Request → Endpoint → Response).
+PostgreSQL 15 through EF Core. JWT authentication with rotating refresh tokens.
 
-> La API es pública por diseño: cualquier cliente (frontend, extensión de Netflix, plugin de
-> KOReader, o uno de terceros) se autentica igual, con el JWT del usuario. No hay clave de API.
+> The API is public by design: every client (the web app, the Netflix extension, the KOReader
+> plugin or a third-party one) authenticates the same way, with the user's JWT. There is no API key.
 
-> Mapa rápido para reorientarse. Para el detalle vivo, mira siempre `Program.cs` (registro de
-> endpoints y pipeline) y la carpeta `Features/`.
+> This is a quick map to find your way around. For the live detail, always check `Program.cs`
+> (endpoint registration and pipeline) and the `Features/` folder.
 
 ---
 
-## 1. Cómo arranca (`Program.cs`)
+## 1. Startup (`Program.cs`)
 
-Todo el arranque está en el top-level `Program.cs` con funciones locales:
+The whole startup lives in the top-level `Program.cs`, split into local functions:
 
 ```
-loadEnvironment()      -> carga ../.env con DotNetEnv (relativo al cwd)
-configureDatabase()    -> DbContext Npgsql; se SALTA si Environment == "Testing"
-configureAuth()        -> JWT bearer + policy UserPolicy + EmailService HttpClient + BackgroundRunner
-configureApi()         -> Swagger, servicios scoped (REPR), OpenLibrary/TMDB HttpClient, ValidationFilter
+loadEnvironment()      -> loads ../.env with DotNetEnv (relative to the working directory)
+configureDatabase()    -> Npgsql DbContext; SKIPPED when Environment == "Testing"
+configureAuth()        -> JWT bearer + UserPolicy + EmailService HttpClient + BackgroundRunner
+configureApi()         -> Swagger, scoped services (REPR), OpenLibrary/TMDB HttpClients, ValidationFilter
 --- build ---
 configurePipeline():
-    applyMigrations()  -> db.Database.Migrate() automático en cada arranque (EnsureCreated si es SQLite)
-    Swagger + SwaggerUI (siempre activos, incluso en prod, en /swagger)
+    applyMigrations()  -> db.Database.Migrate() on every startup (EnsureCreated on SQLite)
+    Swagger + SwaggerUI (always on, production included, at /swagger)
     UseRateLimiter -> UseAuthentication -> UseAuthorization
-    (rate limit global por IP: 200/min, o RateLimiting:PermitLimit; en Testing solo se activa si se fija ese valor)
-    grupo "/api" y cada *Endpoint.Map(apiGroup)
+    (global per-IP rate limit: 200/min, or RateLimiting:PermitLimit; in Testing it is only on if that value is set)
+    "/api" group and every *Endpoint.Map(apiGroup)
 ```
 
-- **Migraciones**: se aplican solas al arrancar. Para crear una nueva:
-  `dotnet ef migrations add <Nombre>` (nunca escribir el archivo a mano).
-- **Config JWT**: `appsettings.json > JwtSettings` (Issuer/Audience `TaleTrackApp`, access token 5 min,
-  refresh token 60 días). El secreto viene de env `JwtSettings__Secret` (doble guion bajo = jerarquía
-  en .NET config).
+- **Migrations** are applied on startup. To create one:
+  `dotnet ef migrations add <Name>` (never write the file by hand).
+- **JWT settings**: `appsettings.json > JwtSettings` (Issuer/Audience `TaleTrackApp`, 5-minute access
+  token, 60-day refresh token). The secret comes from the `JwtSettings__Secret` environment variable
+  (double underscore = section separator in .NET configuration), or from `JWT_SECRET`. The backend
+  refuses to start without it.
 
 ---
 
-## 2. Organización de carpetas
+## 2. Folder layout
 
 ```
 TaleTrackApp/
-├── Program.cs                 # arranque + registro de TODOS los endpoints
+├── Program.cs                 # startup + registration of EVERY endpoint
 ├── appsettings.json           # JwtSettings, Logging, OpenLibrary:SimilarityThreshold
-├── Security/                  # piezas que se enganchan al pipeline de los endpoints
-│   ├── Policies.cs            # constante: UserPolicy (JWT válido)
-│   ├── ClaimsPrincipalExtensions.cs  # TryGetUserId: el userId del JWT
-│   └── ValidationFilter.cs    # IEndpointFilter: valida DataAnnotations de cada argumento -> 400
-├── OpenApi/                   # configuración de Swagger y helpers .Responds...() de los endpoints
-├── Services/                  # servicios usados por varios features (no pertenecen a uno)
+├── Security/                  # pieces plugged into the endpoint pipeline
+│   ├── Policies.cs            # constant: UserPolicy (valid JWT)
+│   ├── ClaimsPrincipalExtensions.cs  # TryGetUserId: the userId from the JWT
+│   └── ValidationFilter.cs    # IEndpointFilter: validates each argument's DataAnnotations -> 400
+├── OpenApi/                   # Swagger setup and the .Responds...() helpers used by endpoints
+├── Services/                  # services shared by several features
 │   ├── JwtService.cs          # GenerateToken(userId, email, username)
-│   └── BackgroundRunner.cs    # ejecuta trabajo tras responder (scope DI propio, errores logueados)
+│   └── BackgroundRunner.cs    # runs work after responding (own DI scope, errors logged)
 ├── Data/
 │   ├── AppDbContext.cs        # DbSets: Users, Medias, Reviews, TrackingEvents, Friendships, RefreshTokens, AuthActionTokens, UserAvatars
-│   └── Migrations/            # generadas por EF, nunca a mano
-├── Model/                     # entidades EF: User, Media, Review, TrackingEvent, Friendship, RefreshToken, AuthActionToken, UserAvatar
+│   └── Migrations/            # generated by EF, never by hand
+├── Model/                     # EF entities: User, Media, Review, TrackingEvent, Friendship, RefreshToken, AuthActionToken, UserAvatar
 ├── Features/
-│   ├── User/                  # UserService + AvatarService: perfil, avatar, búsqueda (no un único <Feature>Service.cs)
+│   ├── User/                  # UserService + AvatarService: profile, avatar, search
 │   ├── Media/  TrackingEvent/  Review/  Friend/  Activity/
-│   ├── Auth/                  # registro, logins y sesiones: SessionService + AuthActionTokenService + GoogleAuthService (+ GoogleIdTokenValidator, GoogleSignupTokenService, TokenHasher, EmailService)
-│   ├── Stats/                 # StatsService + GetStats/  → GET /api/stats (resumen anual)
-│   └── Library/               # LibraryService + GetLibrary/  → GET /api/library (1 fila por media)
-└── Features/<Feature>/<Accion>/
-        ├── <Accion>Endpoint.cs   # static class con Map(RouteGroupBuilder) + HandleAsync(...)
-        ├── <Accion>Request.cs    # DTO de entrada con DataAnnotations (cuando el endpoint recibe body/query)
-        └── (Response opcional)
-    Features/<Feature>/<Feature>Service.cs   # lógica compartida del feature (scoped)
+│   ├── Auth/                  # sign-up, sign-ins and sessions: SessionService + AuthActionTokenService + GoogleAuthService (+ GoogleIdTokenValidator, GoogleSignupTokenService, TokenHasher, EmailService)
+│   ├── Stats/                 # StatsService + GetStats/   → GET /api/stats (yearly summary)
+│   └── Library/               # LibraryService + GetLibrary/ → GET /api/library (one row per media)
+└── Features/<Feature>/<Action>/
+        ├── <Action>Endpoint.cs   # static class with Map(RouteGroupBuilder) + HandleAsync(...)
+        ├── <Action>Request.cs    # input DTO with DataAnnotations (when the endpoint takes a body or query)
+        └── (optional Response)
+    Features/<Feature>/<Feature>Service.cs   # the feature's shared logic (scoped)
 ```
 
-**Patrón de un endpoint** (todos iguales):
+**Endpoint pattern** (they all look alike):
 
 ```csharp
 public static class XEndpoint {
@@ -87,264 +88,278 @@ public static class XEndpoint {
 }
 ```
 
-El `userId` (un `Guid`) se saca siempre con `user.TryGetUserId(out var userId)`. Los endpoints no
-capturan excepciones genéricas: un error no previsto llega al manejador global, que lo registra y
-responde un 500 con ProblemDetails.
+The `userId` (a `Guid`) is always read with `user.TryGetUserId(out var userId)`. Endpoints do not
+catch generic exceptions: an unexpected error reaches the global handler, which logs it and returns
+a 500 with ProblemDetails.
 
 ---
 
-## 3. Autenticación y autorización
+## 3. Authentication and authorization
 
-| Policy | Requiere | Se usa para |
+| Policy | Requires | Used for |
 |---|---|---|
-| `UserPolicy` | JWT válido (`RequireAuthenticatedUser`) | todos los endpoints de datos del usuario |
+| `UserPolicy` | Valid JWT (`RequireAuthenticatedUser`) | every endpoint that touches user data |
 
-Es la única policy. La API es pública por diseño (un tercero puede construir su propio
-cliente y autenticarse igual que el usuario); el JWT es el único control de acceso.
-`POST /api/register` y `GET /api/users/{id}/avatar` son anónimos.
+It is the only policy. The API is public by design (a third party can build its own client and
+authenticate just like the user does); the JWT is the only access control.
+`POST /api/register` and `GET /api/users/{id}/avatar` are anonymous.
 
-**Claims del JWT**: `sub` / `NameIdentifier` (userId), `email`, `unique_name` (username), `jti`.
-Expira a los 5 min; el frontend/extensión lo renuevan con el refresh token sin que el usuario haga nada.
+**JWT claims**: `sub` / `NameIdentifier` (userId), `email`, `unique_name` (username), `jti`.
+It expires after 5 minutes; the web app, the extension and the plugin renew it with the refresh
+token without the user noticing.
 
-**3 formas de login**, todas devuelven `{ success, message, token, refreshToken, expiresIn }`:
+**Three ways to sign in**, all returning `{ success, message, token, refreshToken, expiresIn }`:
 1. Email + password → `POST /api/login`
-2. Google OAuth → `POST /api/auth/google` (valida el idToken con `Google.Apis.Auth`; crea o vincula usuario por `GoogleId`/email)
-3. Email OTP → `POST /api/auth/request-code` (manda código de 6 dígitos, expira 10 min) + `POST /api/auth/verify-code`
+2. Google → `POST /api/auth/google` (validates the idToken with `Google.Apis.Auth`; a new user picks a
+   username in a second step, `POST /api/auth/google/complete`; an existing account with the same
+   email gets Google linked to it)
+3. Email one-time code → `POST /api/auth/request-code` (sends a 6-digit code, valid for 10 minutes)
+   + `POST /api/auth/verify-code`
 
-**Sesiones / refresh tokens** (`SessionService`, un `RefreshToken` por dispositivo/cliente; todos los logins arrancan la sesión con `SessionService.StartAsync`):
-- `POST /api/auth/refresh` — cambia un refresh token por un par nuevo (rota; hay una ventana de gracia de
-  60s para tolerar reintentos duplicados por red).
-- `POST /api/auth/logout` — revoca el refresh token indicado.
-- `GET /api/auth/sessions` — lista los dispositivos/sesiones activas del usuario ("Conexiones").
-- `DELETE /api/auth/sessions/{id}` — revoca una sesión concreta (solo si es tuya).
-- `POST /api/auth/extension-grant` — con el JWT del navegador, emite un par de tokens propio para la
-  extensión de Netflix (aparece como sesión `"Netflix extension"`).
+**Sessions / refresh tokens** (`SessionService`, one `RefreshToken` per device or client; every
+sign-in starts its session with `SessionService.StartAsync`):
+- `POST /api/auth/refresh` exchanges a refresh token for a new pair. It rotates, with a 60-second
+  grace period so duplicate retries caused by the network do not fail.
+- `POST /api/auth/logout` revokes the given refresh token.
+- `GET /api/auth/sessions` lists the user's active sessions ("Connections" in the web app).
+- `DELETE /api/auth/sessions/{id}` revokes one session (only your own).
+- `POST /api/auth/extension-grant` uses the browser's JWT to issue a separate token pair for the
+  Netflix extension (shown as the `"Netflix extension"` session).
 
-**Registro**: `POST /api/register` → **anónimo** (registro abierto). No hace auto-login; el
-frontend llama a `/login` después.
+**One-time email links** (`AuthActionTokenService`): password reset, account deletion confirmation
+and revoking a sign-up the user did not request. Only the token's hash is stored, and each link can
+be used once.
 
-**Hash de contraseñas**: PBKDF2-HMAC-SHA512 con sal por hash y 210 000 iteraciones, vía
-`PasswordHasher<User>` de ASP.NET Core Identity (`UserService`). La migración
-`ClearLegacyPasswordHashes` anuló los hashes SHA-256 sin sal anteriores; esos usuarios
-entran con código por email y se ponen contraseña nueva desde el perfil.
+**Sign-up**: `POST /api/register` is **anonymous** (open registration). It does not sign the user in;
+the web app calls `/login` afterwards. Passwords need 8 to 100 characters with at least one
+uppercase letter and one digit (`PasswordPolicy`).
 
-⚠️ **Gotchas de seguridad** (relevante para el TFG):
-- Swagger UI queda expuesto siempre, también en producción.
+**Password hashing**: PBKDF2-HMAC-SHA512 with a per-hash salt and 210,000 iterations, through ASP.NET
+Core Identity's `PasswordHasher<User>` (`UserService`). The `ClearLegacyPasswordHashes` migration
+wiped the old unsalted SHA-256 hashes; those users sign in with an email code and set a new password
+from their profile.
+
+Swagger UI stays exposed in production on purpose: the API is public and Swagger is its reference.
 
 ---
 
-## 4. Endpoints (todos bajo `/api`)
+## 4. Endpoints (all under `/api`)
 
-### Documentación OpenAPI (`/swagger`)
-La configuración vive en `OpenApi/` (info, esquema Bearer, tags con su descripción y un filtro que añade
-el candado, el `401` de los endpoints protegidos y el `429` global). Al crear un endpoint:
-- En `Map`: `.WithTags(...)` (uno de los de `OpenApiConfiguration.Tags`), `.WithSummary(...)` y, si hay
-  comportamiento no obvio, `.WithDescription(...)`.
-- Cada respuesta con `.Responds<T>("qué significa")` / `.RespondsBadRequest(...)` / `.RespondsNotFound(...)`
-  / `.Responds(código, "...")` (sin cuerpo). Los cuerpos de error/confirmación se describen con
-  `ApiError` y `ApiResult`; las respuestas con datos, con una clase `*Response` propia (no objetos anónimos,
-  que Swagger no puede describir).
-- Cada propiedad de un DTO lleva `/// <summary>`; los `record` documentan con `<param>`.
-- `OpenApiDocumentationTests` falla si falta cualquiera de estas piezas.
+### OpenAPI documentation (`/swagger`)
+The setup lives in `OpenApi/` (info, Bearer scheme, tags with their description, and a filter that
+adds the padlock, the `401` of protected endpoints and the global `429`). When adding an endpoint:
+- In `Map`: `.WithTags(...)` (one of `OpenApiConfiguration.Tags`), `.WithSummary(...)` and, if it
+  behaves in a non-obvious way, `.WithDescription(...)`.
+- Every response with `.Responds<T>("what it means")` / `.RespondsBadRequest(...)` /
+  `.RespondsNotFound(...)` / `.Responds(code, "...")` (no body). Error and confirmation bodies are
+  described with `ApiError` and `ApiResult`; responses with data use their own `*Response` class (not
+  anonymous objects, which Swagger cannot describe).
+- Every DTO property has a `/// <summary>`; records document with `<param>`.
+- `OpenApiDocumentationTests` fails if any of these pieces is missing.
 
-### Auth / sesiones
-| Método | Ruta | Auth | Qué hace |
+### Auth / sessions
+| Method | Route | Auth | What it does |
 |---|---|---|---|
-| POST | `/login` | anónimo | login email+password |
-| POST | `/auth/google` | anónimo | login/registro con Google idToken |
-| POST | `/auth/request-code` | anónimo | envía OTP al email (respuesta genérica, no filtra si existe) |
-| POST | `/auth/verify-code` | anónimo | valida OTP → JWT |
-| POST | `/auth/refresh` | anónimo (usa el refresh token del body) | rota el par de tokens |
-| POST | `/auth/logout` | anónimo | revoca un refresh token |
-| POST | `/auth/extension-grant` | JWT | emite tokens propios para la extensión |
-| GET | `/auth/sessions` | JWT | lista tus sesiones activas |
-| DELETE | `/auth/sessions/{id}` | JWT | revoca una sesión tuya |
-| POST | `/register` | anónimo | crea usuario (email, username, password ≥6) |
+| POST | `/login` | anonymous | email + password sign-in |
+| POST | `/auth/google` | anonymous | Google sign-in or start of a Google sign-up |
+| POST | `/auth/google/complete` | anonymous (pending sign-up token) | finishes a Google sign-up with the chosen username |
+| POST | `/auth/request-code` | anonymous | emails a one-time code (generic answer, never reveals whether the account exists) |
+| POST | `/auth/verify-code` | anonymous | checks the code → JWT |
+| POST | `/auth/refresh` | anonymous (uses the refresh token in the body) | rotates the token pair |
+| POST | `/auth/logout` | anonymous | revokes a refresh token |
+| POST | `/auth/extension-grant` | JWT | issues the extension's own tokens |
+| GET | `/auth/sessions` | JWT | lists your active sessions |
+| DELETE | `/auth/sessions/{id}` | JWT | revokes one of your sessions |
+| POST | `/register` | anonymous | creates a user (email, username, password) |
+
+The password reset, account deletion and sign-up revocation endpoints live in `Features/Auth/` too;
+Swagger lists them all.
 
 ### User
-| Método | Ruta | Auth | Qué hace |
+| Method | Route | Auth | What it does |
 |---|---|---|---|
-| GET | `/users/me` | JWT | perfil completo (avatar, privacidad) del usuario autenticado |
-| PUT | `/users/{id}` | JWT | edita username y `privacy{...}`; el email es fijo tras el registro; solo uno mismo (403 si no) |
-| PUT | `/users/me/avatar` | JWT | sube la foto de perfil (multipart `file`, máx. 5 MB); la recorta a 256×256 WebP y devuelve `avatarUrl` |
-| DELETE | `/users/me/avatar` | JWT | borra la foto de perfil |
-| GET | `/users/{id}` | JWT | perfil público: `{ id, username, avatarUrl, createdAt, relationship, counts{book,movie,series,total} }` |
-| GET | `/users/{id}/avatar` | anónimo | sirve la foto de perfil (WebP 256×256) desde la BD |
-| GET | `/users/search?username=` | JWT | busca usuario por username exacto (quita `@` inicial) |
+| GET | `/users/me` | JWT | full profile (avatar, privacy) of the signed-in user |
+| PUT | `/users/{id}` | JWT | edits the username and `privacy{...}`; the email is fixed after sign-up; only yourself (403 otherwise) |
+| PUT | `/users/me/avatar` | JWT | uploads the profile picture (multipart `file`, up to 5 MB); crops it to a 256×256 WebP and returns `avatarUrl` |
+| DELETE | `/users/me/avatar` | JWT | deletes the profile picture |
+| GET | `/users/{id}` | JWT | public profile: `{ id, username, avatarUrl, createdAt, relationship, counts{book,movie,series,total} }` |
+| GET | `/users/{id}/avatar` | anonymous | serves the profile picture (256×256 WebP) from the database |
+| GET | `/users/search?username=` | JWT | finds a user by exact username (a leading `@` is ignored) |
 
 ### Media
-| Método | Ruta | Auth | Qué hace |
+| Method | Route | Auth | What it does |
 |---|---|---|---|
-| GET | `/media/{id}` | JWT | ficha de un media: datos + tu progreso/reseña + todas las reseñas + nota media |
+| GET | `/media/{id}` | JWT | media page: data + your progress and review + every review + average rating |
 
 ### Tracking (`Features/TrackingEvent/`)
-| Método | Ruta | Auth | Qué hace |
+| Method | Route | Auth | What it does |
 |---|---|---|---|
-| POST | `/tracking/movies` | JWT | registra progreso de una película. `FindOrCreateAsync` deduplica el Media |
-| POST | `/tracking/series` | JWT | registra progreso de un episodio (`Season`+`Episode` obligatorios) |
-| POST | `/tracking/books` | JWT | registra progreso de un libro; si falta autor/portada dispara enriquecimiento OpenLibrary en background |
-| PUT | `/tracking/{mediaId}` | JWT | corrige el progreso de un media que el usuario ya sigue, por porcentaje o por temporada y episodio (editar desde la biblioteca); 404 si no lo sigue |
-| DELETE | `/tracking/{mediaId}` | JWT | borra todo el seguimiento de ese media (lo saca de tu biblioteca) |
+| POST | `/tracking/movies` | JWT | records progress on a film. `FindOrCreateAsync` deduplicates the Media |
+| POST | `/tracking/series` | JWT | records progress on an episode (`Season` and `Episode` required) |
+| POST | `/tracking/books` | JWT | records progress on a book; if author or cover is missing, starts an Open Library enrichment in the background |
+| PUT | `/tracking/{mediaId}` | JWT | fixes the progress of a media the user already follows, by percentage or by season and episode (editing from the library); 404 if not followed |
+| DELETE | `/tracking/{mediaId}` | JWT | deletes all tracking for that media (removes it from your library) |
 
-Hay un único seguimiento por (usuario, media) y cada envío, automático o manual, sustituye el
-progreso guardado (y, en series, la temporada y el episodio), así que puede bajar.
+There is a single tracking row per (user, media), and every update, automatic or manual, replaces
+the stored progress (and, for series, the season and episode), so progress can go down.
 
-Las tres rutas `POST /tracking/{movies,series,books}` deduplican el `Media` por título,
-comparándolo con `TitleEN` y `TitleES` (así un título traducido por TMDB también encaja), y para
-movies/series lanzan enriquecimiento TMDB en background si falta portada, sinopsis o el título en el
-otro idioma y el request trae `Language` ("es"/"en").
+The three `POST /tracking/{movies,series,books}` routes deduplicate the `Media` by title, comparing it
+with both `TitleEN` and `TitleES` (so a title translated by TMDB still matches). For films and series
+they start a TMDB enrichment in the background when the poster, the synopsis or the title in the
+other language is missing and the request includes `Language` ("es"/"en").
 
-No hay endpoint para **leer** el seguimiento en crudo: para eso está `/library`, que devuelve una
-fila por media.
+There is no endpoint to **read** raw tracking rows: `/library` returns one row per media instead.
 
-### Library / Stats (`Features/Library/`, `Features/Stats/` — alimentan el home `/`)
-| Método | Ruta | Auth | Qué hace |
+### Library / Stats (`Features/Library/`, `Features/Stats/`, used by the home page)
+| Method | Route | Auth | What it does |
 |---|---|---|---|
-| GET | `/stats` | JWT | resumen anual del usuario: `?year=` (def. actual) → `{ year, total, byType{book,movie,series}, byMonth[12], reviewCount }` |
-| GET | `/library` | JWT | biblioteca del usuario, **una fila por media** + `myRating`/`myReviewId`. Filtros `?type=Book\|Movie\|Series&status=in_progress\|finished&sort=recent\|rating&year=&limit=` |
-| GET | `/reviews` | JWT | reseñas escritas por el usuario, con `media` anidado |
-| GET | `/reviews/pending` | JWT | media terminada (progreso 100) que el usuario aún no ha reseñado |
+| GET | `/stats` | JWT | the user's yearly summary: `?year=` (defaults to the current one) → `{ year, total, byType{book,movie,series}, byMonth[12], reviewCount }` |
+| GET | `/library` | JWT | the user's library, **one row per media** + `myRating`/`myReviewId`. Filters `?type=Book\|Movie\|Series&status=in_progress\|finished&sort=recent\|rating&year=&limit=` |
+| GET | `/reviews` | JWT | reviews written by the user, with the media nested |
+| GET | `/reviews/pending` | JWT | finished media (progress 100) the user has not reviewed yet |
 
-### Friends & Activity (`Features/Friend/`, `Features/Activity/` — todo JWT)
-| Método | Ruta | Qué hace |
+### Friends & Activity (`Features/Friend/`, `Features/Activity/`, all JWT)
+| Method | Route | What it does |
 |---|---|---|
-| GET | `/friends` | `{ friends, incoming, outgoing }` (amigos aceptados + solicitudes) |
-| POST | `/friends/requests` `{userId}` | envía solicitud a ese usuario (responde con `code` estable para mapear el error en el frontend) |
-| PUT | `/friends/requests/{id}` | acepta una solicitud entrante |
-| DELETE | `/friends/requests/{id}` | rechaza una solicitud entrante (borra la fila) |
-| DELETE | `/friends/{userId}` | elimina amistad o cancela solicitud |
-| GET | `/activity?scope=all\|mine\|friends&limit=` | feed derivado de TrackingEvent + Review: `started`/`finished`/`reviewed`. Filtra por la privacidad **por tipo de media** de cada usuario (`Share{Book,Movie,Series}{Progress,Reviews}`) |
-| GET | `/activity?userId=N&limit=` | actividad de un solo usuario (para su perfil público); vacío salvo que seas tú o su amigo |
+| GET | `/friends` | `{ friends, incoming, outgoing }` (accepted friends + requests) |
+| POST | `/friends/requests` `{userId}` | sends a request to that user (answers with a stable `code` the web app maps to a message) |
+| PUT | `/friends/requests/{id}` | accepts an incoming request |
+| DELETE | `/friends/requests/{id}` | declines an incoming request (deletes the row) |
+| DELETE | `/friends/{userId}` | removes a friendship or cancels a request |
+| GET | `/activity?scope=all\|mine\|friends&limit=` | feed built from TrackingEvent + Review: `started`/`finished`/`reviewed`. Filtered by each user's privacy **per media type** (`Share{Book,Movie,Series}{Progress,Reviews}`) |
+| GET | `/activity?userId=N&limit=` | a single user's activity (for their public profile); empty unless it is you or a friend |
 
 ### Review
-| Método | Ruta | Auth | Qué hace |
+| Method | Route | Auth | What it does |
 |---|---|---|---|
-| POST | `/reviews` | JWT | crea reseña (mediaId, rating 1–10, comment opcional) |
-| PUT | `/reviews/{id}` | JWT | edita; solo el dueño (403 si no) |
-| DELETE | `/reviews/{id}` | JWT | borra; solo el dueño (403 si no) |
+| POST | `/reviews` | JWT | creates a review (mediaId, rating 1–10, optional comment) |
+| PUT | `/reviews/{id}` | JWT | edits; owner only (403 otherwise) |
+| DELETE | `/reviews/{id}` | JWT | deletes; owner only (403 otherwise) |
 
-**Validación de entrada**: `ValidationFilter` (IEndpointFilter) recorre los argumentos y valida sus
-DataAnnotations; si falla devuelve `400 { message: "err1; err2" }`. El texto de esos mensajes está en
-español cuando el error lo puede haber causado el usuario (contraseña corta, email inválido...); se deja
-en inglés cuando es un fallo de estado/lógica que la UI nunca llega a mostrar tal cual (sesión no
-encontrada, parámetro interno ausente...).
+**Input validation**: `ValidationFilter` (an `IEndpointFilter`) walks the arguments and validates their
+DataAnnotations; on failure it returns `400 { message: "err1; err2" }`. Backend messages are in
+English. When the web app needs to show an error to the user, the response carries a stable `code`
+that the web app translates.
 
 ---
 
-## 5. Modelo de datos (`Model/`, DbSets en `AppDbContext`)
+## 5. Data model (`Model/`, DbSets in `AppDbContext`)
 
-| Entidad | Campos clave | Notas |
+| Entity | Key fields | Notes |
 |---|---|---|
-| **User** | Email, Username, PasswordHash?, GoogleId?, EmailCode?/Expiry?/FailedAttempts, AvatarUrl?, CreatedAt, 6 flags `Share{Book,Movie,Series}{Progress,Reviews}` | password/google opcionales → un user puede ser solo-Google. `Email` y `Username` son `citext`: sus índices únicos ignoran mayúsculas |
-| **Media** | TitleEN?, TitleES?, Type, Length, Description?, PosterUrl?, Author?, Isbn?, SeasonEpisodeCounts?, FirstTrackedAt, UpdatedAt? | Tabla única para los tres tipos. `Type` es el enum `MediaType` (Movie, Series, Book), guardado como texto. Al menos uno de `TitleEN`/`TitleES`; el otro lo rellena TMDB. Check constraints: `Author` e `Isbn` solo en Book, `SeasonEpisodeCounts` solo en Series, `Type` limitado a los tres valores. Índices no únicos en `Isbn` (parcial), `TitleEN` y `TitleES` |
-| **TrackingEvent** | UserId→, MediaId→, Progress? (0–100), Season?, Episode?, EpisodeTitle?, EventDate | `EventDate` = `DateTime.UtcNow` al crear/actualizar |
+| **User** | Email, Username, PasswordHash?, GoogleId?, EmailCode?/Expiry?/FailedAttempts, AvatarUrl?, CreatedAt, 6 `Share{Book,Movie,Series}{Progress,Reviews}` flags | password and Google are optional, so a user can be Google-only. `Email` and `Username` are `citext`, so their unique indexes ignore case |
+| **Media** | TitleEN?, TitleES?, Type, Length, Description?, PosterUrl?, Author?, Isbn?, SeasonEpisodeCounts?, FirstTrackedAt, UpdatedAt? | One table for the three types. `Type` is the `MediaType` enum (Movie, Series, Book), stored as text. At least one of `TitleEN`/`TitleES`; TMDB fills in the other. Check constraints: `Author` and `Isbn` only for Book, `SeasonEpisodeCounts` only for Series, `Type` limited to the three values. Non-unique indexes on `Isbn` (partial), `TitleEN` and `TitleES` |
+| **TrackingEvent** | UserId→, MediaId→, Progress? (0–100), Season?, Episode?, EventDate | `EventDate` = `DateTime.UtcNow` on create/update |
 | **Review** | UserId→, MediaId→, Rating (1–10), Comment?, CreatedAt, UpdatedAt? | |
-| **Friendship** | RequesterId→, AddresseeId→, Status, CreatedAt, RespondedAt? | `Status` es el enum `FriendshipStatus` (Pending, Accepted), guardado como texto. Una sola fila por pareja de usuarios en cualquier sentido: índice único sobre las columnas generadas `UserLowId`/`UserHighId` (`LEAST`/`GREATEST` de Requester y Addressee), que no existen en la entidad. Ambos FK cascade-delete |
-| **RefreshToken** | UserId→, TokenHash, Device, CreatedAt, LastUsedAt, ExpiresAt, RevokedAt? | una fila por sesión/dispositivo; la rotación cambia el hash en la misma fila (el id no cambia), con ventana de gracia de 60s |
+| **Friendship** | RequesterId→, AddresseeId→, Status, CreatedAt, RespondedAt? | `Status` is the `FriendshipStatus` enum (Pending, Accepted), stored as text. A single row per pair of users in either direction: unique index on the generated columns `UserLowId`/`UserHighId` (`LEAST`/`GREATEST` of Requester and Addressee), which are not in the entity |
+| **RefreshToken** | UserId→, TokenHash, Device, CreatedAt, LastUsedAt, ExpiresAt, RevokedAt? | one row per session/device; rotation changes the hash in the same row (the id stays), with a 60-second grace period |
+| **AuthActionToken** | UserId→, TokenHash, Purpose, CreatedAt, ExpiresAt, ConsumedAt? | one-time email links; `Purpose` is `password_reset`, `delete_account` or `signup_revoke` |
+| **UserAvatar** | UserId (PK, FK), Data, ContentType, UpdatedAt | the profile picture itself, stored in the database |
 
-- **Cascade delete** configurado en `OnModelCreating`: borrar un `User` borra sus `Review`,
-  `TrackingEvent`, `Friendship` y `RefreshToken`.
-- **Dedup de Media** (`MediaService.FindOrCreateAsync`): prioridad ISBN → título+Author → título; el
-  título se compara con `TitleEN` y `TitleES` (siempre dentro del mismo `Type`).
-- **Enriquecimiento de libros** (`OpenLibraryService`): busca por ISBN o por título/autor (similitud de
-  tokens, umbral 0.75 configurable) y rellena Author / PosterUrl / Isbn si faltan.
-  Portadas: `covers.openlibrary.org`.
-- **Enriquecimiento de películas/series** (`TmdbService`, requiere env `TMDB_API_KEY`): busca en TMDB por
-  título y toma el primer resultado (los títulos llegan tal cual de Netflix), y rellena `PosterUrl`,
-  `Length` (runtime, solo películas), `SeasonEpisodeCounts` (series) y el título en el otro idioma
-  (`TitleEN`/`TitleES`, vía `append_to_response=translations`).
-  Solo se activa si el request trae `Language` ("es"/"en" — lo manda la extensión de Netflix leyendo
-  `<html lang>`); sin API key configurada, o sin `Language`, no hace nada y no rompe el flujo normal.
+- **Cascade delete**: every user-owned row is deleted with its `User` (reviews, tracking, friendships,
+  sessions, email links and avatar).
+- **Media deduplication** (`MediaService.FindOrCreateAsync`): ISBN → title + author → title alone;
+  the title is compared with both `TitleEN` and `TitleES` (always within the same `Type`).
+- **Book enrichment** (`OpenLibraryService`): searches by ISBN or by title and author (token
+  similarity, threshold 0.75, configurable) and fills in Author / PosterUrl / Isbn when missing.
+  Covers come from `covers.openlibrary.org`.
+- **Film and series enrichment** (`TmdbService`, needs `TMDB_API_KEY`): searches TMDB by title and
+  takes the first result (titles arrive as Netflix shows them), then fills in `PosterUrl`, `Length`
+  (runtime, films only), `SeasonEpisodeCounts` (series) and the title in the other language
+  (`TitleEN`/`TitleES`, via `append_to_response=translations`). It only runs when the request includes
+  `Language` ("es"/"en", which the Netflix extension reads from `<html lang>`); without an API key or
+  without `Language` it does nothing and never breaks the normal flow.
 
 ---
 
-## 6. Paquetes NuGet (`TaleTrackApp.csproj`)
+## 6. NuGet packages (`TaleTrackApp.csproj`)
 
-| Paquete | Para qué |
+| Package | Purpose |
 |---|---|
 | `Microsoft.EntityFrameworkCore` | ORM |
-| `Npgsql.EntityFrameworkCore.PostgreSQL` | provider PostgreSQL |
-| `Microsoft.EntityFrameworkCore.Design` | `dotnet ef` (migraciones) |
-| `Microsoft.AspNetCore.Authentication.JwtBearer` | validación de JWT |
-| `System.IdentityModel.Tokens.Jwt` | generación de JWT |
-| `Google.Apis.Auth` | validar idToken de Google |
-| `DotNetEnv` | cargar `.env` |
+| `Npgsql.EntityFrameworkCore.PostgreSQL` | PostgreSQL provider |
+| `Microsoft.EntityFrameworkCore.Design` | `dotnet ef` (migrations) |
+| `Microsoft.AspNetCore.Authentication.JwtBearer` | JWT validation |
+| `System.IdentityModel.Tokens.Jwt` | JWT generation |
+| `Google.Apis.Auth` | Google idToken validation |
+| `DotNetEnv` | loading `.env` |
 | `Swashbuckle.AspNetCore` | Swagger / OpenAPI |
 
-Hashing de contraseñas vía `PasswordHasher<User>` de `Microsoft.AspNetCore.Identity` (PBKDF2-HMAC-SHA512,
-sal por hash, 210 000 iteraciones). Sin MediatR, sin FluentValidation, sin AutoMapper. DI a mano en
-`Program.cs`. TMDB y Open Library se consumen con `HttpClient` a pelo, sin SDK.
+Password hashing uses `PasswordHasher<User>` from `Microsoft.AspNetCore.Identity` (PBKDF2-HMAC-SHA512,
+per-hash salt, 210,000 iterations). No MediatR, no FluentValidation, no AutoMapper; dependency
+injection is wired by hand in `Program.cs`. TMDB and Open Library are called with plain `HttpClient`,
+without an SDK.
 
 ---
 
-## 7. Variables de entorno
+## 7. Environment variables
 
-Se leen de `../.env` (repo root).
+Read from `../.env` (repository root).
 
-| Variable | Uso |
+| Variable | Use |
 |---|---|
-| `POSTGRES_HOST/PORT/USER/PASSWORD/DB` | connection string (se construye a mano en `configureDatabase`) |
-| `JWT_SECRET` / `JwtSettings__Secret` | firma del JWT |
-| `GOOGLE_CLIENT_ID` | audience al validar el idToken de Google |
-| `RESEND_API_KEY` | Bearer para la API de Resend (emails OTP) |
-| `TMDB_API_KEY` | enriquecimiento de películas/series (portada, duración, título en el otro idioma). Sin ella, ese enriquecimiento simplemente no hace nada |
+| `POSTGRES_HOST/PORT/USER/PASSWORD/DB` | connection string (built by hand in `configureDatabase`) |
+| `JWT_SECRET` / `JwtSettings__Secret` | JWT signing key (required) |
+| `APP_BASE_URL` | public URL of the web app, used in email links |
+| `GOOGLE_CLIENT_ID` | audience when validating Google idTokens |
+| `RESEND_API_KEY` | Bearer token for the Resend API (all emails) |
+| `TMDB_API_KEY` | film and series enrichment (poster, runtime, title in the other language). Without it, that enrichment simply does nothing |
 
 ---
 
 ## 8. Tests (`../TaleTrackApp.Tests`)
 
-- **xUnit** + `Microsoft.AspNetCore.Mvc.Testing`: todos son de integración, levantan la API entera en
-  memoria (`WebApplicationFactory<Program>`) y la llaman por HTTP como un cliente. No hay tests
-  unitarios del backend: con los servicios externos simulados, la integración llega a toda la lógica.
-- `CustomWebApplicationFactory`: fuerza `Environment=Testing` (salta Npgsql y el rate limit), inyecta
-  **SQLite in-memory** (con una conexión KeepAlive compartida por toda la colección) y fija
-  `JwtSettings__Secret`, `TMDB_API_KEY` y `GOOGLE_CLIENT_ID` de test.
-- **Servicios externos simulados** (`ExternalServiceFakes.cs`), compartidos por todos los tests y
-  accesibles desde la factoría. Ningún test sale a la red:
-  - `FakeTmdb` / `FakeOpenLibrary`: un título solo existe si el test lo añade (`Add`); `AddDown` hace
-    que respondan 500; `FakeOpenLibrary.SearchesFor` cuenta las búsquedas.
-  - `FakeResend`: guarda los correos enviados (destinatario, asunto, enlace y código), así que los
-    tests usan el enlace o el código del correo como lo haría el usuario. Un destinatario que
-    contenga `resend-down` recibe un 500.
-  - `FakeGoogleIdTokenValidator`: sustituye la validación de Google; acepta los tokens hechos con
+- **xUnit** + `Microsoft.AspNetCore.Mvc.Testing`: they are all integration tests. They start the whole
+  API in memory (`WebApplicationFactory<Program>`) and call it over HTTP like a client. There are no
+  backend unit tests: with the external services faked, integration tests reach all the logic.
+- `CustomWebApplicationFactory`: forces `Environment=Testing` (skips Npgsql and the rate limit),
+  injects **in-memory SQLite** (with a keep-alive connection shared by the whole collection) and sets
+  test values for `JwtSettings__Secret`, `TMDB_API_KEY` and `GOOGLE_CLIENT_ID`.
+- **Faked external services** (`ExternalServiceFakes.cs`), shared by every test and reachable from the
+  factory. No test goes out to the network:
+  - `FakeTmdb` / `FakeOpenLibrary`: a title only exists if the test adds it (`Add`); `AddDown` makes
+    them answer 500; `FakeOpenLibrary.SearchesFor` counts the searches.
+  - `FakeResend`: stores the emails sent (recipient, subject, link and code), so tests use the link or
+    the code from the email just like the user would. A recipient containing `resend-down` gets a 500.
+  - `FakeGoogleIdTokenValidator`: replaces Google's validation; it accepts tokens built with
     `FakeGoogleIdTokenValidator.Token(googleId, email)`.
-  - Los clientes tipados se registran con el nombre corto de la clase (`nameof(TmdbService)`), no con
-    el completo: con el completo la sustitución no se aplica y se llama a la API real.
-- Las caducidades (código de 10 min, enlaces de 1 h / 7 días) se prueban moviendo la fecha guardada
-  en la BD (`UpdateActionTokenAsync`, `EmailCodeExpiry`), sin esperar.
-- Un fichero por área (`*FlowTests.cs`), más `AuthorizationTests` (recorre todos los endpoints y
-  comprueba que solo los de la lista blanca son anónimos), `ValidationTests`, `RateLimitTests` (levanta
-  otra instancia con `RateLimiting:PermitLimit=5`), `MediaConstraintsTests` (check constraints de
-  `Media` contra la BD), `UnhandledExceptionTests` y `OpenApiDocumentationTests`.
-- Helpers: `CreateUserAsync` crea un usuario y devuelve un cliente autenticado; `ApiHelpers` tiene las
-  llamadas que repiten muchos tests (biblioteca, ficha, reseñas, amistades, sesiones); `Eventually`
-  espera a lo que el backend hace en segundo plano (correos, enriquecimiento).
-- Correr: `dotnet test ../TaleTrackApp.Tests`
+  - Typed clients are registered under the short class name (`nameof(TmdbService)`), not the full one:
+    with the full name the replacement does not apply and the real API gets called.
+- Expirations (10-minute code, 1-hour / 7-day links) are tested by moving the stored date in the
+  database (`UpdateActionTokenAsync`, `EmailCodeExpiry`), without waiting.
+- One file per area (`*FlowTests.cs`), plus `AuthorizationTests` (walks every endpoint and checks that
+  only the allow-listed ones are anonymous), `ValidationTests`, `RateLimitTests` (starts another
+  instance with `RateLimiting:PermitLimit=5`), `MediaConstraintsTests` (the `Media` check constraints
+  against the database), `UnhandledExceptionTests` and `OpenApiDocumentationTests`.
+- Helpers: `CreateUserAsync` creates a user and returns an authenticated client; `ApiHelpers` holds
+  the calls many tests repeat (library, media page, reviews, friendships, sessions); `Eventually`
+  waits for what the backend does in the background (emails, enrichment).
+- Run: `dotnet test ../TaleTrackApp.Tests`. Coverage: `dotnet test ../TaleTrackApp.Tests --collect:"XPlat Code Coverage"` (coverlet).
 
 ---
 
-## 9. Cómo levantarlo
+## 9. Running it
 
 ```bash
-# Stack de desarrollo completo (hot-reload; el backend aplica las migraciones al arrancar):
+# Full development stack (hot reload; the backend applies migrations on startup):
 docker compose -f docker-compose.dev.yml up -d
-#   backend  -> http://localhost:8080  (Swagger en /swagger)
+#   backend  -> http://localhost:8080  (Swagger at /swagger)
 #   frontend -> http://localhost:8090
 #   logs     -> http://localhost:9999  (dozzle)
 ```
 
-Para meter un usuario de prueba con datos: `../scripts/seed-demo.ps1` (registra `demo@taletrack.dev` /
-`demo1234` + tracking events de ejemplo).
+To add a demo user with data: `../scripts/seed-demo.ps1` (registers `demo@taletrack.dev` /
+`demo1234` plus sample tracking events).
 
 ---
 
-## 10. Consumidores del backend
+## 10. Backend clients
 
-| Cliente | Cómo llama |
+| Client | How it calls the API |
 |---|---|
-| `taletrack-frontend` (Next.js) | navegador → `/api/*` (rewrite a `backend:8080`). SSR usa `lib/api/server.ts` con la cookie `tt-token` |
-| `taletrack.koplugin` (KOReader, Lua) | login por OTP (`/api/auth/request-code` + `/verify-code`), luego `POST /api/tracking/books` con `Authorization: Bearer` al terminar un libro |
-| `taletrack-netflix-extension` | detecta reproducción en Netflix, extrae título/temporada/episodio/progreso/idioma y postea a `/api/tracking/movies` o `/api/tracking/series` cada ~15s (con throttle por % de cambio) vía el service worker |
+| `taletrack-frontend` (Next.js) | browser → `/api/*` (rewritten to `backend:8080`). Server-side rendering uses `lib/api/server.ts` with the `tt-token` cookie |
+| `taletrack.koplugin` (KOReader, Lua) | one-time code sign-in (`/api/auth/request-code` + `/verify-code`), then `POST /api/tracking/books` with `Authorization: Bearer` while reading, at most every 2 minutes and right away when the book is finished |
+| `taletrack-netflix-extension` | detects playback on Netflix, extracts title/season/episode/progress/language and posts to `/api/tracking/movies` or `/api/tracking/series` through the service worker, throttled by percentage of change |
 
-> El koplugin y la extensión apuntan por defecto al servidor de producción hardcodeado
-> (`https://taletrack.app`); para desarrollo local se sobreescribe (ver el README de cada uno).
+> The plugin and the extension point to the production server by default
+> (`https://taletrack.app`); for local development it is overridden (see each one's README).

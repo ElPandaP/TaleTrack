@@ -1,100 +1,105 @@
-# TaleTrack — Frontend
+# TaleTrack — Web app
 
-Next.js 16 (App Router), React 19, Tailwind 4 + shadcn/ui. Consume el backend en `../TaleTrackApp`.
+Next.js 16 (App Router), React 19, Tailwind CSS 4 + shadcn/ui. It talks to the backend in `../TaleTrackApp`.
 
-## Cómo arranca
+## Running it
 
 ```bash
 bun install
-bun run dev      # http://localhost:3000 (o :8090 dentro de docker-compose.dev.yml)
+bun run dev      # http://localhost:3000 (or :8090 inside docker-compose.dev.yml)
 bun run lint
 bun run build
 ```
 
-En Docker (`docker compose -f ../docker-compose.dev.yml up -d`) el frontend corre en el puerto **8090**
-con hot-reload, y Next.js hace de proxy: `/api/*` y `/swagger/*` se reescriben (`next.config.ts`) hacia
-`http://backend:8080/...`, así que el navegador siempre habla con el mismo origen y nunca necesita saber
-dónde vive el backend.
+In Docker (`docker compose -f ../docker-compose.dev.yml up -d`) the web app runs on port **8090**
+with hot reload, and Next.js acts as a proxy: `/api/*` and `/swagger/*` are rewritten
+(`next.config.ts`) to `http://backend:8080/...`, so the browser always talks to the same origin and
+never needs to know where the backend lives.
 
-## Estructura
+## Structure
 
 ```
 app/
-├── page.tsx                # "/" — home logueado (carruseles, stats) o landing pública si no hay sesión
-├── login/  register/       # formularios de auth (email+password, Google, OTP)
-├── extension-auth/         # puente OAuth-like para dar tokens a la extensión de Netflix
-├── (logged)/               # páginas con layout de columna + footer (la protección la da proxy.ts por prefijo)
-│   ├── library/            # biblioteca: filtros, búsqueda, editar/borrar progreso
-│   ├── media/[id]/         # ficha de una película/serie/libro
-│   ├── reviews/            # tus reseñas
-│   ├── activity/           # feed de actividad (tuya + amigos)
-│   ├── friends/            # amigos, solicitudes, buscar usuarios
-│   ├── profile/            # tu perfil, privacidad, borrar cuenta
-│   ├── connections/        # sesiones activas y guías de conexión de KOReader y Netflix
-│   ├── u/[id]/             # perfil público de otro usuario
-│   ├── about/              # qué es TaleTrack (TFG, código y API abiertos) — pública
-│   ├── credits/            # créditos de datos (TMDB, Open Library) — pública
-│   └── privacy/            # política de privacidad (RGPD, cookies técnicas) — pública, enlazada desde el registro
-├── _components/home/       # piezas del home (carrusel, stats, tarjetas)
+├── page.tsx                # "/": signed-in home (carousels, stats) or public landing page without a session
+├── login/  register/       # auth forms (email + password, Google, one-time code)
+├── extension-auth/         # OAuth-like bridge that hands tokens to the Netflix extension
+├── (logged)/               # pages with the column + footer layout (proxy.ts protects them by path prefix)
+│   ├── library/            # library: filters, search, edit/delete progress
+│   ├── media/[id]/         # a film, series or book page
+│   ├── reviews/            # your reviews
+│   ├── activity/           # activity feed (yours + friends)
+│   ├── friends/            # friends, requests, user search
+│   ├── profile/            # your profile, privacy, account deletion
+│   ├── connections/        # active sessions and the KOReader and Netflix install guides
+│   ├── u/[id]/             # another user's public profile
+│   ├── about/              # what TaleTrack is (TFG, open code and API), public
+│   ├── credits/            # data credits (TMDB, Open Library), public
+│   └── privacy/            # privacy policy (GDPR, technical cookies), public, linked from sign-up
+├── _components/home/       # home page pieces (carousel, stats, cards)
 components/
-├── auth/                   # AuthShell, flujo de Google, pantallas de los enlaces de borrado, checklist de contraseña
-├── activity/               # ActivityRow (una entrada del feed)
-├── layout/                 # topnav, footer (Acerca de, Créditos, Privacidad, API, GitHub), toggles de tema/idioma, ConfirmDialog
+├── auth/                   # AuthShell, Google flow, email-link screens, password checklist
+├── activity/               # ActivityRow (one feed entry)
+├── layout/                 # top nav, footer (About, Credits, Privacy, API, GitHub), theme/language toggles, ConfirmDialog
 ├── media/                  # Cover, StarRating, ReviewModal, TrackingProgressModal
-└── ui/                     # primitives shadcn (button, dialog, card...)
+└── ui/                     # shadcn primitives (button, dialog, card...)
 lib/
 ├── api/
-│   ├── client.ts           # ApiClient — fetch con refresh automático de JWT en 401
-│   ├── server.ts           # fetchers para Server Components (usa la cookie tt-token)
-│   └── services/           # un fichero por dominio (auth, tracking, review, friend, user, sessions)
-├── auth-context.tsx        # estado de auth vía useSyncExternalStore (no Context+useState)
-├── auth-storage.ts         # nombres de las claves de localStorage y de las cookies de sesión
-├── jwt.ts                  # decodifica el payload del JWT y comprueba si ha caducado
-├── password.ts             # regla de contraseñas (8+ caracteres, mayúscula y número)
-├── i18n.tsx / i18n-shared.ts / i18n-server.ts   # ver sección de i18n abajo
-└── types/index.ts          # tipos de las respuestas del backend
+│   ├── client.ts           # ApiClient: fetch with automatic JWT refresh on 401
+│   ├── server.ts           # fetchers for Server Components (use the tt-token cookie)
+│   └── services/           # one file per domain (auth, tracking, review, friend, user, sessions)
+├── auth-context.tsx        # auth state through useSyncExternalStore (not Context + useState)
+├── auth-storage.ts         # names of the localStorage keys and session cookies
+├── jwt.ts                  # decodes the JWT payload and checks whether it has expired
+├── password.ts             # password rule (8+ characters, an uppercase letter and a digit)
+├── i18n.tsx / i18n-shared.ts / i18n-server.ts   # see the i18n section below
+└── types/index.ts          # types of the backend responses
 ```
 
 ## Auth
 
-El access token se guarda en `localStorage` (`token`) y el refresh token en `tt-refresh`, y los dos
-se copian en cookies (`tt-token` y `tt-refresh`, `SameSite=Lax`) para que el middleware (`proxy.ts`)
-y los Server Components puedan leerlos. Los nombres están en `lib/auth-storage.ts`; el estado lo
-expone `lib/auth-context.tsx`. `ApiClient`
-(`lib/api/client.ts`) reintenta una vez con refresh automático si una petición devuelve 401.
+The access token is stored in `localStorage` (`token`) and the refresh token in `tt-refresh`, and
+both are copied into cookies (`tt-token` and `tt-refresh`, `SameSite=Lax`) so the middleware
+(`proxy.ts`) and Server Components can read them. The names live in `lib/auth-storage.ts`; the state
+is exposed by `lib/auth-context.tsx`. `ApiClient` (`lib/api/client.ts`) retries once with an
+automatic refresh when a request returns 401.
 
-Tres formas de entrar: email+contraseña, Google (`@react-oauth/google`), o código OTP por email
-(`RequestCode` → `VerifyCode`). `proxy.ts` protege `/library /reviews /activity /friends
-/profile /media /u /connections` y redirige a `/login` sin sesión (y al revés: si ya tienes sesión, `/login` y
-`/register` te mandan a `/`).
+Three ways to sign in: email + password, Google (`@react-oauth/google`), or a one-time code by email
+(`RequestCode` → `VerifyCode`). `proxy.ts` protects `/library /reviews /activity /friends /profile
+/media /u /connections` and redirects to `/login` without a session (and the other way round: with
+a session, `/login` and `/register` send you to `/`). It also refreshes an expired access token from
+the refresh cookie before rendering.
 
 ## i18n
 
-Sitio bilingüe es/en, sin librería externa — diccionarios planos en `messages/{en,es}.json`.
+Bilingual site (Spanish/English) without an external library: flat dictionaries in
+`messages/{en,es}.json`.
 
-- **Client Components**: `useT()` / `useI18n()` de `lib/i18n.tsx` (Context + hook).
-- **Server Components**: `getServerT()` / `getServerLocale()` de `lib/i18n-server.ts` — **no** las
-  importes desde un componente cliente, tira de `next/headers` y rompe el bundle. Si necesitas algo
-  compartido entre cliente y servidor (el tipo `Locale`, `isLocale`...), va en `lib/i18n-shared.ts`.
-- El locale se guarda en la cookie `tt-locale`; sin cookie, se adivina por `Accept-Language`.
+- **Client Components**: `useT()` / `useI18n()` from `lib/i18n.tsx` (Context + hook).
+- **Server Components**: `getServerT()` / `getServerLocale()` from `lib/i18n-server.ts`. **Do not**
+  import them from a client component: they use `next/headers` and break the bundle. Anything shared
+  between client and server (the `Locale` type, `isLocale`...) goes in `lib/i18n-shared.ts`.
+- The locale is stored in the `tt-locale` cookie; without it, it is guessed from `Accept-Language`.
+- Backend errors arrive as a stable `code` that the web app translates, so the backend never sends
+  user-facing text.
 
-## Diseño
+## Design
 
-Tema "cottagecore" (verde salvia + crema cálido) en claro, gris/slate neutro con el mismo acento en
-oscuro — variables OKLCH en `app/globals.css`. Tipografía: Geist (sans) + Cormorant Garamond
-(`font-heading`, para títulos). `font-size: 112.5%` en `html` escala toda la app.
+"Cottagecore" theme (sage green + warm cream) in light mode, neutral grey/slate with the same accent
+in dark mode, as OKLCH variables in `app/globals.css`. Fonts: Geist (sans) + Cormorant Garamond
+(`font-heading`, for headings). `font-size: 112.5%` on `html` scales the whole app.
 
-## Variables de entorno
+## Environment variables
 
-| Variable | Uso |
+| Variable | Use |
 |---|---|
-| `INTERNAL_API_URL` | base que usan los Server Components para llamar directo al backend (`http://backend:8080/api` en Docker) |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | login con Google |
+| `INTERNAL_API_URL` | base URL Server Components use to call the backend directly (`http://backend:8080/api` in Docker) |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google sign-in (Docker Compose fills it from `GOOGLE_CLIENT_ID`) |
+| `NEXT_PUBLIC_EXTENSION_ID` | id of the Netflix extension that `/extension-auth` sends tokens to; optional, defaults to the id fixed by the `key` in the extension's `manifest.json` |
 
-## Notas
+## Notes
 
-- No hay test runner configurado para el frontend — la verificación es `bun run lint` +
-  `bun x tsc --noEmit` + probar la app en el navegador.
-- `'use client'` solo donde hace falta de verdad (hooks, estado, listeners de browser). La mayoría de
-  piezas del home lo necesitan porque `useT()`/`useI18n()` son hooks de React; las páginas puramente
-  estáticas (`/about`, `/credits`, `/privacy`) usan `getServerT()` y son Server Components.
+- There is no test runner for the web app: it is checked with `bun run lint`, `bun x tsc --noEmit`
+  and by using the app in the browser.
+- `'use client'` only where it is really needed (hooks, state, browser listeners). Most home page
+  pieces need it because `useT()`/`useI18n()` are React hooks; purely static pages (`/about`,
+  `/credits`, `/privacy`) use `getServerT()` and are Server Components.

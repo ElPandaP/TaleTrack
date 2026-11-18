@@ -1,110 +1,116 @@
-# TaleTrack — Plugin de KOReader
+# TaleTrack — KOReader plugin
 
-Plugin en Lua para [KOReader](https://github.com/koreader/koreader) que registra en tu cuenta de
-TaleTrack lo que lees: el progreso de lectura mientras avanzas y el libro como terminado al
-acabarlo.
+Lua plugin for [KOReader](https://github.com/koreader/koreader) that records what you read in your
+TaleTrack account: your reading progress as you go, and the book as finished when you reach the end.
 
-## Instalación
+## Install
 
-Copia esta carpeta dentro de `koreader/plugins/` en tu dispositivo, con el nombre
-`taletrack.koplugin` — KOReader detecta los plugins por el sufijo `.koplugin` del nombre de carpeta.
+Download `taletrack.koplugin.zip` from the
+[latest release](https://github.com/ElPandaP/TaleTrack/releases/latest) and unzip it into the
+`koreader/plugins/` folder of your device, so that you end up with `plugins/taletrack.koplugin/`.
+KOReader finds plugins by the `.koplugin` suffix of the folder name. Copying this folder from the
+repository works the same way. Restart KOReader and sign in from *Tools → TaleTrack*.
 
-## Estructura
+## Structure
 
 ```
-_meta.lua          # nombre/descripción/versión del plugin, la lee KOReader
-main.lua            # punto de entrada: eventos del lector, menú y flujo de login
-book.lua            # el libro abierto: progreso, margen final, título/clave (usa bookmeta.lua)
-bookmeta.lua        # autor e ISBN sacados de los metadatos del documento
-session.lua         # tokens del usuario (access + refresh) y su renovación
-queue.lua           # cola offline de progreso (una entrada por libro, persistida)
-sync.lua            # envía la cola al backend cuando hay red
-api.lua             # comunicación HTTP con el backend (login OTP, refresh, trackear libro)
-login_dialog.lua    # diálogo de login en dos pasos: email → código de 6 dígitos
-i18n.lua            # textos ES/EN según el idioma configurado en KOReader
-logo.png            # logo del proyecto (no lo usa KOReader)
+_meta.lua          # plugin name/description/version, read by KOReader
+main.lua           # entry point: reader events, menu and sign-in flow
+book.lua           # the open book: progress, end margin, title/key (uses bookmeta.lua)
+bookmeta.lua       # author and ISBN taken from the document metadata
+session.lua        # the user's tokens (access + refresh) and their renewal
+queue.lua          # offline progress queue (one entry per book, persisted)
+sync.lua           # sends the queue to the backend when there is network
+api.lua            # HTTP communication with the backend (one-time code sign-in, refresh, track book)
+login_dialog.lua   # two-step sign-in dialog: email → 6-digit code
+i18n.lua           # Spanish/English strings depending on KOReader's language
+logo.png           # project logo (not used by KOReader)
 ```
 
-`main.lua` solo cablea: recibe los eventos de KOReader y decide cuándo hacer qué; leer el libro,
-guardar la sesión, mantener la cola y hablar con el backend son cosas de los demás módulos.
-KOReader crea una instancia del plugin por cada explorador de archivos y cada lector que abre, y
-la sesión y la cola deben existir una sola vez por proceso, así que `main.lua` las crea la primera
-vez y todas las instancias comparten esas mismas (los módulos se cargan con `dofile` desde la ruta
-del plugin, no con `require`, para que nombres como `api` o `queue` no choquen con los de KOReader).
+`main.lua` only wires things together: it receives KOReader's events and decides when to do what;
+reading the book, storing the session, keeping the queue and talking to the backend belong to the
+other modules. KOReader creates one plugin instance for every file browser and reader it opens,
+while the session and the queue must exist only once per process, so `main.lua` creates them the
+first time and every instance shares them (modules are loaded with `dofile` from the plugin path,
+not with `require`, so names like `api` or `queue` do not clash with KOReader's own).
 
-## Cómo trackea
+## How it tracks
 
-**Progreso mientras lees.** `main.lua` escucha `onPageUpdate` y, como mucho una vez cada
-2 minutos mientras pasas páginas, pide a `book.lua` el porcentaje de lectura
-(`ReaderPaging`/`ReaderRolling:getLastPercent()`) y lo encola. También encola al llegar al
-final del libro (`onEndOfBook` → 100), al cerrar el documento y al suspender. Solo se encola un
-progreso distinto del último encolado. El backend guarda siempre el último progreso recibido, así
-que volver a páginas anteriores también baja el progreso guardado.
+**Progress while reading.** `main.lua` listens to `onPageUpdate` and, at most once every 2 minutes
+while you turn pages, asks `book.lua` for the reading percentage
+(`ReaderPaging`/`ReaderRolling:getLastPercent()`) and queues it. It also queues on reaching the end
+of the book (`onEndOfBook` → 100), when the document is closed and when the device suspends. Only a
+progress different from the last queued one is queued. The backend always keeps the last progress
+received, so going back to earlier pages also lowers the stored progress.
 
-**Libro terminado.** No hay marcado manual: un libro cuenta como terminado (progreso 100) al
-entrar en el margen final, que es el 5% de las páginas con un máximo de 25, porque las últimas
-páginas suelen ser agradecimientos, notas o publicidad que nadie lee. Es el equivalente a lo que
-hace la extensión de Netflix al llegar a los créditos. Entrar en el margen se envía al momento,
-sin esperar a los 2 minutos. Volver atrás después y seguir leyendo fuera del margen lo desmarca,
-porque el siguiente envío lleva el progreso real. La página actual se pide a
-`ReaderUI:getCurrentPage()`, que la conoce tanto en los documentos reflowables (EPUB) como en los
-de maquetación fija (PDF, DjVu).
+**Finished book.** There is no manual marking: a book counts as finished (progress 100) on entering
+the end margin, which is 5 % of the pages with a maximum of 25, because the last pages are usually
+acknowledgements, notes or ads that nobody reads. It is the equivalent of what the Netflix extension
+does when the credits start. Entering the margin is sent right away, without waiting for the 2
+minutes. Going back afterwards and reading outside the margin unmarks it, because the next update
+carries the real progress. The current page comes from `ReaderUI:getCurrentPage()`, which knows it
+for both reflowable documents (EPUB) and fixed-layout ones (PDF, DjVu).
 
-**Cola offline (`queue.lua` y `sync.lua`).** Cada entrada es un libro con su último progreso;
-encolar de nuevo el mismo libro **sustituye** la entrada (nos quedamos con el último porcentaje),
-así que 8 actualizaciones seguidas se resuelven con un solo `POST`. La cola se persiste en
-`taletrack_queue.lua` (máximo 100 entradas y 4 semanas) y `sync.lua` la vacía cuando hay red: al
-abrir el lector, al reconectar (`onNetworkConnected`), al reanudar, al cerrar el documento, al
-iniciar sesión y tras cada envío. El backend es
-idempotente (guarda el último progreso recibido), así que reenviar es inofensivo. Si no hay
-conexión, `flush` no hace nada y la cola espera. Un fallo transitorio (sin red, 5xx, 408, 429)
-deja el elemento en la cola y detiene el vaciado; otros 4xx lo descartan porque reintentar no
-cambiaría el resultado. Al cerrar sesión la cola se vacía, para que el progreso pendiente no acabe
-en otra cuenta.
+**Offline queue (`queue.lua` and `sync.lua`).** Each entry is a book with its latest progress;
+queuing the same book again **replaces** the entry (only the latest percentage matters), so 8
+updates in a row end up as a single `POST`. The queue is persisted in `taletrack_queue.lua` (up to
+100 entries and 4 weeks) and `sync.lua` flushes it when there is network: when the reader opens, on
+reconnecting (`onNetworkConnected`), on resume, when the document is closed, after signing in and
+after every update. The backend is idempotent (it keeps the last progress received), so sending
+again is harmless. Without a connection, `flush` does nothing and the queue waits. A transient
+failure (no network, 5xx, 408, 429) keeps the item in the queue and stops the flush; other 4xx
+responses discard it because retrying would not change the result. Signing out empties the queue,
+so pending progress never ends up in another account.
 
-**Qué libro es (`book.lua`).** El título sale de los metadatos del documento; si no tiene, del
-nombre del fichero sin extensión, y solo si tampoco se puede leer, `"Desconocido"`. La clave de
-deduplicación de la cola es el `partial_md5_checksum` del documento, o el título si no está. El
-número de páginas solo se envía en documentos de maquetación fija: en un EPUB depende de la fuente
-y de los márgenes, así que no dice nada del libro.
+**Which book it is (`book.lua`).** The title comes from the document metadata; failing that, from the
+file name without its extension, and only if that cannot be read either, `"Desconocido"`. The
+queue's deduplication key is the document's `partial_md5_checksum`, or the title if there is none.
+The page count is only sent for fixed-layout documents: in an EPUB it depends on the font and the
+margins, so it says nothing about the book.
 
-**Autor e ISBN (`bookmeta.lua`).** Se leen de `doc:getProps()` (`authors` e `identifiers`, que
-KOReader extrae del OPF del EPUB) y se envían si existen, para que el backend deduplique por ISBN
-o por título + autor en vez de solo por título. Los autores se unen con `, `. De los
-identificadores solo se acepta uno que sea un ISBN-10/13 con checksum válido (`urn:isbn:`, guiones
-y espacios se normalizan), porque el backend limita `Isbn` a 13 caracteres y muchos EPUB traen
-solo un UUID. Si el libro no trae ISBN válido o autor, ese campo simplemente no se envía.
+**Author and ISBN (`bookmeta.lua`).** They are read from `doc:getProps()` (`authors` and
+`identifiers`, which KOReader extracts from the EPUB's OPF) and sent when present, so the backend
+deduplicates by ISBN or by title + author instead of by title alone. Authors are joined with `, `.
+Of the identifiers, only a valid ISBN-10/13 (checksum included) is accepted (`urn:isbn:`, dashes and
+spaces are normalised), because the backend limits `Isbn` to 13 characters and many EPUBs only carry
+a UUID. If the book has no valid ISBN or author, that field is simply not sent.
 
 ## Auth
 
-Login por **código OTP** (`login_dialog.lua`, dos pasos): pides el email
-(`TaleTrack:requestCode` → `Api.requestCode` → `POST /api/auth/request-code`), introduces el código de
-6 dígitos que llega por email (`TaleTrack:verifyCode` → `Api.verifyCode` → `POST /api/auth/verify-code`).
-Se guardan **el access token y el refresh token** en `LuaSettings`
-(`DataStorage:getSettingsDir()/TaleTrack.lua`), que gestiona `session.lua`.
+Sign-in with a **one-time code** (`login_dialog.lua`, two steps): you enter your email
+(`TaleTrack:requestCode` → `Api.requestCode` → `POST /api/auth/request-code`), then the 6-digit code
+that arrives by email (`TaleTrack:verifyCode` → `Api.verifyCode` → `POST /api/auth/verify-code`).
+**Both the access token and the refresh token** are stored in `LuaSettings`
+(`DataStorage:getSettingsDir()/TaleTrack.lua`), managed by `session.lua`.
 
-El access token dura ~1 h; no se calcula la caducidad en local (el reloj de los e-readers no es
-fiable). Cuando un `POST` de progreso devuelve **401**, `session.lua` canjea el refresh token por
-un par nuevo (`POST /api/auth/refresh`, que rota el refresh token — se guarda el nuevo) y
-reintenta. Solo si el servidor rechaza el refresh token se borran los tokens y se pide iniciar
-sesión de nuevo (un único aviso, no uno por cada elemento de la cola); un fallo de red o del
-servidor al renovar conserva la sesión y la cola.
+The access token lasts 5 minutes; its expiry is not computed locally (e-reader clocks are not
+reliable). When a progress `POST` returns **401**, `session.lua` exchanges the refresh token for a
+new pair (`POST /api/auth/refresh`, which rotates the refresh token, so the new one is stored) and
+retries. Only if the server rejects the refresh token are the tokens deleted and the user asked to
+sign in again (a single notice, not one per queued item); a network or server failure while renewing
+keeps both the session and the queue.
 
-**Red y pantalla.** KOReader hace las llamadas de red en el mismo hilo que dibuja la pantalla, así
-que una petición lenta la congela. Por eso pedir el código, verificarlo y cerrar sesión muestran un
-mensaje ("Enviando código…") mientras esperan, y el login espera a que haya conexión
-(`NetworkMgr:runWhenOnline`, que pide activar el wifi si hace falta). Si el correo o el código
-fallan, el diálogo vuelve a abrirse con el correo rellenado, y el motivo se explica según la
-respuesta: sin conexión, demasiados intentos (429), error del servidor (5xx) o rechazo. El envío
-de progreso, en cambio, es silencioso y con tiempos cortos (3 s sin datos, 12 s en total).
+**Network and screen.** KOReader makes network calls on the same thread that draws the screen, so a
+slow request freezes it. That is why requesting the code, verifying it and signing out show a
+message ("Sending code…") while they wait, and sign-in waits until there is a connection
+(`NetworkMgr:runWhenOnline`, which offers to turn on Wi-Fi if needed). If the email or the code
+fails, the dialog reopens with the email filled in, and the reason is explained from the response:
+no connection, too many attempts (429), server error (5xx) or rejection. Sending progress, on the
+other hand, is silent and uses short timeouts (3 s without data, 12 s in total).
 
-## Servidor
+## Server
 
-`api.lua` tiene `SERVER_URL` **hardcodeado** a `https://taletrack.app` (la VM de producción) — para
-apuntar a un backend local hay que editar esa constante a mano y volver a copiar el plugin al
-dispositivo. Detecta http/https automáticamente y usa `socket.http` o `ssl.https` según toque
-(`ssl.https` no está disponible en todos los dispositivos). Los tiempos de espera se acortan con
-`socketutil` para que una red caída falle en segundos en vez de colgarse, y se restauran siempre,
-incluso si la petición falla, porque son globales de KOReader. Las peticiones llevan el
-`User-Agent` de KOReader. Las llamadas devuelven siempre una tabla como respuesta: si el cuerpo no
-es JSON (una página de error de un proxy, por ejemplo) no se enseña al usuario.
+`api.lua` has `SERVER_URL` **hardcoded** to `https://taletrack.app` (the production server). To point
+it at a local backend, edit that constant by hand and copy the plugin to the device again. It
+detects http/https automatically and uses `socket.http` or `ssl.https` accordingly (`ssl.https` is
+not available on every device). Timeouts are shortened with `socketutil` so a dead network fails in
+seconds instead of hanging, and they are always restored, even if the request fails, because they
+are global to KOReader. Requests carry KOReader's `User-Agent`. Calls always return a table as the
+response: if the body is not JSON (an error page from a proxy, for example) it is never shown to
+the user.
+
+## Testing
+
+There are no automated tests. The plugin was tested by hand in KOReader's desktop emulator, which
+keeps the KOReader console visible while using the plugin, so warnings and Lua stack traces show up
+the moment they happen.

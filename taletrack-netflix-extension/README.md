@@ -1,116 +1,125 @@
-# TaleTrack — Extensión de Netflix
+# TaleTrack — Netflix extension
 
-Extensión de Chrome (Manifest V3) que detecta lo que estás viendo en Netflix y lo trackea
-automáticamente en tu cuenta de TaleTrack — sin tener que anotarlo a mano.
+Chrome extension (Manifest V3) that detects what you are watching on Netflix and tracks it in your
+TaleTrack account automatically, without logging it by hand.
 
-## Cómo funciona
+## Install
 
-Netflix no expone una API pública, así que la extensión combina varias fuentes con fallbacks, todas
-en `src/netflix-extract.ts`:
+Download `taletrack-netflix-extension.zip` from the
+[latest release](https://github.com/ElPandaP/TaleTrack/releases/latest) and unzip it. In Chrome,
+open `chrome://extensions`, turn on *Developer mode*, click *Load unpacked* and choose the unzipped
+folder. That build points to [taletrack.app](https://taletrack.app) (currently offline). To build it
+yourself or point it at another server, see
+[Building](#building).
 
-- Los **metadatos que el reproductor de Netflix ya ha cargado** para el vídeo
-  (`window.netflix.appContext.state.playerApp.getState().videoPlayer.videoMetadata[id]`): título,
-  tipo, temporadas y episodios. Es la fuente principal. Se leen desde un script inyectado en el
-  `MAIN` world (`src/injected.ts`), porque un content script normal no puede tocar el JS de la
-  página, solo su DOM. Ese script solo lee datos ya cargados: no llama a métodos del reproductor ni
-  hace peticiones a Netflix.
-- La caché **Falcor** de Netflix (`window.netflix.falcorCache`), para duración, créditos y
-  temporada/episodio cuando los metadatos no los tienen.
-- El DOM de la página como último recurso: la barra de título (con varios selectores, porque Netflix
-  cambia sus clases con frecuencia) y el `<video>`, que da la posición y la duración.
+## How it works
 
-La temporada y el episodio solo se toman de las dos primeras fuentes (metadatos del reproductor y
-Falcor). Si ninguna los tiene, la serie no se registra.
-- `<html lang>` para saber si la interfaz está en español o inglés — se lo mandamos al backend para
-  que pueda enriquecer con TMDB (portada, sinopsis, duración, título en el otro idioma) sin depender de
-  que el título coincida palabra por palabra si cambias el idioma de Netflix a mitad de temporada.
+Netflix has no public API, so the extension combines several sources with fallbacks, all in
+`src/netflix-extract.ts`:
 
-`src/content.ts` es la parte que decide **cuándo** llamar a esa extracción. Solo funciona con la
-sesión de la extensión iniciada: al cargar pregunta al service worker si hay sesión, y la extensión
-avisa a las pestañas de Netflix abiertas cada vez que se inicia o se cierra. Con sesión, sondea
-cada 15s solo mientras estás en una página `/watch/`, y además reacciona al instante al cambio de URL (Netflix es
-una SPA, así que pasar de `/browse` a `/watch/` no recarga el script) y al evento `loadedmetadata`.
-Si todavía no hay título reintenta hasta 10 veces, una por segundo, antes de rendirse hasta el
-siguiente sondeo (por si hay que tirar de la barra de título, que solo está visible los primeros
-segundos). Una vez resuelto el título
-para un vídeo, se queda cacheado y no se vuelve a leer del DOM mientras sigas en el mismo
-episodio/película. Un título que viene de los metadatos del reproductor se usa tal cual; solo el
-texto raspado del DOM se limpia de marcas de episodio, y solo en series, porque los dos puntos o el
-guion de una película (`Mission: Impossible`) forman parte de su nombre.
+- The **metadata the Netflix player has already loaded** for the video
+  (`window.netflix.appContext.state.playerApp.getState().videoPlayer.videoMetadata[id]`): title,
+  type, seasons and episodes. It is the main source. It is read from a script injected into the
+  `MAIN` world (`src/injected.ts`), because a regular content script cannot touch the page's
+  JavaScript, only its DOM. That script only reads data that is already loaded: it does not call
+  player methods or make requests to Netflix.
+- Netflix's **Falcor** cache (`window.netflix.falcorCache`), for runtime, credits and
+  season/episode when the metadata does not have them.
+- The page DOM as a last resort: the title bar (with several selectors, because Netflix changes its
+  classes often) and the `<video>` element, which gives position and duration.
+- `<html lang>`, to know whether the interface is in Spanish or English. It is sent to the backend so
+  it can enrich the item with TMDB (poster, synopsis, runtime, title in the other language) without
+  relying on the title matching word for word if you switch Netflix's language mid-season.
 
-El momento en que algo cuenta como visto lo decide `content.ts`: al entrar en el margen previo a los
-créditos (el `creditsOffset` que da Netflix, que se vuelve a pedir en cada sondeo hasta que aparece)
-el progreso pasa a 100 %, sin esperar a que el vídeo llegue a su final real.
+Season and episode are only taken from the first two sources (player metadata and Falcor). If
+neither has them, the series is not recorded.
 
-El progreso se manda a `POST /api/tracking/movies` o `/api/tracking/series` vía el service worker
-(`src/background.ts`), que throttlea los envíos para no saturar al backend: el primero de cada vídeo,
-después solo cada 2 % de cambio (hacia delante o hacia atrás) o al cruzar el 95 %. Se salta el filtro (envío forzado)
-al cerrar u ocultar la pestaña, al terminar el vídeo, al cambiar de vídeo y al salir del reproductor.
-En los dos últimos casos el `<video>` ya no se puede leer, así que se envía la última lectura que
-`content.ts` guardó. No hay cola offline: si un envío falla, el siguiente sondeo informa el estado
-actual.
+`src/content.ts` decides **when** to call that extraction. It only works with the extension signed
+in: on load it asks the service worker whether there is a session, and the extension notifies open
+Netflix tabs whenever a session starts or ends. With a session, it polls every 15 s, only while you
+are on a `/watch/` page, and also reacts immediately to URL changes (Netflix is a single-page app, so
+going from `/browse` to `/watch/` does not reload the script) and to the `loadedmetadata` event.
+If there is no title yet, it retries up to 10 times, once per second, before giving up until the
+next poll (in case it has to fall back to the title bar, which is only visible for the first few
+seconds). Once the title of a video is resolved, it is cached and not read from the DOM again while
+you stay on the same episode or film. A title from the player metadata is used as is; only text
+scraped from the DOM is stripped of episode markers, and only for series, because a colon or dash
+in a film title (`Mission: Impossible`) is part of its name.
 
-## Estructura
+`content.ts` also decides when something counts as watched: on entering the margin before the
+credits (the `creditsOffset` Netflix provides, requested again on every poll until it shows up)
+progress becomes 100 %, without waiting for the video to actually end.
+
+Progress is sent to `POST /api/tracking/movies` or `/api/tracking/series` through the service worker
+(`src/background.ts`), which throttles updates so the backend is not flooded: the first one for each
+video, then only every 2 % of change (forwards or backwards) or when crossing 95 %. The filter is
+skipped (forced send) when the tab is closed or hidden, when the video ends, when it changes and
+when you leave the player. In the last two cases the `<video>` can no longer be read, so the last
+reading saved by `content.ts` is sent. There is no offline queue: if an update fails, the next poll
+reports the current state.
+
+## Structure
 
 ```
 src/
-├── content.ts           # bucle de auto-tracking: sondeo, título, créditos, envío del progreso
-├── netflix-extract.ts    # toda la lógica de "qué hay en esta página de Netflix"
-├── injected.ts           # se ejecuta en el MAIN world de la página (acceso a window.netflix)
-├── background.ts         # service worker: throttle de envíos, refresco de token
-├── auth.ts               # ciclo de vida del JWT/refresh token (chrome.storage.local)
-├── popup.ts               # UI del popup: estado de sesión, iniciar y cerrar sesión
-├── config.ts              # BACKEND_URL / FRONTEND_URL / DEBUG (build time) y debug()
-└── types.ts               # tipos compartidos entre los distintos contextos
+├── content.ts           # auto-tracking loop: polling, title, credits, sending progress
+├── netflix-extract.ts   # all the "what is on this Netflix page" logic
+├── injected.ts          # runs in the page's MAIN world (access to window.netflix)
+├── background.ts        # service worker: update throttling, token refresh
+├── auth.ts              # JWT/refresh token lifecycle (chrome.storage.local)
+├── popup.ts             # popup UI: session state, sign in and sign out
+├── config.ts            # BACKEND_URL / FRONTEND_URL / DEBUG (build time) and debug()
+└── types.ts             # types shared between the different contexts
 public/
-├── popup.html            # marcado y estilos del popup (tokens y tipografías de la web)
-└── fonts/                # Geist y Cormorant Garamond en woff2, con sus licencias OFL
+├── popup.html           # popup markup and styles (the web app's tokens and fonts)
+└── fonts/               # Geist and Cormorant Garamond as woff2, with their OFL licenses
 tests/
-└── netflix-extract.test.ts  # limpieza de títulos y lectura de marcas de episodio (bun test)
+└── netflix-extract.test.ts  # title cleaning and episode marker parsing (bun test)
 ```
 
 ## Auth
 
-Al pulsar "Iniciar sesión" en el popup, se abre una pestaña normal (y el popup se cierra: no espera
-el resultado, al volver a abrirlo muestra la sesión) en `FRONTEND_URL/extension-auth`
-(`chrome.tabs.create`, sin `chrome.identity` — esa API queda detrás de un ajuste de "permitir
-inicio de sesión de Google" en Brave que no tiene nada que ver con este flujo, así que se evita
-por completo). Esa página, ya con tu sesión web, te pide confirmar, pide un par de tokens propio
-al backend (`POST /api/auth/extension-grant`, que aparece como la sesión **"Netflix extension"**
-en tu perfil) y se lo pasa a la extensión con `chrome.runtime.sendMessage(EXTENSION_ID, ...)`
-— permitido porque el origen de `FRONTEND_URL` está declarado en `externally_connectable` en
-`manifest.json` (generado en build time a partir de `TT_FRONTEND_URL`, nunca un wildcard).
-`background.ts` vuelve a comprobar el origen del remitente y la forma del mensaje antes de guardar
-nada. Los tokens se guardan en `chrome.storage.local` y se refrescan solos.
+Clicking "Sign in" in the popup opens a regular tab at `FRONTEND_URL/extension-auth` and closes the
+popup (it does not wait for the result; reopening it shows the session). It uses
+`chrome.tabs.create`, not `chrome.identity`: that API sits behind an "allow Google sign-in" setting
+in Brave that has nothing to do with this flow, so it is avoided entirely. That page, already
+signed in to the web app, asks you to confirm, requests a separate token pair from the backend
+(`POST /api/auth/extension-grant`, which shows up as the **"Netflix extension"** session in your
+profile) and passes it to the extension with `chrome.runtime.sendMessage(EXTENSION_ID, ...)`. This
+is allowed because the `FRONTEND_URL` origin is declared in `externally_connectable` in
+`manifest.json` (generated at build time from `TT_FRONTEND_URL`, never a wildcard).
+`background.ts` checks the sender's origin and the message shape again before storing anything.
+Tokens are kept in `chrome.storage.local` and refreshed automatically.
 
-El campo `"key"` de `manifest.json` fija el id de la extensión (`kbhjoofgffidokbnlklekelkpdhcllih`)
-para que no cambie entre recargas — el frontend necesita conocerlo de antemano
-(`NEXT_PUBLIC_EXTENSION_ID`, con ese mismo valor por defecto) para poder enviarle el mensaje.
+The `"key"` field of `manifest.json` fixes the extension id (`kbhjoofgffidokbnlklekelkpdhcllih`) so
+it does not change between reloads or machines. The web app needs to know it in advance
+(`NEXT_PUBLIC_EXTENSION_ID`, with that same default) to be able to message it.
 
-## Compilar
+## Building
 
 ```bash
 bun install
 bun build.ts
 ```
 
-Por defecto apunta al servidor de producción (`https://taletrack.app`, hardcodeado en `build.ts` y
-`src/config.ts` como fallback). Para desarrollo local:
+By default it targets the production server (`https://taletrack.app`, set in `build.ts` and as a
+fallback in `src/config.ts`). For local development:
 
 ```bash
 TT_BACKEND_URL=http://localhost:8080 TT_FRONTEND_URL=http://localhost:8090 bun build.ts
 ```
 
-Con `bun run build --debug` la extensión escribe trazas detalladas en la consola (`debug()` de `config.ts`); sin
-él no escribe nada salvo errores. Esto genera `dist/` con los scripts, `popup.html`, las fuentes y el
-`manifest.json`, al que el build le añade `externally_connectable` y `host_permissions` a partir de
-las URLs elegidas. Para cargarla en
-Chrome: `chrome://extensions` → activar "Modo de desarrollador" → "Cargar extensión sin empaquetar" →
-seleccionar la carpeta `dist/`. Tras recompilar hay que darle a recargar en `chrome://extensions`.
+With `bun run build --debug` the extension writes detailed traces to the console (`debug()` in
+`config.ts`); without it, it only logs errors. The build generates `dist/` with the scripts,
+`popup.html`, the fonts and `manifest.json`, to which it adds `externally_connectable` and
+`host_permissions` based on the chosen URLs. To load it in Chrome: `chrome://extensions` → turn on
+*Developer mode* → *Load unpacked* → choose the `dist/` folder. After rebuilding, click reload in
+`chrome://extensions`.
 
-Los `host_permissions` del build son siempre `netflix.com` y el origen de `TT_BACKEND_URL`, así que
-una build de producción no pide acceso a `localhost` y una local acepta el puerto que le pases.
-Todavía no hay iconos (`icons` en el manifiesto y los PNG en `public/`), y la Chrome Web Store los exige.
+The build's `host_permissions` are always `netflix.com` plus the origin of `TT_BACKEND_URL`, so a
+production build does not ask for `localhost` access and a local one accepts whatever port you give
+it. There are no icons yet (`icons` in the manifest and the PNGs in `public/`), which the Chrome Web
+Store requires.
 
 ## Tests
 
@@ -118,5 +127,5 @@ Todavía no hay iconos (`icons` en el manifiesto y los PNG en `public/`), y la C
 bun test
 ```
 
-Cubre la limpieza de títulos y la lectura de marcas de episodio (`tests/netflix-extract.test.ts`); lo
-demás depende del DOM y del reproductor de Netflix y solo se puede probar a mano.
+They cover title cleaning and episode marker parsing (`tests/netflix-extract.test.ts`); the rest
+depends on the DOM and the Netflix player and can only be tested by hand.
